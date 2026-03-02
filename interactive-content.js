@@ -21,7 +21,7 @@
 
 		const componentPrefixes = [
 			'title-interactive',
-			'section-interactive',
+			'2col-interactive',
 			'big-idea-interactive',
 		];
 
