@@ -21,7 +21,8 @@
 
 		const componentPrefixes = [
 			'title-interactive',
-			'section-interactive'
+			'section-interactive',
+			'big-idea-interactive',
 		];
 
 		const allSlugs = ['default', 'amish-fire-cider', 'herbal-parasite-flush'];
