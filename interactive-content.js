@@ -1,4 +1,4 @@
-// Interactive Content Display Script v1.3
+// Interactive Content Display Script v1.4-debug
 // Load from external source to avoid Leadpages validation restrictions
 
 (function() {
@@ -21,6 +21,7 @@
 
 		const componentPrefixes = [
 			'title-interactive',
+			'title-interactive-mobile',
 			'2col-interactive',
 			'big-idea-interactive',
 		];
@@ -32,12 +33,15 @@
 				const element = document.getElementById(prefix + '-' + s);
 				if (element) {
 					element.style.setProperty('display', 'none', 'important');
+					console.log('Hidden:', prefix + '-' + s);
 				}
 			});
 
 			const targetElement = document.getElementById(prefix + '-' + slug);
+			console.log('Looking for:', prefix + '-' + slug, 'Found:', !!targetElement);
 			if (targetElement) {
 				targetElement.style.setProperty('display', 'block', 'important');
+				console.log('Shown:', prefix + '-' + slug, 'Display value:', window.getComputedStyle(targetElement).display);
 			}
 		});
 	}
