@@ -1,4 +1,4 @@
-// Interactive Content Display Script v1.1
+// Interactive Content Display Script v1.3
 // Load from external source to avoid Leadpages validation restrictions
 
 (function() {
@@ -31,13 +31,13 @@
 			allSlugs.forEach(function(s) {
 				const element = document.getElementById(prefix + '-' + s);
 				if (element) {
-					element.style.display = 'none';
+					element.style.setProperty('display', 'none', 'important');
 				}
 			});
 
 			const targetElement = document.getElementById(prefix + '-' + slug);
 			if (targetElement) {
-				targetElement.style.display = 'block';
+				targetElement.style.setProperty('display', 'block', 'important');
 			}
 		});
 	}
