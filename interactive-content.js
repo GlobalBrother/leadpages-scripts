@@ -2,9 +2,24 @@
 // Load from external source to avoid Leadpages validation restrictions
 
 (function() {
+	var hasRun = false;
+	
 	function applyDynamicContent() {
+		if (hasRun) {
+			console.log('[Dynamic Content] Already executed, skipping...');
+			return;
+		}
+		hasRun = true;
+		
 		const url = window.location.href.toLowerCase();
 		console.log('[Dynamic Content] URL:', url);
+		
+		// Debug: Lista toate elementele cu ID
+		console.log('[Dynamic Content] Available IDs in page:');
+		var allElements = document.querySelectorAll('[id]');
+		allElements.forEach(function(el) {
+			console.log('  - ID:', el.id, '| Tag:', el.tagName, '| Classes:', el.className);
+		});
 
 		// Determina slug-ul din URL
 		let slug = 'default';
