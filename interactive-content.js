@@ -1,4 +1,4 @@
-// Interactive Content Display Script
+// Interactive Content Display Script v1.0
 // Load from external source to avoid Leadpages validation restrictions
 
 (function() {
