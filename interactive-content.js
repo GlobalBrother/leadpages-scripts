@@ -1,4 +1,4 @@
-// Interactive Content Display Script v1.0
+// Interactive Content Display Script v1.1
 // Load from external source to avoid Leadpages validation restrictions
 
 (function() {
@@ -23,7 +23,7 @@
 		// Lista de prefixe pentru componentele dinamice
 		const componentPrefixes = [
 			'title-interactive',
-			'interactivesection'
+			'section-interactive'
 		];
 
 		// Lista de slug-uri posibile
