@@ -24,6 +24,7 @@
 			'title-interactive-mobile',
 			'2col-interactive',
 			'big-idea-interactive',
+			'popup-interactive'
 		];
 
 		const allSlugs = ['default', 'amish-fire-cider', 'herbal-parasite-flush'];
