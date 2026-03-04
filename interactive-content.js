@@ -19,17 +19,24 @@
 			slug = 'herbal-parasite-flush';
 		}
 
-		const componentPrefixes = [
+		// Content elements that should be shown/hidden with display property
+		const contentPrefixes = [
 			'title-interactive',
 			'title-interactive-mobile',
 			'2col-interactive',
-			'big-idea-interactive',
+			'big-idea-interactive'
+		];
+
+		// Functional elements (popups, modals) that have their own display logic
+		// We remove wrong variants from DOM, leave correct one untouched
+		const functionalPrefixes = [
 			'popup-interactive'
 		];
 
 		const allSlugs = ['default', 'amish-fire-cider', 'herbal-parasite-flush'];
 
-		componentPrefixes.forEach(function(prefix) {
+		// Handle content elements: hide all, show correct variant
+		contentPrefixes.forEach(function(prefix) {
 			allSlugs.forEach(function(s) {
 				const element = document.getElementById(prefix + '-' + s);
 				if (element) {
@@ -41,6 +48,18 @@
 			if (targetElement) {
 				targetElement.style.setProperty('display', 'block', 'important');
 			}
+		});
+
+		// Handle functional elements: remove wrong variants, leave correct one in DOM
+		functionalPrefixes.forEach(function(prefix) {
+			allSlugs.forEach(function(s) {
+				if (s !== slug) {
+					const element = document.getElementById(prefix + '-' + s);
+					if (element && element.parentNode) {
+						element.parentNode.removeChild(element);
+					}
+				}
+			});
 		});
 	}
 
