@@ -50,14 +50,21 @@
 			}
 		});
 
-		// Handle functional elements: remove wrong variants, leave correct one in DOM
+		// Handle functional elements: remove wrong variants, reset correct one's display
 		functionalPrefixes.forEach(function(prefix) {
 			allSlugs.forEach(function(s) {
+				const element = document.getElementById(prefix + '-' + s);
+				if (!element) return;
+
 				if (s !== slug) {
-					const element = document.getElementById(prefix + '-' + s);
-					if (element && element.parentNode) {
+					// Remove wrong variants from DOM
+					if (element.parentNode) {
 						element.parentNode.removeChild(element);
 					}
+				} else {
+					// Reset correct variant to normal display (remove !important)
+					// so its own JS logic can control visibility
+					element.style.setProperty('display', 'none');
 				}
 			});
 		});
