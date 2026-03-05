@@ -24,7 +24,9 @@
 			'title-interactive',
 			'title-interactive-mobile',
 			'2col-interactive',
-			'big-idea-interactive'
+			'big-idea-interactive',
+			'vsl-interactive-desktop',
+			'vsl-interactive-mobile'
 		];
 
 		// Functional elements (popups, modals) that have their own display logic
