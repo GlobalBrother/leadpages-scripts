@@ -632,9 +632,9 @@
 		<div class="auth-card">
 			<div class="auth-icon">🔥</div>
 			<h2>Content Manager</h2>
-			<p>Introdu URL-ul bazei de date Firebase pentru a accesa panoul de administrare.</p>
+			<p>Enter your Firebase Realtime Database URL to access the admin panel.</p>
 			<input type="text" id="firebaseUrl" placeholder="https://your-project.firebaseio.com">
-			<button class="btn-connect" onclick="initializeFirebase()">Conectează-te la Firebase →</button>
+			<button class="btn-connect" onclick="initializeFirebase()">Connect to Firebase →</button>
 		</div>
 	</div>
 
@@ -654,39 +654,39 @@
 			</div>
 
 			<div class="sidebar-section">
-				<div class="sidebar-section-label">Site Activ</div>
+				<div class="sidebar-section-label">Active Site</div>
 				<select id="siteSelect" class="sidebar-select" onchange="loadSiteContent()">
-					<option value="">Selectează site...</option>
+					<option value="">Select site...</option>
 				</select>
 			</div>
 
 			<div class="sidebar-section" style="margin-top:14px;">
-				<div class="sidebar-section-label">Slug / Produs</div>
+				<div class="sidebar-section-label">Slug / Product</div>
 				<select id="slugSelect" class="sidebar-select" onchange="loadSlugContent()">
-					<option value="">Selectează slug...</option>
+					<option value="">Select slug...</option>
 				</select>
 			</div>
 
 			<div class="sidebar-divider"></div>
 
-			<div class="sidebar-nav-label">Acțiuni</div>
+			<div class="sidebar-nav-label">Actions</div>
 			<div class="sidebar-actions">
 				<button class="sidebar-btn" onclick="showAddSiteModal()">
 					<span class="btn-icon">🌐</span>
-					Adaugă Site Nou
+					Add New Site
 				</button>
 				<button class="sidebar-btn" onclick="showAddNewSlugModal()">
 					<span class="btn-icon">🔖</span>
-					Adaugă Slug Nou
+					Add New Slug
 				</button>
 				<button class="sidebar-btn" onclick="showAddComponentModal()">
 					<span class="btn-icon">＋</span>
-					Adaugă Componentă
+					Add Component
 				</button>
 			</div>
 
 			<div class="sidebar-footer">
-				<button class="sidebar-refresh-btn" onclick="refreshData()">↺ &nbsp;Reîmprosprătează</button>
+				<button class="sidebar-refresh-btn" onclick="refreshData()">↺ &nbsp;Refresh</button>
 			</div>
 		</aside>
 
@@ -694,13 +694,13 @@
 		<main class="main-content">
 			<div class="topbar">
 				<div class="topbar-breadcrumb">
-					<span class="breadcrumb-item" id="breadcrumbSite">Toate site-urile</span>
+					<span class="breadcrumb-item" id="breadcrumbSite">All sites</span>
 					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>
 					<span class="breadcrumb-item active" id="breadcrumbSlug" style="display:none;"></span>
 				</div>
 				<div id="connectionStatus" class="topbar-status" style="display:none;">
 					<div class="status-dot"></div>
-					Firebase conectat
+					Firebase connected
 				</div>
 			</div>
 
@@ -708,13 +708,13 @@
 
 				<div id="loader" class="loader">
 					<div class="spinner"></div>
-					<p>Se încarcă datele...</p>
+					<p>Loading data...</p>
 				</div>
 
 				<div id="slugMetaBar" class="slug-meta-bar" style="display:none;">
-					<span class="meta-label">Editezi slug-ul:</span>
+					<span class="meta-label">Editing slug:</span>
 					<span class="meta-badge" id="metaBadgeSlug"></span>
-					<span class="meta-label" style="margin-left:2px;">pe site-ul:</span>
+					<span class="meta-label" style="margin-left:2px;">on site:</span>
 					<span class="meta-badge" id="metaBadgeSite"></span>
 					<span class="meta-count" id="metaCount"></span>
 				</div>
@@ -723,8 +723,8 @@
 
 				<div id="emptyState" class="empty-state">
 					<div class="empty-state-icon">📝</div>
-					<h3>Nimic de afișat</h3>
-					<p>Selectează din sidebar un site și un slug pentru a edita conținutul.</p>
+					<h3>Nothing to display</h3>
+					<p>Select a site and a slug from the sidebar to start editing content.</p>
 				</div>
 
 			</div>
@@ -748,7 +748,7 @@
 
 		async function initializeFirebase() {
 			const url = document.getElementById('firebaseUrl').value.trim();
-			if (!url) { showNotification('Te rog introdu URL-ul Firebase', 'error'); return; }
+			if (!url) { showNotification('Please enter the Firebase URL', 'error'); return; }
 
 			firebaseUrl = url.replace(/\/$/, '');
 
@@ -756,13 +756,13 @@
 				const response = await fetch(`${firebaseUrl}/config.json`);
 				if (!response.ok) throw new Error('Connection failed');
 
-				showNotification('Conectat cu succes!', 'success');
+				showNotification('Connected successfully!', 'success');
 				document.getElementById('authOverlay').style.display = 'none';
 				document.getElementById('appLayout').style.display = 'flex';
 				document.getElementById('connectionStatus').style.display = 'flex';
 				loadSites();
 			} catch (error) {
-				showNotification('Eroare la conectare: ' + error.message, 'error');
+				showNotification('Connection error: ' + error.message, 'error');
 			}
 		}
 
@@ -772,7 +772,7 @@
 				const data = await response.json();
 
 				const siteSelect = document.getElementById('siteSelect');
-				siteSelect.innerHTML = '<option value="">Selectează site...</option>';
+				siteSelect.innerHTML = '<option value="">Select site...</option>';
 
 				Object.keys(data || {}).forEach(firebaseKey => {
 					const option = document.createElement('option');
@@ -781,7 +781,7 @@
 					siteSelect.appendChild(option);
 				});
 			} catch (error) {
-				showNotification('Eroare la încărcarea site-urilor', 'error');
+				showNotification('Error loading sites', 'error');
 			}
 		}
 
@@ -807,7 +807,7 @@
 				});
 
 				const slugSelect = document.getElementById('slugSelect');
-				slugSelect.innerHTML = '<option value="">Selectează slug...</option>';
+				slugSelect.innerHTML = '<option value="">Select slug...</option>';
 				Array.from(slugsSet).sort().forEach(slug => {
 					const option = document.createElement('option');
 					option.value = slug;
@@ -820,7 +820,7 @@
 				document.getElementById('contentGrid').innerHTML = '';
 			} catch (error) {
 				showLoader(false);
-				showNotification('Eroare la încărcarea conținutului', 'error');
+				showNotification('Error loading content', 'error');
 			}
 		}
 
@@ -847,7 +847,7 @@
 			document.getElementById('slugMetaBar').style.display = 'flex';
 			document.getElementById('metaBadgeSlug').textContent = slug;
 			document.getElementById('metaBadgeSite').textContent = firebaseKeyToHostname(currentSite);
-			document.getElementById('metaCount').textContent = `${count} component${count !== 1 ? 'e' : 'ă'}`;
+			document.getElementById('metaCount').textContent = `${count} component${count !== 1 ? 's' : ''}`;
 		}
 
 		function getComponentIcon(name) {
@@ -878,8 +878,8 @@
 						<textarea id="content-${component}" rows="4">${content}</textarea>
 					</div>
 					<div class="card-footer">
-						<button class="btn-save-card" onclick="saveContent('${component}')">💾 &nbsp;Salvează</button>
-						<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Șterge</button>
+						<button class="btn-save-card" onclick="saveContent('${component}')">💾 &nbsp;Save</button>
+						<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Delete</button>
 					</div>
 				`;
 				grid.appendChild(item);
@@ -894,49 +894,49 @@
 					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
 				);
 				if (response.ok) {
-					showNotification('Salvat cu succes!', 'success');
+					showNotification('Saved successfully!', 'success');
 					contentData[component][currentSlug] = content;
 				} else throw new Error('Save failed');
 			} catch (error) {
-				showNotification('Eroare la salvare', 'error');
+				showNotification('Error saving content', 'error');
 			}
 		}
 
 		async function deleteComponent(component) {
-			if (!confirm(`Sigur vrei să ștergi slug-ul "${currentSlug}" din componenta "${component}"?`)) return;
+			if (!confirm(`Are you sure you want to delete slug "${currentSlug}" from component "${component}"?`)) return;
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 					{ method: 'DELETE' }
 				);
 				if (response.ok) {
-					showNotification('Șters cu succes!', 'success');
+					showNotification('Deleted successfully!', 'success');
 					delete contentData[component][currentSlug];
 					loadSlugContent();
 				} else throw new Error('Delete failed');
 			} catch (error) {
-				showNotification('Eroare la ștergere', 'error');
+				showNotification('Error deleting content', 'error');
 			}
 		}
 
 		function showAddComponentModal() {
-			if (!currentSlug) { showNotification('Selectează mai întâi un slug', 'error'); return; }
-			const component = prompt('Introdu numele componentei (ex: title-interactive):');
+			if (!currentSlug) { showNotification('Please select a slug first', 'error'); return; }
+			const component = prompt('Enter the component name (e.g. title-interactive):');
 			if (!component) return;
-			const content = prompt('Introdu conținutul pentru acest slug și componentă:');
+			const content = prompt('Enter the content for this slug and component:');
 			if (content === null) return;
 			addNewComponent(component, content);
 		}
 
 		function showAddNewSlugModal() {
-			if (!currentSite) { showNotification('Selectează mai întâi un site', 'error'); return; }
-			const slugName = prompt('Introdu numele slug-ului nou (ex: produs-1, reactive-site, book):');
+			if (!currentSite) { showNotification('Please select a site first', 'error'); return; }
+			const slugName = prompt('Enter the new slug name (e.g. product-1, reactive-site, book):');
 			if (!slugName) return;
 			const sanitizedSlug = slugName.toLowerCase()
 				.replace(/[^a-z0-9-]/g, '-')
 				.replace(/-+/g, '-')
 				.replace(/^-|-$/g, '');
-			if (!sanitizedSlug) { showNotification('Numele slug-ului este invalid!', 'error'); return; }
+			if (!sanitizedSlug) { showNotification('Invalid slug name!', 'error'); return; }
 			addNewSlug(sanitizedSlug);
 		}
 
@@ -944,14 +944,14 @@
 			try {
 				showLoader(true);
 				const defaultComponents = {
-					'main-title': `Titlu pentru ${slugName}`,
+					'main-title': `Title for ${slugName}`,
 					'vsl-video': 'https://player.vimeo.com/video/YOUR_VIDEO_ID'
 				};
 				await Promise.all(Object.keys(defaultComponents).map(component =>
 					fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${slugName}.json`,
 						{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(defaultComponents[component]) })
 				));
-				showNotification(`Slug "${slugName}" adăugat cu succes!`, 'success');
+				showNotification(`Slug "${slugName}" added successfully!`, 'success');
 				showLoader(false);
 				await loadSiteContent();
 				document.getElementById('slugSelect').value = slugName;
@@ -959,7 +959,7 @@
 				loadSlugContent();
 			} catch (error) {
 				showLoader(false);
-				showNotification('Eroare la adăugarea slug-ului: ' + error.message, 'error');
+				showNotification('Error adding slug: ' + error.message, 'error');
 			}
 		}
 
@@ -970,20 +970,20 @@
 					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
 				);
 				if (response.ok) {
-					showNotification('Componentă adăugată cu succes!', 'success');
+					showNotification('Component added successfully!', 'success');
 					if (!contentData[component]) contentData[component] = {};
 					contentData[component][currentSlug] = content;
 					loadSlugContent();
 				} else throw new Error('Add failed');
 			} catch (error) {
-				showNotification('Eroare la adăugare', 'error');
+				showNotification('Error adding component', 'error');
 			}
 		}
 
 		function showAddSiteModal() {
-			const hostname = prompt('Introdu hostname-ul site-ului (ex: advertorials645.lpages.co):');
+			const hostname = prompt('Enter the site hostname (e.g. advertorials645.lpages.co):');
 			if (!hostname) return;
-			if (!hostname.includes('.')) { showNotification('Hostname invalid! Trebuie să conțină un domeniu valid', 'error'); return; }
+			if (!hostname.includes('.')) { showNotification('Invalid hostname! Must contain a valid domain', 'error'); return; }
 			addNewSite(hostname);
 		}
 
@@ -992,7 +992,7 @@
 			try {
 				showLoader(true);
 				const minimalStructure = {
-					"main-title": { "default": "Titlu Generic - Editează din Admin Panel" },
+					"main-title": { "default": "Generic Title – Edit from Admin Panel" },
 					"vsl-video":  { "default": "https://player.vimeo.com/video/YOUR_VIDEO_ID" }
 				};
 				const response = await fetch(
@@ -1000,7 +1000,7 @@
 					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(minimalStructure) }
 				);
 				if (response.ok) {
-					showNotification(`Site "${hostname}" adăugat cu succes!`, 'success');
+					showNotification(`Site "${hostname}" added successfully!`, 'success');
 					showLoader(false);
 					await loadSites();
 					document.getElementById('siteSelect').value = firebaseKey;
@@ -1008,7 +1008,7 @@
 				} else throw new Error('Add site failed');
 			} catch (error) {
 				showLoader(false);
-				showNotification('Eroare la adăugarea site-ului: ' + error.message, 'error');
+				showNotification('Error adding site: ' + error.message, 'error');
 			}
 		}
 
