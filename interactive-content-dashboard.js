@@ -198,7 +198,7 @@
 					// It's HTML
 					element.innerHTML = content;
 				} else {
-					// It's plain text
+					// It's plain text - wrap in h2 for main-title component
 					if (componentId === 'main-title') {
 						element.innerHTML = `<h2>${content}</h2>`;
 					} else {
