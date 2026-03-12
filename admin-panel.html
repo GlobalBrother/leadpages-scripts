@@ -1129,8 +1129,8 @@
 			Object.keys(componentsData).sort().forEach(component => {
 				const content = componentsData[component];
 				
-				// Special handling for bullets-interactive component
-				if (component === 'bullets-interactive') {
+				// Special handling for bullets-type components
+				if (isBulletsComponent(component)) {
 					renderBulletsEditor(component, content);
 					return;
 				}
@@ -1157,23 +1157,44 @@
 			});
 		}
 
-		// Render special editor for bullets-interactive
+		// --- BULLETS EDITOR HELPERS ---
+
+		// Detect if a component name is a bullets-type component
+		function isBulletsComponent(name) {
+			return name.toLowerCase().includes('bullets');
+		}
+
+		// Parse existing HTML stored in Firebase → extract header + bullets array
+		function parseBulletsHtml(html) {
+			const tmp = document.createElement('div');
+			tmp.innerHTML = html;
+			const headerEl = tmp.querySelector('.amish-header');
+			const bulletEls = tmp.querySelectorAll('.amish-bullet');
+			return {
+				header: headerEl ? headerEl.textContent.trim() : '',
+				bullets: Array.from(bulletEls).map(el => el.textContent.trim())
+			};
+		}
+
+		// Build HTML string from header + bullets array (preserves full structure)
+		function buildBulletsHtml(header, bullets) {
+			const bulletsHtml = bullets.map(b => `\t\t<div class="amish-bullet">${b}</div>`).join('\n');
+			return `<div class="amish-container">\n\t<div class="amish-header">${header}</div>\n\t<div id="amish-bullets">\n${bulletsHtml}\n\t</div>\n</div>`;
+		}
+
+		// Render the visual bullets editor card (used when editing existing component)
 		function renderBulletsEditor(component, content) {
-			let data;
-			try {
-				data = typeof content === 'string' ? JSON.parse(content) : content;
-			} catch (e) {
-				data = { header: 'You will soon learn:', bullets: [] };
-			}
+			const data = parseBulletsHtml(content);
 
 			const grid = document.getElementById('contentGrid');
 			const item = document.createElement('div');
 			item.className = 'content-card bullets-editor-card';
+			item.setAttribute('data-component', component);
 			item.innerHTML = `
 				<div class="card-header">
 					<div class="card-component-name">
 						<div class="component-icon">📋</div>
-						<span class="component-label">Bullets Interactive</span>
+						<span class="component-label">${component}</span>
 					</div>
 					<span class="component-slug-badge">${currentSlug}</span>
 				</div>
@@ -1182,8 +1203,8 @@
 						<label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px;">
 							📝 Header Text
 						</label>
-						<input type="text" id="bullets-header-input" 
-							value="${data.header || ''}" 
+						<input type="text" id="bullets-header-input-${component}"
+							value="${data.header}"
 							placeholder="e.g. You will soon learn:"
 							style="width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit;">
 					</div>
@@ -1191,62 +1212,37 @@
 						<label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px;">
 							📌 Bullet Points
 						</label>
-						<div id="bullets-list"></div>
-						<button onclick="addBulletRow()" 
+						<div id="bullets-list-${component}"></div>
+						<button onclick="addBulletRow('${component}')"
 							style="width: 100%; padding: 9px; margin-top: 8px; background: #f3f4f6; border: 1.5px dashed #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;">
 							➕ Add Bullet Point
 						</button>
 					</div>
 				</div>
 				<div class="card-footer">
-					<button class="btn-save-card" onclick="saveBulletsContent()">💾 &nbsp;Save Bullets</button>
-					<button class="btn-delete-card" onclick="deleteComponent('bullets-interactive')">🗑 Delete</button>
+					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">💾 &nbsp;Save Bullets</button>
+					<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Delete</button>
 				</div>
 			`;
 			grid.appendChild(item);
 
-			// Populate bullets
-			renderBulletsList(data.bullets || []);
+			// Populate bullet rows
+			const container = document.getElementById(`bullets-list-${component}`);
+			data.bullets.forEach(bullet => addBulletRow(component, bullet));
 		}
 
-		function renderBulletsList(bullets) {
-			const container = document.getElementById('bullets-list');
-			container.innerHTML = '';
-
-			bullets.forEach((bullet, index) => {
-				const row = document.createElement('div');
-				row.className = 'bullet-row';
-				row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
-				row.innerHTML = `
-					<input type="text" 
-						class="bullet-input" 
-						data-index="${index}"
-						value="${bullet}" 
-						placeholder="Enter bullet point..."
-						style="flex: 1; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit;">
-					<button onclick="removeBulletRow(${index})" 
-						style="padding: 9px 12px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #dc2626; cursor: pointer; font-size: 13px; font-weight: 600;">
-						🗑
-					</button>
-				`;
-				container.appendChild(row);
-			});
-		}
-
-		function addBulletRow() {
-			const container = document.getElementById('bullets-list');
-			const index = container.children.length;
+		function addBulletRow(component, value = '') {
+			const container = document.getElementById(`bullets-list-${component}`);
 			const row = document.createElement('div');
 			row.className = 'bullet-row';
 			row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
 			row.innerHTML = `
-				<input type="text" 
-					class="bullet-input" 
-					data-index="${index}"
-					value="" 
+				<input type="text"
+					class="bullet-input"
+					value="${value.replace(/"/g, '&quot;')}"
 					placeholder="Enter bullet point..."
 					style="flex: 1; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit;">
-				<button onclick="removeBulletRow(${index})" 
+				<button onclick="this.closest('.bullet-row').remove()"
 					style="padding: 9px 12px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #dc2626; cursor: pointer; font-size: 13px; font-weight: 600;">
 					🗑
 				</button>
@@ -1254,32 +1250,28 @@
 			container.appendChild(row);
 		}
 
-		function removeBulletRow(index) {
-			const container = document.getElementById('bullets-list');
-			const rows = container.querySelectorAll('.bullet-row');
-			if (rows[index]) {
-				rows[index].remove();
-			}
-		}
+		async function saveBulletsContent(component) {
+			const header = document.getElementById(`bullets-header-input-${component}`).value.trim();
+			if (!header) { showNotification('Please enter a header text', 'error'); return; }
 
-		async function saveBulletsContent() {
-			const header = document.getElementById('bullets-header-input').value;
-			const bulletInputs = document.querySelectorAll('.bullet-input');
-			const bullets = Array.from(bulletInputs)
-				.map(input => input.value.trim())
-				.filter(value => value !== '');
+			const container = document.getElementById(`bullets-list-${component}`);
+			const bullets = Array.from(container.querySelectorAll('.bullet-input'))
+				.map(i => i.value.trim())
+				.filter(v => v !== '');
 
-			const data = { header, bullets };
-			const jsonString = JSON.stringify(data);
+			if (bullets.length === 0) { showNotification('Please add at least one bullet point', 'error'); return; }
+
+			const htmlContent = buildBulletsHtml(header, bullets);
 
 			try {
 				const response = await fetch(
-					`${firebaseUrl}/dynamic_content/${currentSite}/bullets-interactive/${currentSlug}.json`,
-					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(jsonString) }
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(htmlContent) }
 				);
 				if (response.ok) {
 					showNotification('Bullets saved successfully!', 'success');
-					contentData['bullets-interactive'][currentSlug] = jsonString;
+					if (!contentData[component]) contentData[component] = {};
+					contentData[component][currentSlug] = htmlContent;
 				} else throw new Error('Save failed');
 			} catch (error) {
 				showNotification('Error saving bullets', 'error');
@@ -1390,9 +1382,9 @@
 
 			if (bullets.length === 0) { showNotification('Please add at least one bullet point', 'error'); return; }
 
-			const jsonString = JSON.stringify({ header, bullets });
+			const htmlContent = buildBulletsHtml(header, bullets);
 			closeAddComponentModal();
-			await addNewComponent(name, jsonString);
+			await addNewComponent(name, htmlContent);
 		}
 
 		function showAddNewSlugModal() {

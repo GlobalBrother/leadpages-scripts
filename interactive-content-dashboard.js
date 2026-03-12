@@ -203,12 +203,6 @@
 			if (element && componentData[slug]) {
 				const content = componentData[slug];
 
-				// Special handling for bullets-interactive component
-				if (componentId === 'bullets-interactive') {
-					handleBulletsComponent(content);
-					return;
-				}
-
 				// Detect content type and apply
 				if (content.startsWith('http://') || content.startsWith('https://')) {
 					// It's a URL - probably for iframe/img/video
@@ -219,17 +213,22 @@
 					} else if (element.tagName === 'A') {
 						element.href = content;
 					} else if (element.tagName === 'DIV') {
-						// Look for nested iframe (e.g. Wistia/Vimeo responsive wrapper)
 						const nestedIframe = element.querySelector('iframe');
 						if (nestedIframe) {
 							nestedIframe.src = content;
 						}
 					}
 				} else if (content.startsWith('<')) {
-					// It's HTML
+					// It's HTML - inject directly
 					element.innerHTML = content;
+
+					// If it contains bullets, start the animation
+					const bullets = element.querySelectorAll('.amish-bullet');
+					if (bullets.length > 0) {
+						startBulletsAnimation(bullets);
+					}
 				} else {
-					// It's plain text - convert newlines to <br> for line breaks
+					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');
 					if (componentId === 'main-title') {
 						element.innerHTML = `<h2>${contentWithBreaks}</h2>`;
@@ -241,48 +240,14 @@
 		});
 	}
 
-	// Handle bullets-interactive component with JSON structure
-	function handleBulletsComponent(content) {
-		try {
-			const data = typeof content === 'string' ? JSON.parse(content) : content;
-			
-			// Update header
-			const headerEl = document.getElementById('bullets-header');
-			if (headerEl && data.header) {
-				headerEl.textContent = data.header;
-			}
-
-			// Update bullets
-			const container = document.getElementById('amish-bullets-container');
-			if (container && data.bullets && Array.isArray(data.bullets)) {
-				container.innerHTML = '';
-				data.bullets.forEach(function(bulletText) {
-					const bulletDiv = document.createElement('div');
-					bulletDiv.className = 'amish-bullet';
-					bulletDiv.textContent = bulletText;
-					container.appendChild(bulletDiv);
-				});
-
-				// Start animation for bullets
-				startBulletsAnimation();
-			}
-		} catch (e) {
-			console.error('Error parsing bullets data:', e);
-		}
-	}
-
-	// Animation for bullets
-	function startBulletsAnimation() {
-		const bullets = document.querySelectorAll('#amish-bullets-container .amish-bullet');
-		if (bullets.length === 0) return;
-
+	// Animation for bullets - works on any NodeList of .amish-bullet elements
+	function startBulletsAnimation(bullets) {
+		if (!bullets || bullets.length === 0) return;
 		let current = 0;
 
 		function updateBullets() {
 			bullets.forEach(function(b) { b.classList.remove('bolded'); });
-			if (bullets[current]) {
-				bullets[current].classList.add('bolded');
-			}
+			if (bullets[current]) bullets[current].classList.add('bolded');
 			current = (current + 1) % bullets.length;
 		}
 
