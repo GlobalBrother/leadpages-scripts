@@ -1507,10 +1507,21 @@ e.g.
 		}
 
 		function modalStep1Next() {
-			const name = document.getElementById('modalComponentName').value.trim();
-			if (!name) { showNotification('Please enter a component name', 'error'); return; }
+			const raw = document.getElementById('modalComponentName').value.trim();
+			if (!raw) { showNotification('Please enter a component name', 'error'); return; }
 
-			const isBullets = name.toLowerCase() === 'changing-bullets';
+			// Sanitize: lowercase, spaces/special chars → hyphens
+			const name = raw.toLowerCase()
+				.replace(/[^a-z0-9-_]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+
+			if (!name) { showNotification('Invalid component name', 'error'); return; }
+
+			// Update the input to show the sanitized value
+			document.getElementById('modalComponentName').value = name;
+
+			const isBullets = name === 'changing-bullets';
 
 			document.getElementById('modalStep1').style.display = 'none';
 
