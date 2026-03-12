@@ -6,6 +6,23 @@
 	var hasRun = false;
 	var _icdSafetyTimeout = null;
 
+	// Inject styles for dynamic components
+	const _icdStyles = document.createElement('style');
+	_icdStyles.textContent = `
+		#main-title h2 {
+			font-family: "Noto Serif", sans-serif;
+			font-size: 3rem;
+			line-height: 1.2;
+			margin: 0;
+		}
+		@media (max-width: 767px) {
+			#main-title h2 {
+				font-size: 1.7rem;
+			}
+		}
+	`;
+	(document.head || document.documentElement).appendChild(_icdStyles);
+
 	function revealComponents(componentIds) {
 		componentIds.forEach(function(id) {
 			var el = document.getElementById(id);
