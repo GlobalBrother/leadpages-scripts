@@ -101,7 +101,10 @@
 
 			// Detect slug now that we know all configured slugs (URL contains match)
 			const slug = getSlug(allSlugs);
-
+		console.log('[ICD] Site detectat:', currentSite);
+		console.log('[ICD] Slug-uri din Firebase:', allSlugs);
+		console.log('[ICD] Slug detectat:', slug);
+		console.log('[ICD] Continut Firebase:', JSON.stringify(siteContent));
 			// Apply content-based display logic
 			applyContentDisplay(contentPrefixes, allSlugs, slug);
 
