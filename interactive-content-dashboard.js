@@ -4,13 +4,14 @@
 
 (function() {
 	var hasRun = false;
+	var _icdSafetyTimeout = null;
 
-	// Safety timeout: show all [data-icd] elements after 3s even if Firebase fails
-	const _icdSafetyTimeout = setTimeout(function() {
-		document.querySelectorAll('[data-icd]').forEach(function(el) {
-			el.style.setProperty('display', 'block', 'important');
+	function revealComponents(componentIds) {
+		componentIds.forEach(function(id) {
+			var el = document.getElementById(id);
+			if (el) el.style.setProperty('display', 'block', 'important');
 		});
-	}, 3000);
+	}
 
 	// Firebase Configuration
 	const FIREBASE_CONFIG = {
@@ -93,6 +94,10 @@
 
 			// Get all configured slugs for this site
 			const allSlugs = getConfiguredSlugs(siteContent);
+			const componentIds = Object.keys(siteContent);
+
+			// Safety timeout: show components after 3s even if something fails later
+			_icdSafetyTimeout = setTimeout(function() { revealComponents(componentIds); }, 3000);
 
 			// Detect slug now that we know all configured slugs (URL contains match)
 			const slug = getSlug(allSlugs);
@@ -105,19 +110,12 @@
 			// Update actual content from Firebase
 			updateContentFromData(siteContent, slug);
 
-			// Show all [data-icd] elements after content is applied
+			// Show all component elements after content is applied
 			clearTimeout(_icdSafetyTimeout);
-			document.querySelectorAll('[data-icd]').forEach(function(el) {
-				el.style.setProperty('display', 'block', 'important');
-			});
+			revealComponents(componentIds);
 
 		} catch (error) {
 			console.error('Error loading Firebase content:', error);
-			// Show elements even if Firebase fails
-			clearTimeout(_icdSafetyTimeout);
-			document.querySelectorAll('[data-icd]').forEach(function(el) {
-				el.style.setProperty('display', 'block', 'important');
-			});
 		}
 	}
 
