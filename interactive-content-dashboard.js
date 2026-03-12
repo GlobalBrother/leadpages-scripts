@@ -22,14 +22,36 @@
 	// Detect slug from URL
 	function getSlug() {
 		const url = window.location.href.toLowerCase();
+		const pathname = window.location.pathname.toLowerCase();
 
-		// Check for known slugs
+		// Method 1: Check for explicit slug parameter in URL (?slug=X or &slug=X)
+		const urlParams = new URLSearchParams(window.location.search);
+		const explicitSlug = urlParams.get('slug');
+		if (explicitSlug) {
+			return explicitSlug;
+		}
+
+		// Method 2: Auto-detect from pathname (first path segment)
+		// Example: /reactive-site-admin-panel/ → reactive-site-admin-panel
+		// Example: /book/ → book
+		const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
+		if (pathSegments.length > 0) {
+			// Return first path segment as slug, sanitized
+			const detectedSlug = pathSegments[0]
+				.replace(/[^a-z0-9-]/g, '-') // Replace invalid chars with dash
+				.replace(/-+/g, '-') // Replace multiple dashes with single dash
+				.replace(/^-|-$/g, ''); // Remove leading/trailing dashes
+			
+			if (detectedSlug) {
+				return detectedSlug;
+			}
+		}
+
+		// Method 3: Fallback - check for hardcoded slugs (backward compatibility)
 		if (url.includes('amish-fire-cider')) return 'amish-fire-cider';
 		if (url.includes('herbal-parasite-flush')) return 'herbal-parasite-flush';
 
-		// Add more slug detection here as needed
-		// if (url.includes('other-product')) return 'other-product';
-
+		// Method 4: Default fallback
 		return 'default';
 	}
 
