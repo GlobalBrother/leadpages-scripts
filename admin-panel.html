@@ -4,401 +4,732 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Content Manager - Admin Panel</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 	<style>
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
+		:root {
+			--sidebar-bg: #1a1d24;
+			--gold: #c9a227;
+			--gold-dark: #b8860b;
+			--gold-light: #e0b83a;
+			--surface: #ffffff;
+			--page-bg: #f0f2f5;
+			--border: #e5e7eb;
+			--text-primary: #111827;
+			--text-secondary: #6b7280;
+			--text-muted: #9ca3af;
+			--danger: #dc2626;
 		}
+
+		* { margin: 0; padding: 0; box-sizing: border-box; }
 
 		body {
-			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-			background: linear-gradient(135deg, #3a3e4a 0%, #1e2128 100%);
+			font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+			background: var(--page-bg);
 			min-height: 100vh;
-			padding: 20px;
+			color: var(--text-primary);
 		}
 
-		.container {
-			max-width: 1400px;
-			margin: 0 auto;
-			background: white;
-			border-radius: 16px;
-			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-			overflow: hidden;
-		}
-
-		.header {
-			background: linear-gradient(135deg, #2e3240 0%, #1a1d24 100%);
-			color: white;
-			padding: 30px;
-			text-align: center;
-			border-bottom: 3px solid #c9a227;
-		}
-
-		.header h1 {
-			font-size: 32px;
-			margin-bottom: 10px;
-		}
-
-		.header p {
-			opacity: 0.9;
-			font-size: 14px;
-		}
-
-		.controls {
-			padding: 30px;
-			background: #f7f9fc;
-			border-bottom: 2px solid #e1e8ed;
+		/* AUTH OVERLAY */
+		.auth-overlay {
+			position: fixed;
+			inset: 0;
+			background: linear-gradient(135deg, #1a1d24 0%, #2e3240 100%);
 			display: flex;
-			gap: 20px;
-			flex-wrap: wrap;
 			align-items: center;
+			justify-content: center;
+			z-index: 100;
 		}
 
-		.control-group {
+		.auth-card {
+			background: white;
+			border-radius: 20px;
+			padding: 48px 40px;
+			width: 100%;
+			max-width: 460px;
+			box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+			text-align: center;
+		}
+
+		.auth-icon {
+			width: 68px;
+			height: 68px;
+			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			border-radius: 16px;
 			display: flex;
-			flex-direction: column;
-			gap: 8px;
-			flex: 1;
-			min-width: 200px;
+			align-items: center;
+			justify-content: center;
+			font-size: 30px;
+			margin: 0 auto 24px;
 		}
 
-		.control-group label {
-			font-weight: 600;
-			font-size: 13px;
-			color: #536471;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
+		.auth-card h2 {
+			font-size: 26px;
+			font-weight: 700;
+			color: var(--text-primary);
+			margin-bottom: 8px;
 		}
 
-		select, input, textarea {
-			padding: 12px 16px;
-			border: 2px solid #e1e8ed;
-			border-radius: 8px;
-			font-size: 15px;
+		.auth-card p {
+			color: var(--text-secondary);
+			font-size: 14px;
+			margin-bottom: 32px;
+			line-height: 1.6;
+		}
+
+		.auth-card input {
+			width: 100%;
+			padding: 14px 16px;
+			border: 2px solid var(--border);
+			border-radius: 10px;
+			font-size: 14px;
 			font-family: inherit;
-			transition: all 0.2s;
+			margin-bottom: 16px;
+			transition: border-color 0.2s, box-shadow 0.2s;
+			color: var(--text-primary);
 		}
 
-		select:focus, input:focus, textarea:focus {
+		.auth-card input:focus {
 			outline: none;
-			border-color: #c9a227;
+			border-color: var(--gold);
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.12);
 		}
 
-		.btn {
-			padding: 12px 24px;
+		.btn-connect {
+			width: 100%;
+			padding: 14px;
+			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			color: #1a1d24;
 			border: none;
-			border-radius: 8px;
+			border-radius: 10px;
 			font-size: 15px;
-			font-weight: 600;
+			font-weight: 700;
+			font-family: inherit;
 			cursor: pointer;
 			transition: all 0.2s;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
 		}
 
-		.btn-primary {
-			background: linear-gradient(135deg, #d4a827 0%, #b8860b 100%);
-			color: #1a1d24;
+		.btn-connect:hover {
+			background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
+			transform: translateY(-1px);
+			box-shadow: 0 6px 20px rgba(201, 162, 39, 0.4);
 		}
 
-		.btn-primary:hover {
-			background: linear-gradient(135deg, #e0b83a 0%, #c9920d 100%);
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(201, 162, 39, 0.45);
-		}
-
-		.btn-success {
-			background: linear-gradient(135deg, #3a3e4a 0%, #2e3240 100%);
-			color: #c9a227;
-			border: 2px solid #c9a227;
-		}
-
-		.btn-success:hover {
-			background: linear-gradient(135deg, #4a4f5e 0%, #3a3e4a 100%);
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(201, 162, 39, 0.3);
-		}
-
-		.btn-add {
-			background: linear-gradient(135deg, #d4a827 0%, #b8860b 100%);
-			color: #1a1d24;
-			align-self: flex-end;
-		}
-
-		.btn-add:hover {
-			background: linear-gradient(135deg, #e0b83a 0%, #c9920d 100%);
-			transform: translateY(-2px);
-			box-shadow: 0 4px 12px rgba(201, 162, 39, 0.45);
-		}
-
-		.content-area {
-			padding: 30px;
-		}
-
-		.content-grid {
-			display: grid;
-			gap: 20px;
-		}
-
-		.content-item {
-			background: #f7f9fc;
-			border: 2px solid #e1e8ed;
-			border-radius: 12px;
-			padding: 20px;
-			transition: all 0.2s;
-		}
-
-		.content-item:hover {
-			border-color: #c9a227;
-			box-shadow: 0 4px 12px rgba(201, 162, 39, 0.15);
-		}
-
-		.content-item-header {
+		/* APP LAYOUT */
+		.app-layout {
 			display: flex;
-			justify-content: space-between;
-			align-items: center;
-			margin-bottom: 16px;
-			padding-bottom: 12px;
-			border-bottom: 2px solid #e1e8ed;
+			min-height: 100vh;
 		}
 
-		.content-item-title {
-			font-weight: 700;
-			font-size: 16px;
-			color: #0f1419;
-		}
-
-		.content-item-slug {
-			background: linear-gradient(135deg, #d4a827 0%, #b8860b 100%);
-			color: #1a1d24;
-			padding: 4px 12px;
-			border-radius: 20px;
-			font-size: 12px;
-			font-weight: 700;
-		}
-
-		.content-item-body {
+		/* SIDEBAR */
+		.sidebar {
+			width: 260px;
+			min-height: 100vh;
+			background: var(--sidebar-bg);
 			display: flex;
 			flex-direction: column;
+			flex-shrink: 0;
+			position: fixed;
+			top: 0;
+			left: 0;
+			bottom: 0;
+			z-index: 50;
+		}
+
+		.sidebar-brand {
+			padding: 22px 18px 18px;
+			border-bottom: 1px solid rgba(255,255,255,0.06);
+		}
+
+		.brand-logo {
+			display: flex;
+			align-items: center;
 			gap: 12px;
 		}
 
-		.content-item-body label {
-			font-weight: 600;
-			font-size: 13px;
-			color: #536471;
-		}
-
-		.content-item-body textarea {
-			min-height: 100px;
-			resize: vertical;
-		}
-
-		.content-item-actions {
+		.brand-icon {
+			width: 38px;
+			height: 38px;
+			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			border-radius: 10px;
 			display: flex;
-			gap: 10px;
-			margin-top: 16px;
+			align-items: center;
+			justify-content: center;
+			font-size: 17px;
+			flex-shrink: 0;
 		}
 
-		.btn-save {
-			flex: 1;
-			background: linear-gradient(135deg, #d4a827 0%, #b8860b 100%);
-			color: #1a1d24;
-			padding: 10px;
-			border: none;
-			border-radius: 8px;
+		.brand-text h1 {
+			font-size: 13px;
 			font-weight: 700;
+			color: white;
+			line-height: 1.2;
+		}
+
+		.brand-text span {
+			font-size: 11px;
+			color: rgba(255,255,255,0.35);
+			font-weight: 500;
+		}
+
+		.sidebar-section {
+			padding: 0 16px;
+			margin-top: 20px;
+		}
+
+		.sidebar-section-label {
+			font-size: 10px;
+			font-weight: 700;
+			color: rgba(255,255,255,0.3);
+			text-transform: uppercase;
+			letter-spacing: 1.2px;
+			margin-bottom: 7px;
+		}
+
+		.sidebar-select {
+			width: 100%;
+			padding: 9px 12px;
+			background: rgba(255,255,255,0.06);
+			border: 1px solid rgba(255,255,255,0.1);
+			border-radius: 8px;
+			color: white;
+			font-size: 13px;
+			font-family: inherit;
 			cursor: pointer;
 			transition: all 0.2s;
 		}
 
-		.btn-save:hover {
-			background: linear-gradient(135deg, #e0b83a 0%, #c9920d 100%);
-			transform: translateY(-1px);
-			box-shadow: 0 4px 10px rgba(201, 162, 39, 0.4);
+		.sidebar-select:focus {
+			outline: none;
+			border-color: var(--gold);
+			background: rgba(201, 162, 39, 0.08);
 		}
 
-		.btn-delete {
-			background: #c0392b;
+		.sidebar-select option {
+			background: #2e3240;
 			color: white;
-			padding: 10px 20px;
+		}
+
+		.sidebar-divider {
+			height: 1px;
+			background: rgba(255,255,255,0.06);
+			margin: 18px 16px;
+		}
+
+		.sidebar-nav-label {
+			padding: 0 18px;
+			font-size: 10px;
+			font-weight: 700;
+			color: rgba(255,255,255,0.3);
+			text-transform: uppercase;
+			letter-spacing: 1.2px;
+			margin-bottom: 6px;
+		}
+
+		.sidebar-actions {
+			padding: 0 10px;
+			display: flex;
+			flex-direction: column;
+			gap: 2px;
+		}
+
+		.sidebar-btn {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			padding: 9px 10px;
+			border-radius: 8px;
+			border: none;
+			background: transparent;
+			color: rgba(255,255,255,0.6);
+			font-size: 13px;
+			font-weight: 500;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.15s;
+			text-align: left;
+			width: 100%;
+		}
+
+		.sidebar-btn:hover {
+			background: rgba(201, 162, 39, 0.1);
+			color: var(--gold);
+		}
+
+		.btn-icon {
+			width: 30px;
+			height: 30px;
+			background: rgba(255,255,255,0.05);
+			border-radius: 7px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 14px;
+			flex-shrink: 0;
+		}
+
+		.sidebar-btn:hover .btn-icon {
+			background: rgba(201, 162, 39, 0.15);
+		}
+
+		.sidebar-footer {
+			margin-top: auto;
+			padding: 14px 10px;
+			border-top: 1px solid rgba(255,255,255,0.06);
+		}
+
+		.sidebar-refresh-btn {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 8px;
+			padding: 10px;
+			width: 100%;
+			border-radius: 8px;
+			border: 1px solid rgba(201, 162, 39, 0.25);
+			background: transparent;
+			color: rgba(201, 162, 39, 0.8);
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.15s;
+		}
+
+		.sidebar-refresh-btn:hover {
+			background: rgba(201, 162, 39, 0.08);
+			border-color: var(--gold);
+			color: var(--gold);
+		}
+
+		/* MAIN CONTENT */
+		.main-content {
+			margin-left: 260px;
+			flex: 1;
+			display: flex;
+			flex-direction: column;
+			min-height: 100vh;
+		}
+
+		.topbar {
+			background: white;
+			border-bottom: 1px solid var(--border);
+			padding: 13px 28px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			position: sticky;
+			top: 0;
+			z-index: 40;
+		}
+
+		.topbar-breadcrumb {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 13px;
+		}
+
+		.breadcrumb-item {
+			color: var(--text-muted);
+			font-weight: 500;
+		}
+
+		.breadcrumb-item.active {
+			color: var(--text-primary);
+			font-weight: 600;
+		}
+
+		.breadcrumb-sep {
+			color: var(--text-muted);
+		}
+
+		.topbar-status {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			background: #f0fdf4;
+			border: 1px solid #bbf7d0;
+			border-radius: 20px;
+			padding: 5px 12px;
+			font-size: 12px;
+			font-weight: 600;
+			color: #16a34a;
+		}
+
+		.status-dot {
+			width: 7px;
+			height: 7px;
+			background: #22c55e;
+			border-radius: 50%;
+			animation: pulse 2s ease-in-out infinite;
+		}
+
+		@keyframes pulse {
+			0%, 100% { opacity: 1; }
+			50% { opacity: 0.4; }
+		}
+
+		.page-body {
+			padding: 26px 28px;
+			flex: 1;
+		}
+
+		.slug-meta-bar {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-bottom: 20px;
+			padding: 10px 16px;
+			background: white;
+			border: 1px solid var(--border);
+			border-radius: 10px;
+			font-size: 13px;
+		}
+
+		.meta-label { color: var(--text-muted); font-weight: 500; }
+
+		.meta-badge {
+			background: rgba(201, 162, 39, 0.1);
+			border: 1px solid rgba(201, 162, 39, 0.25);
+			color: var(--gold-dark);
+			font-weight: 700;
+			padding: 2px 10px;
+			border-radius: 20px;
+			font-size: 12px;
+		}
+
+		.meta-count {
+			margin-left: auto;
+			font-size: 12px;
+			color: var(--text-muted);
+		}
+
+		/* CONTENT GRID */
+		.content-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+			gap: 16px;
+		}
+
+		.content-card {
+			background: white;
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			overflow: hidden;
+			transition: box-shadow 0.2s, border-color 0.2s;
+		}
+
+		.content-card:hover {
+			border-color: rgba(201, 162, 39, 0.5);
+			box-shadow: 0 4px 20px rgba(201, 162, 39, 0.1);
+		}
+
+		.card-header {
+			padding: 13px 18px;
+			background: #fafafa;
+			border-bottom: 1px solid var(--border);
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.card-component-name {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+		}
+
+		.component-icon {
+			width: 30px;
+			height: 30px;
+			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			border-radius: 7px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 13px;
+		}
+
+		.component-label {
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--text-primary);
+		}
+
+		.component-slug-badge {
+			font-size: 11px;
+			font-weight: 700;
+			color: var(--gold-dark);
+			background: rgba(201, 162, 39, 0.08);
+			border: 1px solid rgba(201, 162, 39, 0.2);
+			padding: 3px 10px;
+			border-radius: 20px;
+		}
+
+		.card-body { padding: 16px 18px; }
+
+		.card-body textarea {
+			width: 100%;
+			padding: 11px 13px;
+			border: 1.5px solid var(--border);
+			border-radius: 8px;
+			font-size: 13px;
+			font-family: 'Inter', monospace;
+			resize: vertical;
+			min-height: 88px;
+			color: var(--text-primary);
+			background: #fafafa;
+			transition: all 0.2s;
+			line-height: 1.6;
+		}
+
+		.card-body textarea:focus {
+			outline: none;
+			border-color: var(--gold);
+			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+			background: white;
+		}
+
+		.card-footer {
+			padding: 11px 18px;
+			border-top: 1px solid var(--border);
+			display: flex;
+			gap: 8px;
+		}
+
+		.btn-save-card {
+			flex: 1;
+			padding: 9px 16px;
+			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			color: #1a1d24;
 			border: none;
 			border-radius: 8px;
-			font-weight: 600;
+			font-size: 13px;
+			font-weight: 700;
+			font-family: inherit;
 			cursor: pointer;
 			transition: all 0.2s;
 		}
 
-		.btn-delete:hover {
-			background: #a93226;
+		.btn-save-card:hover {
+			background: linear-gradient(135deg, var(--gold-light) 0%, var(--gold) 100%);
 			transform: translateY(-1px);
+			box-shadow: 0 4px 14px rgba(201, 162, 39, 0.35);
 		}
 
+		.btn-delete-card {
+			padding: 9px 14px;
+			background: white;
+			color: var(--danger);
+			border: 1.5px solid #fecaca;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-delete-card:hover {
+			background: #fef2f2;
+			border-color: var(--danger);
+		}
+
+		/* EMPTY STATE */
 		.empty-state {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 80px 40px;
 			text-align: center;
-			padding: 60px 20px;
-			color: #536471;
 		}
 
 		.empty-state-icon {
-			font-size: 64px;
-			margin-bottom: 16px;
-			opacity: 0.3;
+			width: 76px;
+			height: 76px;
+			background: #f3f4f6;
+			border-radius: 18px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 34px;
+			margin-bottom: 20px;
 		}
 
+		.empty-state h3 {
+			font-size: 17px;
+			font-weight: 700;
+			color: var(--text-primary);
+			margin-bottom: 8px;
+		}
+
+		.empty-state p {
+			font-size: 14px;
+			color: var(--text-secondary);
+			max-width: 300px;
+			line-height: 1.6;
+		}
+
+		/* LOADER */
+		.loader { display: none; text-align: center; padding: 60px; }
+		.loader.show { display: block; }
+
+		.spinner {
+			width: 36px;
+			height: 36px;
+			border: 3px solid #f3f4f6;
+			border-top: 3px solid var(--gold);
+			border-radius: 50%;
+			animation: spin 0.8s linear infinite;
+			margin: 0 auto 14px;
+		}
+
+		@keyframes spin { to { transform: rotate(360deg); } }
+
+		.loader p { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+
+		/* NOTIFICATION */
 		.notification {
 			position: fixed;
-			top: 20px;
-			right: 20px;
-			padding: 16px 24px;
+			top: 22px;
+			right: 22px;
+			padding: 13px 18px;
 			background: white;
-			border-radius: 8px;
-			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+			border-radius: 10px;
+			box-shadow: 0 8px 30px rgba(0,0,0,0.12);
 			display: none;
 			align-items: center;
-			gap: 12px;
+			gap: 10px;
 			z-index: 1000;
-			animation: slideIn 0.3s ease;
+			animation: slideIn 0.25s ease;
+			max-width: 300px;
+			font-size: 14px;
+			font-weight: 500;
+			color: var(--text-primary);
 		}
 
 		@keyframes slideIn {
-			from {
-				transform: translateX(400px);
-				opacity: 0;
-			}
-			to {
-				transform: translateX(0);
-				opacity: 1;
-			}
+			from { transform: translateX(120%); opacity: 0; }
+			to   { transform: translateX(0);    opacity: 1; }
 		}
 
-		.notification.success {
-			border-left: 4px solid #c9a227;
-		}
-
-		.notification.error {
-			border-left: 4px solid #c0392b;
-		}
-
-		.notification.show {
-			display: flex;
-		}
-
-		.loader {
-			display: none;
-			text-align: center;
-			padding: 40px;
-		}
-
-		.loader.show {
-			display: block;
-		}
-
-		.spinner {
-			border: 4px solid #3a3e4a;
-			border-top: 4px solid #c9a227;
-			border-radius: 50%;
-			width: 40px;
-			height: 40px;
-			animation: spin 1s linear infinite;
-			margin: 0 auto;
-		}
-
-		@keyframes spin {
-			0% { transform: rotate(0deg); }
-			100% { transform: rotate(360deg); }
-		}
-
-		.auth-section {
-			padding: 30px;
-			max-width: 500px;
-			margin: 60px auto;
-		}
-
-		.auth-section h2 {
-			margin-bottom: 20px;
-			color: #0f1419;
-		}
-
-		.auth-section input {
-			width: 100%;
-			margin-bottom: 16px;
-		}
-
-		.auth-section .btn {
-			width: 100%;
-		}
+		.notification.success { border-left: 4px solid var(--gold); }
+		.notification.error   { border-left: 4px solid var(--danger); }
+		.notification.show    { display: flex; }
 	</style>
 </head>
 <body>
+
+	<!-- NOTIFICATION -->
 	<div id="notification" class="notification">
 		<span id="notificationText"></span>
 	</div>
 
-	<div class="container">
-		<div class="header">
-			<h1>Content Manager</h1>
-			<p>Administrează conținutul dinamic pentru toate site-urile</p>
+	<!-- AUTH OVERLAY -->
+	<div id="authOverlay" class="auth-overlay">
+		<div class="auth-card">
+			<div class="auth-icon">🔥</div>
+			<h2>Content Manager</h2>
+			<p>Introdu URL-ul bazei de date Firebase pentru a accesa panoul de administrare.</p>
+			<input type="text" id="firebaseUrl" placeholder="https://your-project.firebaseio.com">
+			<button class="btn-connect" onclick="initializeFirebase()">Conectează-te la Firebase →</button>
 		</div>
+	</div>
 
-		<!-- Authentication Section (shown initially) -->
-		<div id="authSection" class="auth-section">
-			<h2>Autentificare Firebase</h2>
-			<input type="text" id="firebaseUrl" placeholder="Firebase Database URL (ex: https://your-project.firebaseio.com)">
-			<button class="btn btn-primary" onclick="initializeFirebase()">Conectează-te</button>
-		</div>
+	<!-- APP LAYOUT -->
+	<div id="appLayout" class="app-layout" style="display:none;">
 
-		<!-- Main Content (hidden until authenticated) -->
-		<div id="mainContent" style="display: none;">
-			<div class="controls">
-				<div class="control-group">
-					<label>Site</label>
-					<select id="siteSelect" onchange="loadSiteContent()">
-						<option value="">Selectează site...</option>
-					</select>
-				</div>
-
-				<div class="control-group">
-					<label>Slug (Produs)</label>
-					<select id="slugSelect" onchange="loadSlugContent()">
-						<option value="">Selectează slug...</option>
-					</select>
-				</div>
-
-				<div class="control-group">
-					<button class="btn btn-add" onclick="showAddSiteModal()">+ Adaugă Site Nou</button>
-				</div>
-
-				<div class="control-group">
-					<button class="btn btn-add" onclick="showAddNewSlugModal()">+ Adaugă Slug Nou</button>
-				</div>
-
-				<div class="control-group">
-					<button class="btn btn-add" onclick="showAddComponentModal()">+ Adaugă Componentă</button>
-				</div>
-
-				<div class="control-group">
-					<button class="btn btn-success" onclick="refreshData()">🔄 Reîmprosprătează</button>
+		<!-- SIDEBAR -->
+		<aside class="sidebar">
+			<div class="sidebar-brand">
+				<div class="brand-logo">
+					<div class="brand-icon">⚡</div>
+					<div class="brand-text">
+						<h1>Content Manager</h1>
+						<span>Admin Panel</span>
+					</div>
 				</div>
 			</div>
 
-			<div class="content-area">
+			<div class="sidebar-section">
+				<div class="sidebar-section-label">Site Activ</div>
+				<select id="siteSelect" class="sidebar-select" onchange="loadSiteContent()">
+					<option value="">Selectează site...</option>
+				</select>
+			</div>
+
+			<div class="sidebar-section" style="margin-top:14px;">
+				<div class="sidebar-section-label">Slug / Produs</div>
+				<select id="slugSelect" class="sidebar-select" onchange="loadSlugContent()">
+					<option value="">Selectează slug...</option>
+				</select>
+			</div>
+
+			<div class="sidebar-divider"></div>
+
+			<div class="sidebar-nav-label">Acțiuni</div>
+			<div class="sidebar-actions">
+				<button class="sidebar-btn" onclick="showAddSiteModal()">
+					<span class="btn-icon">🌐</span>
+					Adaugă Site Nou
+				</button>
+				<button class="sidebar-btn" onclick="showAddNewSlugModal()">
+					<span class="btn-icon">🔖</span>
+					Adaugă Slug Nou
+				</button>
+				<button class="sidebar-btn" onclick="showAddComponentModal()">
+					<span class="btn-icon">＋</span>
+					Adaugă Componentă
+				</button>
+			</div>
+
+			<div class="sidebar-footer">
+				<button class="sidebar-refresh-btn" onclick="refreshData()">↺ &nbsp;Reîmprosprătează</button>
+			</div>
+		</aside>
+
+		<!-- MAIN CONTENT -->
+		<main class="main-content">
+			<div class="topbar">
+				<div class="topbar-breadcrumb">
+					<span class="breadcrumb-item" id="breadcrumbSite">Toate site-urile</span>
+					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>
+					<span class="breadcrumb-item active" id="breadcrumbSlug" style="display:none;"></span>
+				</div>
+				<div id="connectionStatus" class="topbar-status" style="display:none;">
+					<div class="status-dot"></div>
+					Firebase conectat
+				</div>
+			</div>
+
+			<div class="page-body">
+
 				<div id="loader" class="loader">
 					<div class="spinner"></div>
-					<p style="margin-top: 16px; color: #536471;">Se încarcă...</p>
+					<p>Se încarcă datele...</p>
+				</div>
+
+				<div id="slugMetaBar" class="slug-meta-bar" style="display:none;">
+					<span class="meta-label">Editezi slug-ul:</span>
+					<span class="meta-badge" id="metaBadgeSlug"></span>
+					<span class="meta-label" style="margin-left:2px;">pe site-ul:</span>
+					<span class="meta-badge" id="metaBadgeSite"></span>
+					<span class="meta-count" id="metaCount"></span>
 				</div>
 
 				<div id="contentGrid" class="content-grid"></div>
 
-				<div id="emptyState" class="empty-state" style="display: none;">
+				<div id="emptyState" class="empty-state">
 					<div class="empty-state-icon">📝</div>
-					<h3>Selectează un site și un slug</h3>
-					<p>Pentru a începe, alege site-ul și slug-ul (produsul) pe care dorești să-l editezi.</p>
+					<h3>Nimic de afișat</h3>
+					<p>Selectează din sidebar un site și un slug pentru a edita conținutul.</p>
 				</div>
+
 			</div>
-		</div>
+		</main>
+
 	</div>
 
 	<script>
@@ -407,7 +738,6 @@
 		let currentSlug = '';
 		let contentData = {};
 
-		// Convert between Firebase keys and display names
 		function firebaseKeyToHostname(key) {
 			return key.replace(/_/g, '.');
 		}
@@ -416,33 +746,26 @@
 			return hostname.replace(/\./g, '_');
 		}
 
-		// Initialize Firebase connection
 		async function initializeFirebase() {
 			const url = document.getElementById('firebaseUrl').value.trim();
+			if (!url) { showNotification('Te rog introdu URL-ul Firebase', 'error'); return; }
 
-			if (!url) {
-				showNotification('Te rog introdu URL-ul Firebase', 'error');
-				return;
-			}
-
-			firebaseUrl = url.replace(/\/$/, ''); // Remove trailing slash
+			firebaseUrl = url.replace(/\/$/, '');
 
 			try {
-				// Test connection
 				const response = await fetch(`${firebaseUrl}/config.json`);
 				if (!response.ok) throw new Error('Connection failed');
 
 				showNotification('Conectat cu succes!', 'success');
-				document.getElementById('authSection').style.display = 'none';
-				document.getElementById('mainContent').style.display = 'block';
-
+				document.getElementById('authOverlay').style.display = 'none';
+				document.getElementById('appLayout').style.display = 'flex';
+				document.getElementById('connectionStatus').style.display = 'flex';
 				loadSites();
 			} catch (error) {
 				showNotification('Eroare la conectare: ' + error.message, 'error');
 			}
 		}
 
-		// Load available sites
 		async function loadSites() {
 			try {
 				const response = await fetch(`${firebaseUrl}/dynamic_content.json`);
@@ -453,8 +776,8 @@
 
 				Object.keys(data || {}).forEach(firebaseKey => {
 					const option = document.createElement('option');
-					option.value = firebaseKey; // Keep Firebase key as value
-					option.textContent = firebaseKeyToHostname(firebaseKey); // Display with dots
+					option.value = firebaseKey;
+					option.textContent = firebaseKeyToHostname(firebaseKey);
 					siteSelect.appendChild(option);
 				});
 			} catch (error) {
@@ -462,31 +785,29 @@
 			}
 		}
 
-		// Load site content
 		async function loadSiteContent() {
 			const site = document.getElementById('siteSelect').value;
 			if (!site) return;
-
 			currentSite = site;
+
+			document.getElementById('breadcrumbSite').textContent = firebaseKeyToHostname(site);
+			document.getElementById('breadcrumbSep').style.display = 'none';
+			document.getElementById('breadcrumbSlug').style.display = 'none';
+			document.getElementById('slugMetaBar').style.display = 'none';
 
 			try {
 				showLoader(true);
 				const response = await fetch(`${firebaseUrl}/dynamic_content/${site}.json`);
 				const data = await response.json();
-
 				contentData = data || {};
 
-				// Extract all unique slugs from all components
 				const slugsSet = new Set();
 				Object.keys(contentData).forEach(component => {
-					Object.keys(contentData[component]).forEach(slug => {
-						slugsSet.add(slug);
-					});
+					Object.keys(contentData[component]).forEach(slug => slugsSet.add(slug));
 				});
 
 				const slugSelect = document.getElementById('slugSelect');
 				slugSelect.innerHTML = '<option value="">Selectează slug...</option>';
-
 				Array.from(slugsSet).sort().forEach(slug => {
 					const option = document.createElement('option');
 					option.value = slug;
@@ -495,7 +816,7 @@
 				});
 
 				showLoader(false);
-				document.getElementById('emptyState').style.display = 'block';
+				document.getElementById('emptyState').style.display = 'flex';
 				document.getElementById('contentGrid').innerHTML = '';
 			} catch (error) {
 				showLoader(false);
@@ -503,14 +824,15 @@
 			}
 		}
 
-		// Load slug content (all components for this slug)
 		function loadSlugContent() {
 			const slug = document.getElementById('slugSelect').value;
 			if (!slug) return;
-
 			currentSlug = slug;
 
-			// Collect all components that have this slug
+			document.getElementById('breadcrumbSep').style.display = 'inline';
+			document.getElementById('breadcrumbSlug').style.display = 'inline';
+			document.getElementById('breadcrumbSlug').textContent = slug;
+
 			const componentsData = {};
 			Object.keys(contentData).forEach(component => {
 				if (contentData[component][slug]) {
@@ -520,271 +842,188 @@
 
 			renderContentGrid(componentsData);
 			document.getElementById('emptyState').style.display = 'none';
+
+			const count = Object.keys(componentsData).length;
+			document.getElementById('slugMetaBar').style.display = 'flex';
+			document.getElementById('metaBadgeSlug').textContent = slug;
+			document.getElementById('metaBadgeSite').textContent = firebaseKeyToHostname(currentSite);
+			document.getElementById('metaCount').textContent = `${count} component${count !== 1 ? 'e' : 'ă'}`;
 		}
 
-		// Render content grid (components for selected slug)
+		function getComponentIcon(name) {
+			if (name.includes('title') || name.includes('titlu')) return '✏️';
+			if (name.includes('video') || name.includes('vsl'))   return '🎬';
+			if (name.includes('image') || name.includes('img'))   return '🖼️';
+			if (name.includes('button') || name.includes('btn'))  return '🔘';
+			return '📄';
+		}
+
 		function renderContentGrid(componentsData) {
 			const grid = document.getElementById('contentGrid');
 			grid.innerHTML = '';
 
 			Object.keys(componentsData).sort().forEach(component => {
 				const content = componentsData[component];
-
 				const item = document.createElement('div');
-				item.className = 'content-item';
+				item.className = 'content-card';
 				item.innerHTML = `
-					<div class="content-item-header">
-						<span class="content-item-title">${component}</span>
-						<span class="content-item-slug">${currentSlug}</span>
+					<div class="card-header">
+						<div class="card-component-name">
+							<div class="component-icon">${getComponentIcon(component)}</div>
+							<span class="component-label">${component}</span>
+						</div>
+						<span class="component-slug-badge">${currentSlug}</span>
 					</div>
-					<div class="content-item-body">
-						<label>Conținut:</label>
+					<div class="card-body">
 						<textarea id="content-${component}" rows="4">${content}</textarea>
 					</div>
-					<div class="content-item-actions">
-						<button class="btn-save" onclick="saveContent('${component}')">💾 Salvează</button>
-						<button class="btn-delete" onclick="deleteComponent('${component}')">🗑️ Șterge</button>
+					<div class="card-footer">
+						<button class="btn-save-card" onclick="saveContent('${component}')">💾 &nbsp;Salvează</button>
+						<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Șterge</button>
 					</div>
 				`;
-
 				grid.appendChild(item);
 			});
 		}
 
-		// Save content
 		async function saveContent(component) {
 			const content = document.getElementById(`content-${component}`).value;
-
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
-					{
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(content)
-					}
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
 				);
-
 				if (response.ok) {
 					showNotification('Salvat cu succes!', 'success');
 					contentData[component][currentSlug] = content;
-				} else {
-					throw new Error('Save failed');
-				}
+				} else throw new Error('Save failed');
 			} catch (error) {
 				showNotification('Eroare la salvare', 'error');
 			}
 		}
 
-		// Delete component content for current slug
 		async function deleteComponent(component) {
 			if (!confirm(`Sigur vrei să ștergi slug-ul "${currentSlug}" din componenta "${component}"?`)) return;
-
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 					{ method: 'DELETE' }
 				);
-
 				if (response.ok) {
 					showNotification('Șters cu succes!', 'success');
 					delete contentData[component][currentSlug];
 					loadSlugContent();
-				} else {
-					throw new Error('Delete failed');
-				}
+				} else throw new Error('Delete failed');
 			} catch (error) {
 				showNotification('Eroare la ștergere', 'error');
 			}
 		}
 
-		// Show add component modal (add component to existing slug)
 		function showAddComponentModal() {
-			if (!currentSlug) {
-				showNotification('Selectează mai întâi un slug', 'error');
-				return;
-			}
-
+			if (!currentSlug) { showNotification('Selectează mai întâi un slug', 'error'); return; }
 			const component = prompt('Introdu numele componentei (ex: title-interactive):');
 			if (!component) return;
-
 			const content = prompt('Introdu conținutul pentru acest slug și componentă:');
 			if (content === null) return;
-
 			addNewComponent(component, content);
 		}
 
-		// Show add new slug modal (create new slug with default components)
 		function showAddNewSlugModal() {
-			if (!currentSite) {
-				showNotification('Selectează mai întâi un site', 'error');
-				return;
-			}
-
+			if (!currentSite) { showNotification('Selectează mai întâi un site', 'error'); return; }
 			const slugName = prompt('Introdu numele slug-ului nou (ex: produs-1, reactive-site, book):');
 			if (!slugName) return;
-
-			// Sanitize slug name
 			const sanitizedSlug = slugName.toLowerCase()
 				.replace(/[^a-z0-9-]/g, '-')
 				.replace(/-+/g, '-')
 				.replace(/^-|-$/g, '');
-
-			if (!sanitizedSlug) {
-				showNotification('Numele slug-ului este invalid!', 'error');
-				return;
-			}
-
+			if (!sanitizedSlug) { showNotification('Numele slug-ului este invalid!', 'error'); return; }
 			addNewSlug(sanitizedSlug);
 		}
 
-		// Add new slug with default components
 		async function addNewSlug(slugName) {
 			try {
 				showLoader(true);
-
-				// Create default components for the new slug
 				const defaultComponents = {
 					'main-title': `Titlu pentru ${slugName}`,
 					'vsl-video': 'https://player.vimeo.com/video/YOUR_VIDEO_ID'
 				};
-
-				// Add each component for the new slug
-				const promises = Object.keys(defaultComponents).map(component => {
-					return fetch(
-						`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${slugName}.json`,
-						{
-							method: 'PUT',
-							headers: { 'Content-Type': 'application/json' },
-							body: JSON.stringify(defaultComponents[component])
-						}
-					);
-				});
-
-				await Promise.all(promises);
-
+				await Promise.all(Object.keys(defaultComponents).map(component =>
+					fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${slugName}.json`,
+						{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(defaultComponents[component]) })
+				));
 				showNotification(`Slug "${slugName}" adăugat cu succes!`, 'success');
 				showLoader(false);
-
-				// Reload site content and auto-select the new slug
 				await loadSiteContent();
 				document.getElementById('slugSelect').value = slugName;
 				currentSlug = slugName;
 				loadSlugContent();
-
 			} catch (error) {
 				showLoader(false);
 				showNotification('Eroare la adăugarea slug-ului: ' + error.message, 'error');
 			}
 		}
 
-		// Add new component for current slug
 		async function addNewComponent(component, content) {
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
-					{
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(content)
-					}
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
 				);
-
 				if (response.ok) {
 					showNotification('Componentă adăugată cu succes!', 'success');
-					if (!contentData[component]) {
-						contentData[component] = {};
-					}
+					if (!contentData[component]) contentData[component] = {};
 					contentData[component][currentSlug] = content;
 					loadSlugContent();
-				} else {
-					throw new Error('Add failed');
-				}
+				} else throw new Error('Add failed');
 			} catch (error) {
 				showNotification('Eroare la adăugare', 'error');
 			}
 		}
 
-		// Show add site modal
 		function showAddSiteModal() {
 			const hostname = prompt('Introdu hostname-ul site-ului (ex: advertorials645.lpages.co):');
 			if (!hostname) return;
-
-			// Validate hostname format
-			if (!hostname.includes('.')) {
-				showNotification('Hostname invalid! Trebuie să conțină un domeniu valid', 'error');
-				return;
-			}
-
+			if (!hostname.includes('.')) { showNotification('Hostname invalid! Trebuie să conțină un domeniu valid', 'error'); return; }
 			addNewSite(hostname);
 		}
 
-		// Add new site to Firebase
 		async function addNewSite(hostname) {
 			const firebaseKey = hostnameToFirebaseKey(hostname);
-
 			try {
 				showLoader(true);
-
-				// Create minimal structure with default slug
 				const minimalStructure = {
-					"main-title": {
-						"default": "Titlu Generic - Editează din Admin Panel"
-					},
-					"vsl-video": {
-						"default": "https://player.vimeo.com/video/YOUR_VIDEO_ID"
-					}
+					"main-title": { "default": "Titlu Generic - Editează din Admin Panel" },
+					"vsl-video":  { "default": "https://player.vimeo.com/video/YOUR_VIDEO_ID" }
 				};
-
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${firebaseKey}.json`,
-					{
-						method: 'PUT',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(minimalStructure)
-					}
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(minimalStructure) }
 				);
-
 				if (response.ok) {
 					showNotification(`Site "${hostname}" adăugat cu succes!`, 'success');
 					showLoader(false);
-
-					// Reload sites and auto-select the new one
 					await loadSites();
 					document.getElementById('siteSelect').value = firebaseKey;
 					loadSiteContent();
-				} else {
-					throw new Error('Add site failed');
-				}
+				} else throw new Error('Add site failed');
 			} catch (error) {
 				showLoader(false);
 				showNotification('Eroare la adăugarea site-ului: ' + error.message, 'error');
 			}
 		}
 
-		// Refresh data
 		function refreshData() {
-			if (currentSite) {
-				loadSiteContent();
-			} else {
-				loadSites();
-			}
+			if (currentSite) loadSiteContent(); else loadSites();
 		}
 
-		// Show notification
 		function showNotification(message, type = 'success') {
 			const notification = document.getElementById('notification');
 			const text = document.getElementById('notificationText');
-
 			text.textContent = message;
 			notification.className = `notification ${type} show`;
-
-			setTimeout(() => {
-				notification.classList.remove('show');
-			}, 3000);
+			setTimeout(() => notification.classList.remove('show'), 3000);
 		}
 
-		// Show/hide loader
 		function showLoader(show) {
 			document.getElementById('loader').classList.toggle('show', show);
 		}
