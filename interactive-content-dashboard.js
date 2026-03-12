@@ -5,19 +5,12 @@
 (function() {
 	var hasRun = false;
 
-	// Inject hiding CSS synchronously (before DOM renders) to prevent FOUC
-	// Elements with [data-icd] attribute will be hidden until content is loaded
-	const _icdHideStyle = document.createElement('style');
-	_icdHideStyle.id = '_icd_hide_style';
-	_icdHideStyle.textContent = '[data-icd] { opacity: 0 !important; transition: opacity 0.35s ease !important; }';
-	(document.head || document.documentElement).appendChild(_icdHideStyle);
-
-	// Safety timeout: reveal all [data-icd] elements after 2.5s even if Firebase fails
+	// Safety timeout: show all [data-icd] elements after 3s even if Firebase fails
 	const _icdSafetyTimeout = setTimeout(function() {
 		document.querySelectorAll('[data-icd]').forEach(function(el) {
-			el.style.opacity = '1';
+			el.style.setProperty('display', 'block', 'important');
 		});
-	}, 2500);
+	}, 3000);
 
 	// Firebase Configuration
 	const FIREBASE_CONFIG = {
@@ -112,14 +105,19 @@
 			// Update actual content from Firebase
 			updateContentFromData(siteContent, slug);
 
-			// Reveal all [data-icd] elements with fade-in after content is applied
+			// Show all [data-icd] elements after content is applied
 			clearTimeout(_icdSafetyTimeout);
 			document.querySelectorAll('[data-icd]').forEach(function(el) {
-				el.style.opacity = '1';
+				el.style.setProperty('display', 'block', 'important');
 			});
 
 		} catch (error) {
 			console.error('Error loading Firebase content:', error);
+			// Show elements even if Firebase fails
+			clearTimeout(_icdSafetyTimeout);
+			document.querySelectorAll('[data-icd]').forEach(function(el) {
+				el.style.setProperty('display', 'block', 'important');
+			});
 		}
 	}
 
