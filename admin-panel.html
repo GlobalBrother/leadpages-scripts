@@ -369,7 +369,11 @@
 				</div>
 
 				<div class="control-group">
-					<button class="btn btn-add" onclick="showAddSlugModal()">+ Adaugă Componentă</button>
+					<button class="btn btn-add" onclick="showAddNewSlugModal()">+ Adaugă Slug Nou</button>
+				</div>
+
+				<div class="control-group">
+					<button class="btn btn-add" onclick="showAddComponentModal()">+ Adaugă Componentă</button>
 				</div>
 
 				<div class="control-group">
@@ -591,8 +595,8 @@
 			}
 		}
 
-		// Show add slug modal
-		function showAddSlugModal() {
+		// Show add component modal (add component to existing slug)
+		function showAddComponentModal() {
 			if (!currentSlug) {
 				showNotification('Selectează mai întâi un slug', 'error');
 				return;
@@ -605,6 +609,70 @@
 			if (content === null) return;
 
 			addNewComponent(component, content);
+		}
+
+		// Show add new slug modal (create new slug with default components)
+		function showAddNewSlugModal() {
+			if (!currentSite) {
+				showNotification('Selectează mai întâi un site', 'error');
+				return;
+			}
+
+			const slugName = prompt('Introdu numele slug-ului nou (ex: produs-1, reactive-site, book):');
+			if (!slugName) return;
+
+			// Sanitize slug name
+			const sanitizedSlug = slugName.toLowerCase()
+				.replace(/[^a-z0-9-]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+
+			if (!sanitizedSlug) {
+				showNotification('Numele slug-ului este invalid!', 'error');
+				return;
+			}
+
+			addNewSlug(sanitizedSlug);
+		}
+
+		// Add new slug with default components
+		async function addNewSlug(slugName) {
+			try {
+				showLoader(true);
+
+				// Create default components for the new slug
+				const defaultComponents = {
+					'main-title': `Titlu pentru ${slugName}`,
+					'vsl-video': 'https://player.vimeo.com/video/YOUR_VIDEO_ID'
+				};
+
+				// Add each component for the new slug
+				const promises = Object.keys(defaultComponents).map(component => {
+					return fetch(
+						`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${slugName}.json`,
+						{
+							method: 'PUT',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify(defaultComponents[component])
+						}
+					);
+				});
+
+				await Promise.all(promises);
+
+				showNotification(`Slug "${slugName}" adăugat cu succes!`, 'success');
+				showLoader(false);
+
+				// Reload site content and auto-select the new slug
+				await loadSiteContent();
+				document.getElementById('slugSelect').value = slugName;
+				currentSlug = slugName;
+				loadSlugContent();
+
+			} catch (error) {
+				showLoader(false);
+				showNotification('Eroare la adăugarea slug-ului: ' + error.message, 'error');
+			}
 		}
 
 		// Add new component for current slug
@@ -677,7 +745,7 @@
 				if (response.ok) {
 					showNotification(`Site "${hostname}" adăugat cu succes!`, 'success');
 					showLoader(false);
-					
+
 					// Reload sites and auto-select the new one
 					await loadSites();
 					document.getElementById('siteSelect').value = firebaseKey;
