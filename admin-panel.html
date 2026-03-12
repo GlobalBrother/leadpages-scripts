@@ -365,6 +365,10 @@
 				</div>
 
 				<div class="control-group">
+					<button class="btn btn-add" onclick="showAddSiteModal()">+ Adaugă Site Nou</button>
+				</div>
+
+				<div class="control-group">
 					<button class="btn btn-add" onclick="showAddSlugModal()">+ Adaugă Componentă</button>
 				</div>
 
@@ -627,6 +631,63 @@
 				}
 			} catch (error) {
 				showNotification('Eroare la adăugare', 'error');
+			}
+		}
+
+		// Show add site modal
+		function showAddSiteModal() {
+			const hostname = prompt('Introdu hostname-ul site-ului (ex: advertorials645.lpages.co):');
+			if (!hostname) return;
+
+			// Validate hostname format
+			if (!hostname.includes('.')) {
+				showNotification('Hostname invalid! Trebuie să conțină un domeniu valid', 'error');
+				return;
+			}
+
+			addNewSite(hostname);
+		}
+
+		// Add new site to Firebase
+		async function addNewSite(hostname) {
+			const firebaseKey = hostnameToFirebaseKey(hostname);
+
+			try {
+				showLoader(true);
+
+				// Create minimal structure with default slug
+				const minimalStructure = {
+					"main-title": {
+						"default": "Titlu Generic - Editează din Admin Panel"
+					},
+					"vsl-video": {
+						"default": "https://player.vimeo.com/video/YOUR_VIDEO_ID"
+					}
+				};
+
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${firebaseKey}.json`,
+					{
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(minimalStructure)
+					}
+				);
+
+				if (response.ok) {
+					showNotification(`Site "${hostname}" adăugat cu succes!`, 'success');
+					showLoader(false);
+					
+					// Reload sites and auto-select the new one
+					await loadSites();
+					document.getElementById('siteSelect').value = firebaseKey;
+					loadSiteContent();
+				} else {
+					throw new Error('Add site failed');
+				}
+			} catch (error) {
+				showLoader(false);
+				showNotification('Eroare la adăugarea site-ului: ' + error.message, 'error');
 			}
 		}
 
