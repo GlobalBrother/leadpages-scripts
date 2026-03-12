@@ -40,6 +40,11 @@
         "default": "<div>Popup content default</div>",
         "amish-fire-cider": "<div>Popup Amish Fire Cider</div>",
         "herbal-parasite-flush": "<div>Popup Parasite Flush</div>"
+      },
+      "bullets-interactive": {
+        "default": "{\"header\":\"You will soon learn:\",\"bullets\":[\"Generic Benefit 1\",\"Generic Benefit 2\",\"Generic Benefit 3\"]}",
+        "amish-fire-cider": "{\"header\":\"You will soon learn:\",\"bullets\":[\"What Happens If You Pour Honey Over Cinnamon\",\"The Antibiotic You Can Smoke\",\"How to make the Mucus Buster\",\"Herbal Balm for Herpes Sores\",\"What Happens If You Soak Your Feet In Rosemary Water\",\"The First Remedies That Will Disappear In A Crisis\",\"The Homemade Lung Shield Recipe\",\"The Gut-Healing Elixir\"]}",
+        "herbal-parasite-flush": "{\"header\":\"Discover Natural Parasite Cleanse:\",\"bullets\":[\"The 3-Day Parasite Flush Protocol\",\"Herbal Wormwood Tincture Recipe\",\"Black Walnut Hull Power\",\"Clove Oil for Parasite Eggs\",\"Signs Your Body Is Cleansing\",\"Foods That Kill Parasites\"]}"
       }
     },
     "site2_com": {

@@ -536,6 +536,26 @@
 			border-color: var(--danger);
 		}
 
+		/* BULLETS EDITOR SPECIFIC STYLES */
+		.bullets-editor-card .card-body {
+			background: #fafafa;
+		}
+
+		.bullet-row {
+			animation: slideInRow 0.2s ease;
+		}
+
+		@keyframes slideInRow {
+			from { opacity: 0; transform: translateX(-10px); }
+			to { opacity: 1; transform: translateX(0); }
+		}
+
+		.bullet-input:focus {
+			outline: none;
+			border-color: var(--gold) !important;
+			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+		}
+
 		/* EMPTY STATE */
 		.empty-state {
 			display: flex;
@@ -864,6 +884,13 @@
 
 			Object.keys(componentsData).sort().forEach(component => {
 				const content = componentsData[component];
+				
+				// Special handling for bullets-interactive component
+				if (component === 'bullets-interactive') {
+					renderBulletsEditor(component, content);
+					return;
+				}
+
 				const item = document.createElement('div');
 				item.className = 'content-card';
 				item.innerHTML = `
@@ -884,6 +911,135 @@
 				`;
 				grid.appendChild(item);
 			});
+		}
+
+		// Render special editor for bullets-interactive
+		function renderBulletsEditor(component, content) {
+			let data;
+			try {
+				data = typeof content === 'string' ? JSON.parse(content) : content;
+			} catch (e) {
+				data = { header: 'You will soon learn:', bullets: [] };
+			}
+
+			const grid = document.getElementById('contentGrid');
+			const item = document.createElement('div');
+			item.className = 'content-card bullets-editor-card';
+			item.innerHTML = `
+				<div class="card-header">
+					<div class="card-component-name">
+						<div class="component-icon">📋</div>
+						<span class="component-label">Bullets Interactive</span>
+					</div>
+					<span class="component-slug-badge">${currentSlug}</span>
+				</div>
+				<div class="card-body">
+					<div style="margin-bottom: 16px;">
+						<label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px;">
+							📝 Header Text
+						</label>
+						<input type="text" id="bullets-header-input" 
+							value="${data.header || ''}" 
+							placeholder="e.g. You will soon learn:"
+							style="width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit;">
+					</div>
+					<div>
+						<label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px;">
+							📌 Bullet Points
+						</label>
+						<div id="bullets-list"></div>
+						<button onclick="addBulletRow()" 
+							style="width: 100%; padding: 9px; margin-top: 8px; background: #f3f4f6; border: 1.5px dashed #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;">
+							➕ Add Bullet Point
+						</button>
+					</div>
+				</div>
+				<div class="card-footer">
+					<button class="btn-save-card" onclick="saveBulletsContent()">💾 &nbsp;Save Bullets</button>
+					<button class="btn-delete-card" onclick="deleteComponent('bullets-interactive')">🗑 Delete</button>
+				</div>
+			`;
+			grid.appendChild(item);
+
+			// Populate bullets
+			renderBulletsList(data.bullets || []);
+		}
+
+		function renderBulletsList(bullets) {
+			const container = document.getElementById('bullets-list');
+			container.innerHTML = '';
+
+			bullets.forEach((bullet, index) => {
+				const row = document.createElement('div');
+				row.className = 'bullet-row';
+				row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
+				row.innerHTML = `
+					<input type="text" 
+						class="bullet-input" 
+						data-index="${index}"
+						value="${bullet}" 
+						placeholder="Enter bullet point..."
+						style="flex: 1; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit;">
+					<button onclick="removeBulletRow(${index})" 
+						style="padding: 9px 12px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #dc2626; cursor: pointer; font-size: 13px; font-weight: 600;">
+						🗑
+					</button>
+				`;
+				container.appendChild(row);
+			});
+		}
+
+		function addBulletRow() {
+			const container = document.getElementById('bullets-list');
+			const index = container.children.length;
+			const row = document.createElement('div');
+			row.className = 'bullet-row';
+			row.style.cssText = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
+			row.innerHTML = `
+				<input type="text" 
+					class="bullet-input" 
+					data-index="${index}"
+					value="" 
+					placeholder="Enter bullet point..."
+					style="flex: 1; padding: 9px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 13px; font-family: inherit;">
+				<button onclick="removeBulletRow(${index})" 
+					style="padding: 9px 12px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 8px; color: #dc2626; cursor: pointer; font-size: 13px; font-weight: 600;">
+					🗑
+				</button>
+			`;
+			container.appendChild(row);
+		}
+
+		function removeBulletRow(index) {
+			const container = document.getElementById('bullets-list');
+			const rows = container.querySelectorAll('.bullet-row');
+			if (rows[index]) {
+				rows[index].remove();
+			}
+		}
+
+		async function saveBulletsContent() {
+			const header = document.getElementById('bullets-header-input').value;
+			const bulletInputs = document.querySelectorAll('.bullet-input');
+			const bullets = Array.from(bulletInputs)
+				.map(input => input.value.trim())
+				.filter(value => value !== '');
+
+			const data = { header, bullets };
+			const jsonString = JSON.stringify(data);
+
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/bullets-interactive/${currentSlug}.json`,
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(jsonString) }
+				);
+				if (response.ok) {
+					showNotification('Bullets saved successfully!', 'success');
+					contentData['bullets-interactive'][currentSlug] = jsonString;
+				} else throw new Error('Save failed');
+			} catch (error) {
+				showNotification('Error saving bullets', 'error');
+			}
 		}
 
 		async function saveContent(component) {

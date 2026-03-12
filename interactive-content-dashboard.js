@@ -203,6 +203,12 @@
 			if (element && componentData[slug]) {
 				const content = componentData[slug];
 
+				// Special handling for bullets-interactive component
+				if (componentId === 'bullets-interactive') {
+					handleBulletsComponent(content);
+					return;
+				}
+
 				// Detect content type and apply
 				if (content.startsWith('http://') || content.startsWith('https://')) {
 					// It's a URL - probably for iframe/img/video
@@ -233,6 +239,55 @@
 				}
 			}
 		});
+	}
+
+	// Handle bullets-interactive component with JSON structure
+	function handleBulletsComponent(content) {
+		try {
+			const data = typeof content === 'string' ? JSON.parse(content) : content;
+			
+			// Update header
+			const headerEl = document.getElementById('bullets-header');
+			if (headerEl && data.header) {
+				headerEl.textContent = data.header;
+			}
+
+			// Update bullets
+			const container = document.getElementById('amish-bullets-container');
+			if (container && data.bullets && Array.isArray(data.bullets)) {
+				container.innerHTML = '';
+				data.bullets.forEach(function(bulletText) {
+					const bulletDiv = document.createElement('div');
+					bulletDiv.className = 'amish-bullet';
+					bulletDiv.textContent = bulletText;
+					container.appendChild(bulletDiv);
+				});
+
+				// Start animation for bullets
+				startBulletsAnimation();
+			}
+		} catch (e) {
+			console.error('Error parsing bullets data:', e);
+		}
+	}
+
+	// Animation for bullets
+	function startBulletsAnimation() {
+		const bullets = document.querySelectorAll('#amish-bullets-container .amish-bullet');
+		if (bullets.length === 0) return;
+
+		let current = 0;
+
+		function updateBullets() {
+			bullets.forEach(function(b) { b.classList.remove('bolded'); });
+			if (bullets[current]) {
+				bullets[current].classList.add('bolded');
+			}
+			current = (current + 1) % bullets.length;
+		}
+
+		updateBullets();
+		setInterval(updateBullets, 1000);
 	}
 
 	// Initialize
