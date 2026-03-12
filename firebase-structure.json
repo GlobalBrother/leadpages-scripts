@@ -1,0 +1,80 @@
+{
+  "dynamic_content": {
+    "site1_com": {
+      "title-interactive": {
+        "default": "Titlu Default",
+        "amish-fire-cider": "Descoperă Secretul Amish Fire Cider",
+        "herbal-parasite-flush": "Eliminează Paraziții cu Flush Natural"
+      },
+      "title-interactive-mobile": {
+        "default": "Titlu Default Mobile",
+        "amish-fire-cider": "Amish Fire Cider",
+        "herbal-parasite-flush": "Parasite Flush Natural"
+      },
+      "vsl-interactive-desktop": {
+        "default": "https://player.vimeo.com/video/default",
+        "amish-fire-cider": "https://player.vimeo.com/video/123456",
+        "herbal-parasite-flush": "https://player.vimeo.com/video/789012"
+      },
+      "vsl-interactive-mobile": {
+        "default": "https://player.vimeo.com/video/default",
+        "amish-fire-cider": "https://player.vimeo.com/video/123456",
+        "herbal-parasite-flush": "https://player.vimeo.com/video/789012"
+      },
+      "cta-button": {
+        "default": "Cumpără Acum",
+        "amish-fire-cider": "Comandă Fire Cider - 47€",
+        "herbal-parasite-flush": "Comandă Parasite Flush - 39€"
+      },
+      "2col-interactive": {
+        "default": "<div>Content default pentru 2col</div>",
+        "amish-fire-cider": "<div>Content pentru Amish Fire Cider</div>",
+        "herbal-parasite-flush": "<div>Content pentru Parasite Flush</div>"
+      },
+      "big-idea-interactive": {
+        "default": "<div>Big idea default</div>",
+        "amish-fire-cider": "<div>Big idea Amish Fire Cider</div>",
+        "herbal-parasite-flush": "<div>Big idea Parasite Flush</div>"
+      },
+      "popup-interactive": {
+        "default": "<div>Popup content default</div>",
+        "amish-fire-cider": "<div>Popup Amish Fire Cider</div>",
+        "herbal-parasite-flush": "<div>Popup Parasite Flush</div>"
+      }
+    },
+    "site2_com": {
+      "title-interactive": {
+        "default": "Alt titlu pentru site 2",
+        "produs-1": "Produs 1 Titlu",
+        "produs-2": "Produs 2 Titlu"
+      }
+    }
+  },
+  "config": {
+    "sites": [
+      "site1_com",
+      "site2_com"
+    ],
+    "component_types": [
+      "title-interactive",
+      "title-interactive-mobile",
+      "vsl-interactive-desktop",
+      "vsl-interactive-mobile",
+      "cta-button",
+      "2col-interactive",
+      "big-idea-interactive",
+      "popup-interactive"
+    ],
+    "content_prefixes": [
+      "title-interactive",
+      "title-interactive-mobile",
+      "2col-interactive",
+      "big-idea-interactive",
+      "vsl-interactive-desktop",
+      "vsl-interactive-mobile"
+    ],
+    "functional_prefixes": [
+      "popup-interactive"
+    ]
+  }
+}

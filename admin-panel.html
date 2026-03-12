@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Content Manager - Admin Panel</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			min-height: 100vh;
+			padding: 20px;
+		}
+
+		.container {
+			max-width: 1400px;
+			margin: 0 auto;
+			background: white;
+			border-radius: 16px;
+			box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+			overflow: hidden;
+		}
+
+		.header {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			padding: 30px;
+			text-align: center;
+		}
+
+		.header h1 {
+			font-size: 32px;
+			margin-bottom: 10px;
+		}
+
+		.header p {
+			opacity: 0.9;
+			font-size: 14px;
+		}
+
+		.controls {
+			padding: 30px;
+			background: #f7f9fc;
+			border-bottom: 2px solid #e1e8ed;
+			display: flex;
+			gap: 20px;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			gap: 8px;
+			flex: 1;
+			min-width: 200px;
+		}
+
+		.control-group label {
+			font-weight: 600;
+			font-size: 13px;
+			color: #536471;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		select, input, textarea {
+			padding: 12px 16px;
+			border: 2px solid #e1e8ed;
+			border-radius: 8px;
+			font-size: 15px;
+			font-family: inherit;
+			transition: all 0.2s;
+		}
+
+		select:focus, input:focus, textarea:focus {
+			outline: none;
+			border-color: #667eea;
+			box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+		}
+
+		.btn {
+			padding: 12px 24px;
+			border: none;
+			border-radius: 8px;
+			font-size: 15px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.btn-primary {
+			background: #667eea;
+			color: white;
+		}
+
+		.btn-primary:hover {
+			background: #5568d3;
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+		}
+
+		.btn-success {
+			background: #1da1f2;
+			color: white;
+		}
+
+		.btn-success:hover {
+			background: #1a8cd8;
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(29, 161, 242, 0.4);
+		}
+
+		.btn-add {
+			background: #17bf63;
+			color: white;
+			align-self: flex-end;
+		}
+
+		.btn-add:hover {
+			background: #14a555;
+			transform: translateY(-2px);
+			box-shadow: 0 4px 12px rgba(23, 191, 99, 0.4);
+		}
+
+		.content-area {
+			padding: 30px;
+		}
+
+		.content-grid {
+			display: grid;
+			gap: 20px;
+		}
+
+		.content-item {
+			background: #f7f9fc;
+			border: 2px solid #e1e8ed;
+			border-radius: 12px;
+			padding: 20px;
+			transition: all 0.2s;
+		}
+
+		.content-item:hover {
+			border-color: #667eea;
+			box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+		}
+
+		.content-item-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			margin-bottom: 16px;
+			padding-bottom: 12px;
+			border-bottom: 2px solid #e1e8ed;
+		}
+
+		.content-item-title {
+			font-weight: 700;
+			font-size: 16px;
+			color: #0f1419;
+		}
+
+		.content-item-slug {
+			background: #667eea;
+			color: white;
+			padding: 4px 12px;
+			border-radius: 20px;
+			font-size: 12px;
+			font-weight: 600;
+		}
+
+		.content-item-body {
+			display: flex;
+			flex-direction: column;
+			gap: 12px;
+		}
+
+		.content-item-body label {
+			font-weight: 600;
+			font-size: 13px;
+			color: #536471;
+		}
+
+		.content-item-body textarea {
+			min-height: 100px;
+			resize: vertical;
+		}
+
+		.content-item-actions {
+			display: flex;
+			gap: 10px;
+			margin-top: 16px;
+		}
+
+		.btn-save {
+			flex: 1;
+			background: #17bf63;
+			color: white;
+			padding: 10px;
+			border: none;
+			border-radius: 8px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-save:hover {
+			background: #14a555;
+			transform: translateY(-1px);
+		}
+
+		.btn-delete {
+			background: #f91880;
+			color: white;
+			padding: 10px 20px;
+			border: none;
+			border-radius: 8px;
+			font-weight: 600;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-delete:hover {
+			background: #dd0e6b;
+			transform: translateY(-1px);
+		}
+
+		.empty-state {
+			text-align: center;
+			padding: 60px 20px;
+			color: #536471;
+		}
+
+		.empty-state-icon {
+			font-size: 64px;
+			margin-bottom: 16px;
+			opacity: 0.3;
+		}
+
+		.notification {
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 16px 24px;
+			background: white;
+			border-radius: 8px;
+			box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+			display: none;
+			align-items: center;
+			gap: 12px;
+			z-index: 1000;
+			animation: slideIn 0.3s ease;
+		}
+
+		@keyframes slideIn {
+			from {
+				transform: translateX(400px);
+				opacity: 0;
+			}
+			to {
+				transform: translateX(0);
+				opacity: 1;
+			}
+		}
+
+		.notification.success {
+			border-left: 4px solid #17bf63;
+		}
+
+		.notification.error {
+			border-left: 4px solid #f91880;
+		}
+
+		.notification.show {
+			display: flex;
+		}
+
+		.loader {
+			display: none;
+			text-align: center;
+			padding: 40px;
+		}
+
+		.loader.show {
+			display: block;
+		}
+
+		.spinner {
+			border: 4px solid #f3f3f3;
+			border-top: 4px solid #667eea;
+			border-radius: 50%;
+			width: 40px;
+			height: 40px;
+			animation: spin 1s linear infinite;
+			margin: 0 auto;
+		}
+
+		@keyframes spin {
+			0% { transform: rotate(0deg); }
+			100% { transform: rotate(360deg); }
+		}
+
+		.auth-section {
+			padding: 30px;
+			max-width: 500px;
+			margin: 60px auto;
+		}
+
+		.auth-section h2 {
+			margin-bottom: 20px;
+			color: #0f1419;
+		}
+
+		.auth-section input {
+			width: 100%;
+			margin-bottom: 16px;
+		}
+
+		.auth-section .btn {
+			width: 100%;
+		}
+	</style>
+</head>
+<body>
+	<div id="notification" class="notification">
+		<span id="notificationText"></span>
+	</div>
+
+	<div class="container">
+		<div class="header">
+			<h1>Content Manager</h1>
+			<p>Administrează conținutul dinamic pentru toate site-urile</p>
+		</div>
+
+		<!-- Authentication Section (shown initially) -->
+		<div id="authSection" class="auth-section">
+			<h2>Autentificare Firebase</h2>
+			<input type="text" id="firebaseUrl" placeholder="Firebase Database URL (ex: https://your-project.firebaseio.com)">
+			<button class="btn btn-primary" onclick="initializeFirebase()">Conectează-te</button>
+		</div>
+
+		<!-- Main Content (hidden until authenticated) -->
+		<div id="mainContent" style="display: none;">
+			<div class="controls">
+				<div class="control-group">
+					<label>Site</label>
+					<select id="siteSelect" onchange="loadSiteContent()">
+						<option value="">Selectează site...</option>
+					</select>
+				</div>
+
+				<div class="control-group">
+					<label>Componentă</label>
+					<select id="componentSelect" onchange="loadComponentContent()">
+						<option value="">Selectează componentă...</option>
+					</select>
+				</div>
+
+				<div class="control-group">
+					<button class="btn btn-add" onclick="showAddSlugModal()">+ Adaugă Slug Nou</button>
+				</div>
+
+				<div class="control-group">
+					<button class="btn btn-success" onclick="refreshData()">🔄 Reîmprosprătează</button>
+				</div>
+			</div>
+
+			<div class="content-area">
+				<div id="loader" class="loader">
+					<div class="spinner"></div>
+					<p style="margin-top: 16px; color: #536471;">Se încarcă...</p>
+				</div>
+
+				<div id="contentGrid" class="content-grid"></div>
+
+				<div id="emptyState" class="empty-state" style="display: none;">
+					<div class="empty-state-icon">📝</div>
+					<h3>Selectează un site și o componentă</h3>
+					<p>Pentru a începe, alege site-ul și componenta pe care dorești să le editezi.</p>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<script>
+		let firebaseUrl = '';
+		let currentSite = '';
+		let currentComponent = '';
+		let contentData = {};
+
+		// Convert between Firebase keys and display names
+		function firebaseKeyToHostname(key) {
+			return key.replace(/_/g, '.');
+		}
+
+		function hostnameToFirebaseKey(hostname) {
+			return hostname.replace(/\./g, '_');
+		}
+
+		// Initialize Firebase connection
+		async function initializeFirebase() {
+			const url = document.getElementById('firebaseUrl').value.trim();
+
+			if (!url) {
+				showNotification('Te rog introdu URL-ul Firebase', 'error');
+				return;
+			}
+
+			firebaseUrl = url.replace(/\/$/, ''); // Remove trailing slash
+
+			try {
+				// Test connection
+				const response = await fetch(`${firebaseUrl}/config.json`);
+				if (!response.ok) throw new Error('Connection failed');
+
+				showNotification('Conectat cu succes!', 'success');
+				document.getElementById('authSection').style.display = 'none';
+				document.getElementById('mainContent').style.display = 'block';
+
+				loadSites();
+			} catch (error) {
+				showNotification('Eroare la conectare: ' + error.message, 'error');
+			}
+		}
+
+		// Load available sites
+		async function loadSites() {
+			try {
+				const response = await fetch(`${firebaseUrl}/dynamic_content.json`);
+				const data = await response.json();
+
+				const siteSelect = document.getElementById('siteSelect');
+				siteSelect.innerHTML = '<option value="">Selectează site...</option>';
+
+				Object.keys(data || {}).forEach(firebaseKey => {
+					const option = document.createElement('option');
+					option.value = firebaseKey; // Keep Firebase key as value
+					option.textContent = firebaseKeyToHostname(firebaseKey); // Display with dots
+					siteSelect.appendChild(option);
+				});
+			} catch (error) {
+				showNotification('Eroare la încărcarea site-urilor', 'error');
+			}
+		}
+
+		// Load site content
+		async function loadSiteContent() {
+			const site = document.getElementById('siteSelect').value;
+			if (!site) return;
+
+			currentSite = site;
+
+			try {
+				showLoader(true);
+				const response = await fetch(`${firebaseUrl}/dynamic_content/${site}.json`);
+				const data = await response.json();
+
+				contentData = data || {};
+
+				const componentSelect = document.getElementById('componentSelect');
+				componentSelect.innerHTML = '<option value="">Selectează componentă...</option>';
+
+				Object.keys(contentData).forEach(component => {
+					const option = document.createElement('option');
+					option.value = component;
+					option.textContent = component;
+					componentSelect.appendChild(option);
+				});
+
+				showLoader(false);
+				document.getElementById('emptyState').style.display = 'block';
+				document.getElementById('contentGrid').innerHTML = '';
+			} catch (error) {
+				showLoader(false);
+				showNotification('Eroare la încărcarea conținutului', 'error');
+			}
+		}
+
+		// Load component content
+		function loadComponentContent() {
+			const component = document.getElementById('componentSelect').value;
+			if (!component) return;
+
+			currentComponent = component;
+			const slugData = contentData[component] || {};
+
+			renderContentGrid(slugData);
+			document.getElementById('emptyState').style.display = 'none';
+		}
+
+		// Render content grid
+		function renderContentGrid(slugData) {
+			const grid = document.getElementById('contentGrid');
+			grid.innerHTML = '';
+
+			Object.keys(slugData).forEach(slug => {
+				const content = slugData[slug];
+
+				const item = document.createElement('div');
+				item.className = 'content-item';
+				item.innerHTML = `
+					<div class="content-item-header">
+						<span class="content-item-title">${currentComponent}</span>
+						<span class="content-item-slug">${slug}</span>
+					</div>
+					<div class="content-item-body">
+						<label>Conținut:</label>
+						<textarea id="content-${slug}" rows="4">${content}</textarea>
+					</div>
+					<div class="content-item-actions">
+						<button class="btn-save" onclick="saveContent('${slug}')">💾 Salvează</button>
+						<button class="btn-delete" onclick="deleteSlug('${slug}')">🗑️ Șterge</button>
+					</div>
+				`;
+
+				grid.appendChild(item);
+			});
+		}
+
+		// Save content
+		async function saveContent(slug) {
+			const content = document.getElementById(`content-${slug}`).value;
+
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					{
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(content)
+					}
+				);
+
+				if (response.ok) {
+					showNotification('Salvat cu succes!', 'success');
+					contentData[currentComponent][slug] = content;
+				} else {
+					throw new Error('Save failed');
+				}
+			} catch (error) {
+				showNotification('Eroare la salvare', 'error');
+			}
+		}
+
+		// Delete slug
+		async function deleteSlug(slug) {
+			if (!confirm(`Sigur vrei să ștergi slug-ul "${slug}"?`)) return;
+
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					{ method: 'DELETE' }
+				);
+
+				if (response.ok) {
+					showNotification('Șters cu succes!', 'success');
+					delete contentData[currentComponent][slug];
+					loadComponentContent();
+				} else {
+					throw new Error('Delete failed');
+				}
+			} catch (error) {
+				showNotification('Eroare la ștergere', 'error');
+			}
+		}
+
+		// Show add slug modal
+		function showAddSlugModal() {
+			if (!currentComponent) {
+				showNotification('Selectează mai întâi o componentă', 'error');
+				return;
+			}
+
+			const slug = prompt('Introdu numele noului slug (ex: produs-nou):');
+			if (!slug) return;
+
+			const content = prompt('Introdu conținutul pentru acest slug:');
+			if (content === null) return;
+
+			addNewSlug(slug, content);
+		}
+
+		// Add new slug
+		async function addNewSlug(slug, content) {
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					{
+						method: 'PUT',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(content)
+					}
+				);
+
+				if (response.ok) {
+					showNotification('Slug adăugat cu succes!', 'success');
+					contentData[currentComponent][slug] = content;
+					loadComponentContent();
+				} else {
+					throw new Error('Add failed');
+				}
+			} catch (error) {
+				showNotification('Eroare la adăugare', 'error');
+			}
+		}
+
+		// Refresh data
+		function refreshData() {
+			if (currentSite) {
+				loadSiteContent();
+			} else {
+				loadSites();
+			}
+		}
+
+		// Show notification
+		function showNotification(message, type = 'success') {
+			const notification = document.getElementById('notification');
+			const text = document.getElementById('notificationText');
+
+			text.textContent = message;
+			notification.className = `notification ${type} show`;
+
+			setTimeout(() => {
+				notification.classList.remove('show');
+			}, 3000);
+		}
+
+		// Show/hide loader
+		function showLoader(show) {
+			document.getElementById('loader').classList.toggle('show', show);
+		}
+	</script>
+</body>
+</html>

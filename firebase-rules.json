@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "config": {
+      ".read": true,
+      ".write": false
+    },
+    "dynamic_content": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
