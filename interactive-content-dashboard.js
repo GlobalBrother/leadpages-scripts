@@ -181,6 +181,12 @@
 						element.src = content;
 					} else if (element.tagName === 'A') {
 						element.href = content;
+					} else if (element.tagName === 'DIV') {
+						// Look for nested iframe (e.g. Wistia/Vimeo responsive wrapper)
+						const nestedIframe = element.querySelector('iframe');
+						if (nestedIframe) {
+							nestedIframe.src = content;
+						}
 					}
 				} else if (content.startsWith('<')) {
 					// It's HTML
