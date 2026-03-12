@@ -1073,11 +1073,13 @@
 			currentSite = '';
 			currentSlug = '';
 			contentData = {};
-			document.getElementById('authOverlay').style.display = 'flex';
-			document.getElementById('appLayout').style.display   = 'none';
+			document.getElementById('appLayout').style.display        = 'none';
 			document.getElementById('connectionStatus').style.display = 'none';
-			document.getElementById('adminPassword').value = '';
+			document.getElementById('adminPassword').value            = '';
 			document.getElementById('authPasswordError').style.display = 'none';
+			document.getElementById('authCardPassword').style.display = 'block';
+			document.getElementById('authOverlay').style.display      = 'flex';
+			setTimeout(() => document.getElementById('adminPassword').focus(), 100);
 		}
 
 		// ─── FIREBASE HELPERS ─────────────────────────────────────────────────────
