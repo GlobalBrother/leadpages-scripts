@@ -1227,7 +1227,7 @@
 
 		// Detect if a component name is a bullets-type component
 		function isBulletsComponent(name) {
-			return name.toLowerCase().includes('bullets');
+			return name.toLowerCase() === 'changing-bullets';
 		}
 
 		// Parse existing HTML stored in Firebase → extract header + bullets array
@@ -1401,7 +1401,7 @@
 			const name = document.getElementById('modalComponentName').value.trim();
 			if (!name) { showNotification('Please enter a component name', 'error'); return; }
 
-			const isBullets = name.toLowerCase().includes('bullets');
+			const isBullets = name.toLowerCase() === 'changing-bullets';
 
 			document.getElementById('modalStep1').style.display = 'none';
 
