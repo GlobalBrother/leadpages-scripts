@@ -866,6 +866,29 @@
 		}
 
 		.code-hint-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+		/* Edit component name button */
+		.btn-rename-card {
+			padding: 9px 12px;
+			background: white;
+			color: #6b7280;
+			border: 1.5px solid var(--border);
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			align-items: center;
+			gap: 5px;
+		}
+
+		.btn-rename-card:hover {
+			background: #f3f4f6;
+			border-color: #9ca3af;
+			color: var(--text-primary);
+		}
 	</style>
 </head>
 <body>
@@ -1300,6 +1323,7 @@ e.g.
 					</div>
 					<div class="card-footer">
 						<button class="btn-save-card" onclick="saveContent('${component}')">Save</button>
+						<button class="btn-rename-card" onclick="renameComponent('${component}')" title="Rename component ID">✏ Rename</button>
 						<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>
 					</div>
 				`;
@@ -1371,6 +1395,7 @@ e.g.
 				</div>
 				<div class="card-footer">
 					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">Save Bullets</button>
+					<button class="btn-rename-card" onclick="renameComponent('${component}')" title="Rename component ID">✏ Rename</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>
 				</div>
 			`;
@@ -1566,6 +1591,52 @@ e.g.
 
 			closeAddCustomComponentModal();
 			await addNewComponent(safeName, code);
+		}
+
+		async function renameComponent(oldName) {
+			const newName = prompt(`Rename component "${oldName}" to:`, oldName);
+			if (!newName || newName.trim() === oldName) return;
+
+			const safeName = newName.trim().toLowerCase()
+				.replace(/[^a-z0-9-_]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+
+			if (!safeName) { showNotification('Invalid component name', 'error'); return; }
+			if (safeName === oldName) return;
+			if (contentData[safeName]) {
+				showNotification(`Component "${safeName}" already exists!`, 'error');
+				return;
+			}
+
+			try {
+				// Get ALL slugs for this component (not just the current one)
+				const allSlugData = contentData[oldName];
+				if (!allSlugData) { showNotification('Component data not found', 'error'); return; }
+
+				// Write all slug data under the new name
+				const putResp = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${safeName}.json`,
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(allSlugData) }
+				);
+				if (!putResp.ok) throw new Error('Write failed');
+
+				// Delete old key
+				const delResp = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${oldName}.json`,
+					{ method: 'DELETE' }
+				);
+				if (!delResp.ok) throw new Error('Delete old failed');
+
+				// Update local cache
+				contentData[safeName] = allSlugData;
+				delete contentData[oldName];
+
+				showNotification(`Renamed "${oldName}" → "${safeName}"`, 'success');
+				loadSlugContent(); // re-render grid
+			} catch (err) {
+				showNotification('Error renaming component', 'error');
+			}
 		}
 
 		function showAddNewSlugModal() {
