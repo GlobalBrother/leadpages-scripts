@@ -20,38 +20,51 @@
 	const currentSite = hostnameToFirebaseKey(currentSiteHostname);
 
 	// Detect slug from URL
-	function getSlug() {
+	function getSlug(knownSlugs) {
 		const url = window.location.href.toLowerCase();
 		const pathname = window.location.pathname.toLowerCase();
 
-		// Method 1: Check for explicit slug parameter in URL (?slug=X or &slug=X)
+		// Method 1: Check if URL contains any known slug from Firebase (contains match)
+		if (knownSlugs && knownSlugs.length > 0) {
+			for (const slug of knownSlugs) {
+				if (url.includes(slug.toLowerCase())) {
+					return slug;
+				}
+			}
+		}
+
+		// Method 2: Check for explicit slug parameter in URL (?slug=X or &slug=X)
 		const urlParams = new URLSearchParams(window.location.search);
 		const explicitSlug = urlParams.get('slug');
 		if (explicitSlug) {
 			return explicitSlug;
 		}
 
-		// Method 2: Auto-detect from pathname (first path segment)
-		// Example: /reactive-site-admin-panel/ → reactive-site-admin-panel
-		// Example: /book/ → book
+		// Method 3: Check for bare query param as slug (e.g. ?amish-fire-cider)
+		const searchString = window.location.search;
+		if (searchString.startsWith('?') && !searchString.includes('=')) {
+			const bareSlug = searchString.slice(1)
+				.replace(/[^a-z0-9-]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+			if (bareSlug) {
+				return bareSlug;
+			}
+		}
+
+		// Method 4: Auto-detect from pathname (first path segment)
 		const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
 		if (pathSegments.length > 0) {
-			// Return first path segment as slug, sanitized
 			const detectedSlug = pathSegments[0]
-				.replace(/[^a-z0-9-]/g, '-') // Replace invalid chars with dash
-				.replace(/-+/g, '-') // Replace multiple dashes with single dash
-				.replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-
+				.replace(/[^a-z0-9-]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
 			if (detectedSlug) {
 				return detectedSlug;
 			}
 		}
 
-		// Method 3: Fallback - check for hardcoded slugs (backward compatibility)
-		if (url.includes('amish-fire-cider')) return 'amish-fire-cider';
-		if (url.includes('herbal-parasite-flush')) return 'herbal-parasite-flush';
-
-		// Method 4: Default fallback
+		// Method 5: Default fallback
 		return 'default';
 	}
 
@@ -59,8 +72,6 @@
 	async function loadContentFromFirebase() {
 		if (hasRun) return;
 		hasRun = true;
-
-		const slug = getSlug();
 
 		try {
 			// Fetch content from Firebase
@@ -87,6 +98,9 @@
 
 			// Get all configured slugs for this site
 			const allSlugs = getConfiguredSlugs(siteContent);
+
+			// Detect slug now that we know all configured slugs (URL contains match)
+			const slug = getSlug(allSlugs);
 
 			// Apply content-based display logic
 			applyContentDisplay(contentPrefixes, allSlugs, slug);
