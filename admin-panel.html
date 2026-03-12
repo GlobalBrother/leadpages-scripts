@@ -358,14 +358,14 @@
 				</div>
 
 				<div class="control-group">
-					<label>Componentă</label>
-					<select id="componentSelect" onchange="loadComponentContent()">
-						<option value="">Selectează componentă...</option>
+					<label>Slug (Produs)</label>
+					<select id="slugSelect" onchange="loadSlugContent()">
+						<option value="">Selectează slug...</option>
 					</select>
 				</div>
 
 				<div class="control-group">
-					<button class="btn btn-add" onclick="showAddSlugModal()">+ Adaugă Slug Nou</button>
+					<button class="btn btn-add" onclick="showAddSlugModal()">+ Adaugă Componentă</button>
 				</div>
 
 				<div class="control-group">
@@ -383,8 +383,8 @@
 
 				<div id="emptyState" class="empty-state" style="display: none;">
 					<div class="empty-state-icon">📝</div>
-					<h3>Selectează un site și o componentă</h3>
-					<p>Pentru a începe, alege site-ul și componenta pe care dorești să le editezi.</p>
+					<h3>Selectează un site și un slug</h3>
+					<p>Pentru a începe, alege site-ul și slug-ul (produsul) pe care dorești să-l editezi.</p>
 				</div>
 			</div>
 		</div>
@@ -393,7 +393,7 @@
 	<script>
 		let firebaseUrl = '';
 		let currentSite = '';
-		let currentComponent = '';
+		let currentSlug = '';
 		let contentData = {};
 
 		// Convert between Firebase keys and display names
@@ -465,14 +465,22 @@
 
 				contentData = data || {};
 
-				const componentSelect = document.getElementById('componentSelect');
-				componentSelect.innerHTML = '<option value="">Selectează componentă...</option>';
-
+				// Extract all unique slugs from all components
+				const slugsSet = new Set();
 				Object.keys(contentData).forEach(component => {
+					Object.keys(contentData[component]).forEach(slug => {
+						slugsSet.add(slug);
+					});
+				});
+
+				const slugSelect = document.getElementById('slugSelect');
+				slugSelect.innerHTML = '<option value="">Selectează slug...</option>';
+
+				Array.from(slugsSet).sort().forEach(slug => {
 					const option = document.createElement('option');
-					option.value = component;
-					option.textContent = component;
-					componentSelect.appendChild(option);
+					option.value = slug;
+					option.textContent = slug;
+					slugSelect.appendChild(option);
 				});
 
 				showLoader(false);
@@ -484,40 +492,47 @@
 			}
 		}
 
-		// Load component content
-		function loadComponentContent() {
-			const component = document.getElementById('componentSelect').value;
-			if (!component) return;
+		// Load slug content (all components for this slug)
+		function loadSlugContent() {
+			const slug = document.getElementById('slugSelect').value;
+			if (!slug) return;
 
-			currentComponent = component;
-			const slugData = contentData[component] || {};
+			currentSlug = slug;
 
-			renderContentGrid(slugData);
+			// Collect all components that have this slug
+			const componentsData = {};
+			Object.keys(contentData).forEach(component => {
+				if (contentData[component][slug]) {
+					componentsData[component] = contentData[component][slug];
+				}
+			});
+
+			renderContentGrid(componentsData);
 			document.getElementById('emptyState').style.display = 'none';
 		}
 
-		// Render content grid
-		function renderContentGrid(slugData) {
+		// Render content grid (components for selected slug)
+		function renderContentGrid(componentsData) {
 			const grid = document.getElementById('contentGrid');
 			grid.innerHTML = '';
 
-			Object.keys(slugData).forEach(slug => {
-				const content = slugData[slug];
+			Object.keys(componentsData).sort().forEach(component => {
+				const content = componentsData[component];
 
 				const item = document.createElement('div');
 				item.className = 'content-item';
 				item.innerHTML = `
 					<div class="content-item-header">
-						<span class="content-item-title">${currentComponent}</span>
-						<span class="content-item-slug">${slug}</span>
+						<span class="content-item-title">${component}</span>
+						<span class="content-item-slug">${currentSlug}</span>
 					</div>
 					<div class="content-item-body">
 						<label>Conținut:</label>
-						<textarea id="content-${slug}" rows="4">${content}</textarea>
+						<textarea id="content-${component}" rows="4">${content}</textarea>
 					</div>
 					<div class="content-item-actions">
-						<button class="btn-save" onclick="saveContent('${slug}')">💾 Salvează</button>
-						<button class="btn-delete" onclick="deleteSlug('${slug}')">🗑️ Șterge</button>
+						<button class="btn-save" onclick="saveContent('${component}')">💾 Salvează</button>
+						<button class="btn-delete" onclick="deleteComponent('${component}')">🗑️ Șterge</button>
 					</div>
 				`;
 
@@ -526,12 +541,12 @@
 		}
 
 		// Save content
-		async function saveContent(slug) {
-			const content = document.getElementById(`content-${slug}`).value;
+		async function saveContent(component) {
+			const content = document.getElementById(`content-${component}`).value;
 
 			try {
 				const response = await fetch(
-					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 					{
 						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' },
@@ -541,7 +556,7 @@
 
 				if (response.ok) {
 					showNotification('Salvat cu succes!', 'success');
-					contentData[currentComponent][slug] = content;
+					contentData[component][currentSlug] = content;
 				} else {
 					throw new Error('Save failed');
 				}
@@ -550,20 +565,20 @@
 			}
 		}
 
-		// Delete slug
-		async function deleteSlug(slug) {
-			if (!confirm(`Sigur vrei să ștergi slug-ul "${slug}"?`)) return;
+		// Delete component content for current slug
+		async function deleteComponent(component) {
+			if (!confirm(`Sigur vrei să ștergi slug-ul "${currentSlug}" din componenta "${component}"?`)) return;
 
 			try {
 				const response = await fetch(
-					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 					{ method: 'DELETE' }
 				);
 
 				if (response.ok) {
 					showNotification('Șters cu succes!', 'success');
-					delete contentData[currentComponent][slug];
-					loadComponentContent();
+					delete contentData[component][currentSlug];
+					loadSlugContent();
 				} else {
 					throw new Error('Delete failed');
 				}
@@ -574,25 +589,25 @@
 
 		// Show add slug modal
 		function showAddSlugModal() {
-			if (!currentComponent) {
-				showNotification('Selectează mai întâi o componentă', 'error');
+			if (!currentSlug) {
+				showNotification('Selectează mai întâi un slug', 'error');
 				return;
 			}
 
-			const slug = prompt('Introdu numele noului slug (ex: produs-nou):');
-			if (!slug) return;
+			const component = prompt('Introdu numele componentei (ex: title-interactive):');
+			if (!component) return;
 
-			const content = prompt('Introdu conținutul pentru acest slug:');
+			const content = prompt('Introdu conținutul pentru acest slug și componentă:');
 			if (content === null) return;
 
-			addNewSlug(slug, content);
+			addNewComponent(component, content);
 		}
 
-		// Add new slug
-		async function addNewSlug(slug, content) {
+		// Add new component for current slug
+		async function addNewComponent(component, content) {
 			try {
 				const response = await fetch(
-					`${firebaseUrl}/dynamic_content/${currentSite}/${currentComponent}/${slug}.json`,
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 					{
 						method: 'PUT',
 						headers: { 'Content-Type': 'application/json' },
@@ -601,9 +616,12 @@
 				);
 
 				if (response.ok) {
-					showNotification('Slug adăugat cu succes!', 'success');
-					contentData[currentComponent][slug] = content;
-					loadComponentContent();
+					showNotification('Componentă adăugată cu succes!', 'success');
+					if (!contentData[component]) {
+						contentData[component] = {};
+					}
+					contentData[component][currentSlug] = content;
+					loadSlugContent();
 				} else {
 					throw new Error('Add failed');
 				}
