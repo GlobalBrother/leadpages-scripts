@@ -41,7 +41,7 @@
 				.replace(/[^a-z0-9-]/g, '-') // Replace invalid chars with dash
 				.replace(/-+/g, '-') // Replace multiple dashes with single dash
 				.replace(/^-|-$/g, ''); // Remove leading/trailing dashes
-			
+
 			if (detectedSlug) {
 				return detectedSlug;
 			}
@@ -182,7 +182,11 @@
 					element.innerHTML = content;
 				} else {
 					// It's plain text
-					element.textContent = content;
+					if (componentId === 'main-title') {
+						element.innerHTML = `<h2>${content}</h2>`;
+					} else {
+						element.textContent = content;
+					}
 				}
 			}
 		});
