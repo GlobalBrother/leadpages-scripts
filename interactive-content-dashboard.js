@@ -52,19 +52,7 @@
 			}
 		}
 
-		// Method 4: Auto-detect from pathname (first path segment)
-		const pathSegments = pathname.split('/').filter(segment => segment.length > 0);
-		if (pathSegments.length > 0) {
-			const detectedSlug = pathSegments[0]
-				.replace(/[^a-z0-9-]/g, '-')
-				.replace(/-+/g, '-')
-				.replace(/^-|-$/g, '');
-			if (detectedSlug) {
-				return detectedSlug;
-			}
-		}
-
-		// Method 5: Default fallback
+		// Method 4: Default fallback
 		return 'default';
 	}
 
