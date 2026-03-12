@@ -13,13 +13,14 @@
 			--gold-dark: #b8860b;
 			--gold-light: #e0b83a;
 			--surface: #ffffff;
-			--page-bg: #f0f2f5;
+			--page-bg: #dae0e9;
 			--border: #e5e7eb;
 			--text-primary: #111827;
 			--text-secondary: #6b7280;
 			--text-muted: #9ca3af;
 			--danger: #dc2626;
 		}
+
 
 		* { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -418,6 +419,8 @@
 			border-radius: 14px;
 			overflow: hidden;
 			transition: box-shadow 0.2s, border-color 0.2s;
+			display: flex;
+			flex-direction: column;
 		}
 
 		.content-card:hover {
@@ -452,7 +455,7 @@
 		}
 
 		.component-label {
-			font-size: 13px;
+			font-size: 20px;
 			font-weight: 700;
 			color: var(--text-primary);
 		}
@@ -490,22 +493,27 @@
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
 			background: white;
 		}
+		#bullets-list-changing-bullets {
+			height: 158px;
+    	overflow: auto;
+		}
 
 		.card-footer {
 			padding: 11px 18px;
 			border-top: 1px solid var(--border);
 			display: flex;
 			gap: 8px;
+			margin-top: auto;
 		}
 
 		.btn-save-card {
 			flex: 1;
 			padding: 9px 16px;
 			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-			color: #1a1d24;
+			color: white;
 			border: none;
 			border-radius: 8px;
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 			font-family: inherit;
 			cursor: pointer;
@@ -858,7 +866,7 @@
 				</div>
 				<div class="modal-footer">
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
-					<button class="btn-save-card" onclick="modalSaveSimple()">💾 Save</button>
+					<button class="btn-save-card" onclick="modalSaveSimple()">Save</button>
 				</div>
 			</div>
 
@@ -877,14 +885,14 @@
 						<input type="text" id="modalBulletsHeader" placeholder="e.g. You will soon learn:" />
 					</div>
 					<div class="modal-field">
-						<label>📌 Bullet Points</label>
+						<label>Bullet Points</label>
 						<div id="modalBulletsList" class="modal-bullets-list"></div>
 						<button class="modal-add-bullet" onclick="modalAddBulletRow()">➕ Add Bullet Point</button>
 					</div>
 				</div>
 				<div class="modal-footer">
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
-					<button class="btn-save-card" onclick="modalSaveBullets()">💾 Save</button>
+					<button class="btn-save-card" onclick="modalSaveBullets()">Save</button>
 				</div>
 			</div>
 
@@ -893,12 +901,15 @@
 
 	<!-- AUTH OVERLAY -->
 	<div id="authOverlay" class="auth-overlay">
-		<div class="auth-card">
-			<div class="auth-icon">🔥</div>
+		<div id="authCardPassword" class="auth-card" style="display:none;">
+			<div class="auth-icon">🔐</div>
 			<h2>Content Manager</h2>
-			<p>Enter your Firebase Realtime Database URL to access the admin panel.</p>
-			<input type="text" id="firebaseUrl" placeholder="https://your-project.firebaseio.com">
-			<button class="btn-connect" onclick="initializeFirebase()">Connect to Firebase →</button>
+			<p>Introdu parola de admin pentru a accesa panoul.</p>
+			<input type="password" id="adminPassword" placeholder="Parolă" onkeydown="if(event.key==='Enter')loginWithPassword()">
+			<div id="authPasswordError" style="display:none; color:#dc2626; font-size:13px; margin:-8px 0 12px; text-align:left;">
+				Parolă incorectă. Încearcă din nou.
+			</div>
+			<button class="btn-connect" onclick="loginWithPassword()">Intră →</button>
 		</div>
 	</div>
 
@@ -949,8 +960,11 @@
 				</button>
 			</div>
 
-			<div class="sidebar-footer">
+			<div class="sidebar-footer" style="display:flex; flex-direction:column; gap:8px;">
 				<button class="sidebar-refresh-btn" onclick="refreshData()">↺ &nbsp;Refresh</button>
+				<button class="sidebar-refresh-btn" onclick="logout()" style="color:rgba(220,38,38,0.7); border-color:rgba(220,38,38,0.25);">
+					⇠ &nbsp;Logout
+				</button>
 			</div>
 		</aside>
 
@@ -1002,32 +1016,59 @@
 		let currentSlug = '';
 		let contentData = {};
 
+		// ─── CONFIG (edit these two values) ──────────────────────────────────────
+		const FIREBASE_URL    = 'https://content-manager-8da5c-default-rtdb.europe-west1.firebasedatabase.app';
+		const ADMIN_PASSWORD  = '121212'; // ← schimbă cu parola ta
+		// ──────────────────────────────────────────────────────────────────────────
+
+		// ─── AUTH ─────────────────────────────────────────────────────────────────
+
+		function initAuthUI() {
+			document.getElementById('authCardPassword').style.display = 'block';
+			setTimeout(() => document.getElementById('adminPassword').focus(), 100);
+		}
+
+		function loginWithPassword() {
+			const input   = document.getElementById('adminPassword').value;
+			const errorEl = document.getElementById('authPasswordError');
+			errorEl.style.display = 'none';
+
+			if (!input) return;
+
+			if (input !== ADMIN_PASSWORD) {
+				errorEl.style.display = 'block';
+				document.getElementById('adminPassword').value = '';
+				document.getElementById('adminPassword').focus();
+				return;
+			}
+
+			firebaseUrl = FIREBASE_URL;
+			document.getElementById('authOverlay').style.display = 'none';
+			document.getElementById('appLayout').style.display   = 'flex';
+			document.getElementById('connectionStatus').style.display = 'flex';
+			loadSites();
+		}
+
+		function logout() {
+			firebaseUrl = '';
+			currentSite = '';
+			currentSlug = '';
+			contentData = {};
+			document.getElementById('authOverlay').style.display = 'flex';
+			document.getElementById('appLayout').style.display   = 'none';
+			document.getElementById('connectionStatus').style.display = 'none';
+			document.getElementById('adminPassword').value = '';
+			document.getElementById('authPasswordError').style.display = 'none';
+		}
+
+		// ─── FIREBASE HELPERS ─────────────────────────────────────────────────────
+
 		function firebaseKeyToHostname(key) {
 			return key.replace(/_/g, '.');
 		}
 
 		function hostnameToFirebaseKey(hostname) {
 			return hostname.replace(/\./g, '_');
-		}
-
-		async function initializeFirebase() {
-			const url = document.getElementById('firebaseUrl').value.trim();
-			if (!url) { showNotification('Please enter the Firebase URL', 'error'); return; }
-
-			firebaseUrl = url.replace(/\/$/, '');
-
-			try {
-				const response = await fetch(`${firebaseUrl}/config.json`);
-				if (!response.ok) throw new Error('Connection failed');
-
-				showNotification('Connected successfully!', 'success');
-				document.getElementById('authOverlay').style.display = 'none';
-				document.getElementById('appLayout').style.display = 'flex';
-				document.getElementById('connectionStatus').style.display = 'flex';
-				loadSites();
-			} catch (error) {
-				showNotification('Connection error: ' + error.message, 'error');
-			}
 		}
 
 		async function loadSites() {
@@ -1149,7 +1190,7 @@
 						<textarea id="content-${component}" rows="4">${content}</textarea>
 					</div>
 					<div class="card-footer">
-						<button class="btn-save-card" onclick="saveContent('${component}')">💾 &nbsp;Save</button>
+						<button class="btn-save-card" onclick="saveContent('${component}')">Save</button>
 						<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Delete</button>
 					</div>
 				`;
@@ -1208,7 +1249,7 @@
 							placeholder="e.g. You will soon learn:"
 							style="width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 8px; font-size: 14px; font-family: inherit;">
 					</div>
-					<div>
+					<div class="bullets-editor-section">
 						<label style="display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px;">
 							📌 Bullet Points
 						</label>
@@ -1220,7 +1261,7 @@
 					</div>
 				</div>
 				<div class="card-footer">
-					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">💾 &nbsp;Save Bullets</button>
+					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">Save Bullets</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">🗑 Delete</button>
 				</div>
 			`;
@@ -1486,6 +1527,9 @@
 		function showLoader(show) {
 			document.getElementById('loader').classList.toggle('show', show);
 		}
+
+		// Boot
+		initAuthUI();
 	</script>
 </body>
 </html>
