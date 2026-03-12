@@ -14,6 +14,8 @@
 			font-size: 3rem;
 			line-height: 1.2;
 			margin: 0;
+			text-align: center;
+			padding: 15px;
 		}
 		@media (max-width: 767px) {
 			#main-title h2 {
@@ -221,11 +223,12 @@
 					// It's HTML
 					element.innerHTML = content;
 				} else {
-					// It's plain text - wrap in h2 for main-title component
+					// It's plain text - convert newlines to <br> for line breaks
+					const contentWithBreaks = content.replace(/\n/g, '<br>');
 					if (componentId === 'main-title') {
-						element.innerHTML = `<h2>${content}</h2>`;
+						element.innerHTML = `<h2>${contentWithBreaks}</h2>`;
 					} else {
-						element.textContent = content;
+						element.innerHTML = contentWithBreaks;
 					}
 				}
 			}
