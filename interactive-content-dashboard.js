@@ -222,6 +222,16 @@
 					// It's HTML - inject directly
 					element.innerHTML = content;
 
+					// Execute any <script> tags inside the injected HTML
+					Array.from(element.querySelectorAll('script')).forEach(function(oldScript) {
+						const newScript = document.createElement('script');
+						Array.from(oldScript.attributes).forEach(function(attr) {
+							newScript.setAttribute(attr.name, attr.value);
+						});
+						newScript.textContent = oldScript.textContent;
+						oldScript.parentNode.replaceChild(newScript, oldScript);
+					});
+
 					// If it contains bullets, start the animation
 					const bullets = element.querySelectorAll('.amish-bullet');
 					if (bullets.length > 0) {

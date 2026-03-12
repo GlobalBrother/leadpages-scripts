@@ -385,7 +385,7 @@
 			background: white;
 			border: 1px solid var(--border);
 			border-radius: 10px;
-			font-size: 13px;
+			font-size: 15px;
 		}
 
 		.meta-label { color: var(--text-muted); font-weight: 500; }
@@ -397,12 +397,12 @@
 			font-weight: 700;
 			padding: 2px 10px;
 			border-radius: 20px;
-			font-size: 12px;
+			font-size: 14px;
 		}
 
 		.meta-count {
 			margin-left: auto;
-			font-size: 12px;
+			font-size: 14px;
 			color: var(--text-muted);
 		}
 
@@ -822,6 +822,50 @@
 		/* Step 1 modal */
 		.modal-step { }
 		.modal-step.hidden { display: none; }
+
+		/* Custom component modal */
+		.modal-box.modal-wide {
+			max-width: 680px;
+		}
+
+		.modal-field textarea.code-textarea {
+			width: 100%;
+			padding: 12px 14px;
+			border: 1.5px solid var(--border);
+			border-radius: 8px;
+			font-size: 13px;
+			font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+			resize: vertical;
+			min-height: 280px;
+			color: var(--text-primary);
+			background: #1e1e2e;
+			color: #cdd6f4;
+			transition: border-color 0.2s, box-shadow 0.2s;
+			line-height: 1.6;
+			tab-size: 2;
+		}
+
+		.modal-field textarea.code-textarea:focus {
+			outline: none;
+			border-color: var(--gold);
+			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
+		}
+
+		.code-hint {
+			display: flex;
+			align-items: flex-start;
+			gap: 10px;
+			padding: 10px 14px;
+			background: #f0f9ff;
+			border: 1px solid #bae6fd;
+			border-radius: 8px;
+			font-size: 12px;
+			color: #0369a1;
+			line-height: 1.6;
+			margin-top: 10px;
+		}
+
+		.code-hint-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
 	</style>
 </head>
 <body>
@@ -903,6 +947,42 @@
 		</div>
 	</div>
 
+	<!-- ADD CUSTOM COMPONENT MODAL -->
+	<div id="addCustomComponentModal" class="modal-overlay" style="display:none;">
+		<div class="modal-box modal-wide">
+			<div class="modal-header">
+				<h3>🧩 Add Custom Component</h3>
+				<button class="modal-close" onclick="closeAddCustomComponentModal()">✕</button>
+			</div>
+			<div class="modal-body">
+				<div class="modal-field">
+					<label>Component Name (= Element ID on Leadpages)</label>
+					<input type="text" id="customCompName" placeholder="e.g. idea-component, promo-banner, countdown-block" />
+				</div>
+				<div class="modal-field" style="margin-bottom:0;">
+					<label>HTML / CSS / JS Snippet</label>
+					<textarea id="customCompCode" class="code-textarea" placeholder="Paste your full HTML snippet here...
+e.g.
+&lt;style&gt;
+  .my-box { background: red; padding: 20px; }
+&lt;/style&gt;
+&lt;div class=&quot;my-box&quot;&gt;Hello World!&lt;/div&gt;
+&lt;script&gt;
+  console.log('injected!');
+&lt;/script&gt;"></textarea>
+				</div>
+				<div class="code-hint">
+					<span class="code-hint-icon">💡</span>
+					<span>The snippet will be injected as <code>innerHTML</code> into the element with <code>id="[component name]"</code> on your Leadpages page. Include <code>&lt;style&gt;</code> and <code>&lt;script&gt;</code> tags freely — they will all be executed.</span>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn-cancel" onclick="closeAddCustomComponentModal()">Cancel</button>
+				<button class="btn-save-card" onclick="saveCustomComponent()">Save Component</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- AUTH OVERLAY -->
 	<div id="authOverlay" class="auth-overlay">
 		<div id="authCardPassword" class="auth-card" style="display:none;">
@@ -961,6 +1041,10 @@
 				<button class="sidebar-btn" onclick="showAddComponentModal()">
 					<span class="btn-icon">＋</span>
 					Add Component
+				</button>
+				<button class="sidebar-btn" onclick="showAddCustomComponentModal()">
+					<span class="btn-icon">🧩</span>
+					Add Custom Component
 				</button>
 			</div>
 
@@ -1451,6 +1535,37 @@
 			const htmlContent = buildBulletsHtml(header, bullets);
 			closeAddComponentModal();
 			await addNewComponent(name, htmlContent);
+		}
+
+		function showAddCustomComponentModal() {
+			if (!currentSlug) { showNotification('Please select a slug first', 'error'); return; }
+			document.getElementById('customCompName').value = '';
+			document.getElementById('customCompCode').value = '';
+			document.getElementById('addCustomComponentModal').style.display = 'flex';
+			setTimeout(() => document.getElementById('customCompName').focus(), 100);
+		}
+
+		function closeAddCustomComponentModal() {
+			document.getElementById('addCustomComponentModal').style.display = 'none';
+		}
+
+		async function saveCustomComponent() {
+			const name = document.getElementById('customCompName').value.trim();
+			const code = document.getElementById('customCompCode').value;
+
+			if (!name) { showNotification('Please enter a component name', 'error'); return; }
+			if (!code.trim()) { showNotification('Please enter some HTML/CSS/JS content', 'error'); return; }
+
+			// Sanitize component name to be a valid ID / Firebase key
+			const safeName = name.toLowerCase()
+				.replace(/[^a-z0-9-_]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+
+			if (!safeName) { showNotification('Invalid component name', 'error'); return; }
+
+			closeAddCustomComponentModal();
+			await addNewComponent(safeName, code);
 		}
 
 		function showAddNewSlugModal() {
