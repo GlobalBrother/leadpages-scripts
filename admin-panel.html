@@ -1023,7 +1023,22 @@
 
 		// ─── AUTH ─────────────────────────────────────────────────────────────────
 
+		const SESSION_KEY      = 'cm_session_until';
+		const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 ore în ms
+
 		function initAuthUI() {
+			const sessionUntil = localStorage.getItem(SESSION_KEY);
+			if (sessionUntil && Date.now() < Number(sessionUntil)) {
+				// Sesiune validă — intră direct
+				firebaseUrl = FIREBASE_URL;
+				document.getElementById('authOverlay').style.display = 'none';
+				document.getElementById('appLayout').style.display   = 'flex';
+				document.getElementById('connectionStatus').style.display = 'flex';
+				loadSites();
+				return;
+			}
+			// Sesiune expirată sau inexistentă
+			localStorage.removeItem(SESSION_KEY);
 			document.getElementById('authCardPassword').style.display = 'block';
 			setTimeout(() => document.getElementById('adminPassword').focus(), 100);
 		}
@@ -1042,6 +1057,9 @@
 				return;
 			}
 
+			// Salvează sesiunea pentru 24h
+			localStorage.setItem(SESSION_KEY, Date.now() + SESSION_DURATION);
+
 			firebaseUrl = FIREBASE_URL;
 			document.getElementById('authOverlay').style.display = 'none';
 			document.getElementById('appLayout').style.display   = 'flex';
@@ -1050,6 +1068,7 @@
 		}
 
 		function logout() {
+			localStorage.removeItem(SESSION_KEY);
 			firebaseUrl = '';
 			currentSite = '';
 			currentSlug = '';
