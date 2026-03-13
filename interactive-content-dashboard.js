@@ -262,7 +262,7 @@
 						if (reviewsContainer) {
 							var initialReviews = parseInt(reviewsContainer.getAttribute('data-initial')) || 5;
 							var reviewCards = reviewsContainer.querySelectorAll('.review-card');
-							var toggleBtn = reviewsContainer.querySelector('.toggle-reviews-btn .toggle-btn');
+							var toggleBtn = reviewsContainer.querySelector('.toggle-reviews-btn');
 							reviewCards.forEach(function(card, i) {
 								card.style.setProperty('display', i < initialReviews ? 'block' : 'none', 'important');
 							});
