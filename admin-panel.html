@@ -508,7 +508,8 @@
 			background: white;
 		}
 		#bullets-list-changing-bullets {
-			height: 158px;
+			max-height: 375px;
+			height: 100%;
     	overflow: auto;
 		}
 
@@ -1475,7 +1476,13 @@ e.g.
 			const grid = document.getElementById('contentGrid');
 			grid.innerHTML = '';
 
-			Object.keys(componentsData).sort().forEach(component => {
+			const _lastComponents = ['changing-bullets', 'customer-reviews'];
+			Object.keys(componentsData).sort((a, b) => {
+				const aLast = _lastComponents.includes(a) ? 1 : 0;
+				const bLast = _lastComponents.includes(b) ? 1 : 0;
+				if (aLast !== bLast) return aLast - bLast;
+				return a.localeCompare(b);
+			}).forEach(component => {
 				const content = componentsData[component];
 
 				// Special handling for bullets-type components
