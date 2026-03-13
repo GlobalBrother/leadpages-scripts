@@ -1674,7 +1674,7 @@ e.g.
 					.join('\n');
 				return `<div class="review-card" style="display: block !important;">\n\t<div class="review-header">\n\t\t<img src="${r.avatar}" alt="Avatar">\n\t\t<div>\n\t\t\t<h4>${r.name}</h4>\n\t\t\t<p class="review-date">${r.date}</p>\n\t\t</div>\n\t</div>\n\t<div class="stars">${starsStr}</div>\n\t<div class="review-body">${r.body}</div>\n\t<div class="review-photo">\n${photosHtml}\n\t</div>\n</div>`;
 			}).join('\n');
-			return `<div class="reviews-container">\n${cardsHtml}\n</div>`;
+			return `<div class="reviews-container" style="margin: 0 15px;">\n${cardsHtml}\n</div>`;
 		}
 
 		function renderTestimonialsEditor(component, content) {
