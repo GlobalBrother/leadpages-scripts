@@ -219,25 +219,38 @@
 						}
 					}
 				} else if (content.startsWith('<')) {
-					// It's HTML - inject directly
-					element.innerHTML = content;
+					// Parse the HTML safely first
+					const parser = new DOMParser();
+					const doc = parser.parseFromString(content, 'text/html');
 
-					// Move <style> tags to <head> so they actually apply
-					Array.from(element.querySelectorAll('style')).forEach(function(styleTag) {
+					// Move <style> tags to <head>
+					Array.from(doc.querySelectorAll('style')).forEach(function(styleTag) {
 						const newStyle = document.createElement('style');
 						newStyle.textContent = styleTag.textContent;
 						document.head.appendChild(newStyle);
 						styleTag.parentNode.removeChild(styleTag);
 					});
 
-					// Execute <script> tags (innerHTML doesn't run them)
-					Array.from(element.querySelectorAll('script')).forEach(function(oldScript) {
+					// Collect <script> contents before injecting
+					const scripts = Array.from(doc.querySelectorAll('script')).map(function(s) {
+						const src = s.getAttribute('src');
+						const text = s.textContent;
+						s.parentNode.removeChild(s);
+						return { src: src, text: text };
+					});
+
+					// Inject cleaned HTML (no style/script tags)
+					element.innerHTML = doc.body.innerHTML;
+
+					// Now execute scripts
+					scripts.forEach(function(scriptData) {
 						const newScript = document.createElement('script');
-						Array.from(oldScript.attributes).forEach(function(attr) {
-							newScript.setAttribute(attr.name, attr.value);
-						});
-						newScript.textContent = oldScript.textContent;
-						oldScript.parentNode.replaceChild(newScript, oldScript);
+						if (scriptData.src) {
+							newScript.src = scriptData.src;
+						} else {
+							newScript.textContent = scriptData.text;
+						}
+						document.body.appendChild(newScript);
 					});
 				} else {
 					// It's plain text
