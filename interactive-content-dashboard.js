@@ -219,39 +219,52 @@
 						}
 					}
 				} else if (content.startsWith('<')) {
-					// Parse the HTML safely first
-					const parser = new DOMParser();
-					const doc = parser.parseFromString(content, 'text/html');
-
-					// Move <style> tags to <head>
-					Array.from(doc.querySelectorAll('style')).forEach(function(styleTag) {
-						const newStyle = document.createElement('style');
-						newStyle.textContent = styleTag.textContent;
-						document.head.appendChild(newStyle);
-						styleTag.parentNode.removeChild(styleTag);
-					});
-
-					// Collect <script> contents before injecting
-					const scripts = Array.from(doc.querySelectorAll('script')).map(function(s) {
-						const src = s.getAttribute('src');
-						const text = s.textContent;
-						s.parentNode.removeChild(s);
-						return { src: src, text: text };
-					});
-
-					// Inject cleaned HTML (no style/script tags)
-					element.innerHTML = doc.body.innerHTML;
-
-					// Now execute scripts
-					scripts.forEach(function(scriptData) {
-						const newScript = document.createElement('script');
-						if (scriptData.src) {
-							newScript.src = scriptData.src;
-						} else {
-							newScript.textContent = scriptData.text;
+					// Check if this is a bullets component (has .amish-container structure)
+					// If so, find the existing .amish-container in the element and replace only that,
+					// leaving the surrounding section (with <style> and <script>) intact.
+					const existingContainer = element.querySelector('.amish-container');
+					if (existingContainer) {
+						const tmp = document.createElement('div');
+						tmp.innerHTML = content;
+						const newContainer = tmp.querySelector('.amish-container');
+						if (newContainer) {
+							existingContainer.parentNode.replaceChild(newContainer, existingContainer);
 						}
-						document.body.appendChild(newScript);
-					});
+					} else {
+						// Generic HTML injection with DOMParser
+						const parser = new DOMParser();
+						const doc = parser.parseFromString(content, 'text/html');
+
+						// Move <style> tags to <head>
+						Array.from(doc.querySelectorAll('style')).forEach(function(styleTag) {
+							const newStyle = document.createElement('style');
+							newStyle.textContent = styleTag.textContent;
+							document.head.appendChild(newStyle);
+							styleTag.parentNode.removeChild(styleTag);
+						});
+
+						// Collect <script> contents before injecting
+						const scripts = Array.from(doc.querySelectorAll('script')).map(function(s) {
+							const src = s.getAttribute('src');
+							const text = s.textContent;
+							s.parentNode.removeChild(s);
+							return { src: src, text: text };
+						});
+
+						// Inject cleaned HTML
+						element.innerHTML = doc.body.innerHTML;
+
+						// Execute scripts
+						scripts.forEach(function(scriptData) {
+							const newScript = document.createElement('script');
+							if (scriptData.src) {
+								newScript.src = scriptData.src;
+							} else {
+								newScript.textContent = scriptData.text;
+							}
+							document.body.appendChild(newScript);
+						});
+					}
 				} else {
 					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');

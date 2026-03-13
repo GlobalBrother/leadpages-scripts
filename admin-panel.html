@@ -1352,59 +1352,10 @@ e.g.
 
 		// Build HTML string from header + bullets array (preserves full structure)
 		function buildBulletsHtml(header, bullets) {
-			const bulletsHtml = bullets.map(b => `    <div class="amish-bullet">${b}</div>`).join('\n');
-			return `<div class="amish-container">
-  <div class="amish-header">${header}</div>
-  <div id="amish-bullets">
-${bulletsHtml}
-  </div>
-</div>
-
-<style>
-  body, html { margin: 0; padding: 0; }
-  .amish-container {
-    width: 100%; max-width: 1100px; margin: 0 auto; padding: 14px 24px;
-    border: 14px solid #5a3e1b;
-    border-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png') 40 round;
-    border-radius: 12px; background: #f9f4ec;
-    font-family: 'Georgia', serif;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.1);
-  }
-  .amish-header { text-align: center; font-size: 22px; font-weight: bold; margin: 0 0 12px 0; color: #3b2c1e; }
-  #amish-bullets { text-align: center; margin: 0; padding: 0; }
-  .amish-bullet { font-size: 19px; margin: 4px 0; color: #4a3b28; transition: all 0.3s ease; }
-  .amish-bullet.bolded { font-weight: bold; color: #000; }
-  @media (max-width: 600px) {
-    .amish-container { width: 100%; padding: 12px 14px; }
-    .amish-header { font-size: 18px; }
-    .amish-bullet { font-size: 16px; }
-  }
-  .amish-container, .amish-container::before, .amish-container::after, .amish-container + * {
-    margin-top: 0 !important; padding-top: 0 !important;
-  }
-</style>
-
-<script>
-  (function() {
-    function initBullets() {
-      var bullets = document.querySelectorAll('.amish-bullet');
-      if (!bullets.length) return;
-      var current = 0;
-      function updateBullets() {
-        bullets.forEach(function(b) { b.classList.remove('bolded'); });
-        bullets[current].classList.add('bolded');
-        current = (current + 1) % bullets.length;
-      }
-      updateBullets();
-      setInterval(updateBullets, 1000);
-    }
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initBullets);
-    } else {
-      initBullets();
-    }
-  })();
-<\/script>`;
+			// Store ONLY the content HTML — no <style> or <script>
+			// Those remain in the Leadpages page itself; we just swap the inner content
+			const bulletsHtml = bullets.map(b => `\t\t<div class="amish-bullet">${b}</div>`).join('\n');
+			return `<div class="amish-container">\n\t<div class="amish-header">${header}</div>\n\t<div id="amish-bullets">\n${bulletsHtml}\n\t</div>\n</div>`;
 		}
 
 		// Render the visual bullets editor card (used when editing existing component)
