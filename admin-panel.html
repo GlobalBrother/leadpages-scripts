@@ -124,7 +124,7 @@
 
 		/* SIDEBAR */
 		.sidebar {
-			width: 260px;
+			width: 300px;
 			min-height: 100vh;
 			background: var(--sidebar-bg);
 			display: flex;
@@ -149,26 +149,31 @@
 		}
 
 		.brand-icon {
-			width: 38px;
-			height: 38px;
-			background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+			width:80px;
+			height:80px;
 			border-radius: 10px;
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			font-size: 17px;
 			flex-shrink: 0;
+			overflow: hidden;
+		}
+
+		.brand-icon img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
 		}
 
 		.brand-text h1 {
-			font-size: 13px;
+			font-size: 15px;
 			font-weight: 700;
 			color: white;
 			line-height: 1.2;
 		}
 
 		.brand-text span {
-			font-size: 11px;
+			font-size: 13px;
 			color: rgba(255,255,255,0.35);
 			font-weight: 500;
 		}
@@ -181,7 +186,7 @@
 		.sidebar-section-label {
 			font-size: 10px;
 			font-weight: 700;
-			color: rgba(255,255,255,0.3);
+			color: rgba(255,255,255,0.45);
 			text-transform: uppercase;
 			letter-spacing: 1.2px;
 			margin-bottom: 7px;
@@ -221,7 +226,7 @@
 			padding: 0 18px;
 			font-size: 10px;
 			font-weight: 700;
-			color: rgba(255,255,255,0.3);
+			color: rgba(255,255,255,0.45);
 			text-transform: uppercase;
 			letter-spacing: 1.2px;
 			margin-bottom: 6px;
@@ -305,7 +310,7 @@
 
 		/* MAIN CONTENT */
 		.main-content {
-			margin-left: 260px;
+			margin-left: 300px;
 			flex: 1;
 			display: flex;
 			flex-direction: column;
@@ -470,8 +475,8 @@
 			border-radius: 20px;
 		}
 
-		.card-body { 
-			padding: 16px 18px; 
+		.card-body {
+			padding: 16px 18px;
 			height: calc(100% - 117px);
 		}
 
@@ -566,6 +571,175 @@
 			outline: none;
 			border-color: var(--gold) !important;
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+		}
+
+		/* TESTIMONIALS EDITOR SPECIFIC STYLES */
+		.testimonials-editor-card {
+			grid-column: 1 / -1;
+		}
+
+		.reviews-editor-list {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+		}
+
+		.review-editor-block {
+			border: 1.5px solid #e5e7eb;
+			border-radius: 10px;
+			overflow: hidden;
+			animation: slideInRow 0.2s ease;
+		}
+
+		.review-editor-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 10px 14px;
+			background: #f9fafb;
+			border-bottom: 1px solid #e5e7eb;
+		}
+
+		.review-editor-index {
+			font-size: 12px;
+			font-weight: 700;
+			color: var(--gold-dark);
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.review-remove-btn {
+			padding: 5px 10px;
+			background: #fef2f2;
+			border: 1.5px solid #fecaca;
+			border-radius: 6px;
+			color: var(--danger);
+			font-size: 12px;
+			font-weight: 600;
+			cursor: pointer;
+			font-family: inherit;
+			transition: all 0.15s;
+		}
+
+		.review-remove-btn:hover { background: #fee2e2; }
+
+		.review-editor-fields {
+			padding: 14px;
+			display: flex;
+			flex-direction: column;
+			gap: 10px;
+		}
+
+		.review-field-row {
+			display: flex;
+			flex-direction: column;
+			gap: 5px;
+		}
+
+		.review-field-row.two-col {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 12px;
+			flex-direction: unset;
+		}
+
+		.review-field-row label {
+			font-size: 11px;
+			font-weight: 700;
+			color: #6b7280;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.review-field {
+			padding: 8px 11px;
+			border: 1.5px solid #e5e7eb;
+			border-radius: 7px;
+			font-size: 13px;
+			font-family: inherit;
+			color: var(--text-primary);
+			background: white;
+			transition: border-color 0.2s, box-shadow 0.2s;
+			width: 100%;
+			box-sizing: border-box;
+		}
+
+		.review-field:focus {
+			outline: none;
+			border-color: var(--gold);
+			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
+		}
+
+		textarea.review-field {
+			resize: vertical;
+			min-height: 70px;
+			line-height: 1.5;
+		}
+
+		.stars-selector {
+			display: flex;
+			gap: 4px;
+			padding: 5px 0;
+		}
+
+		.star-btn {
+			font-size: 24px;
+			cursor: pointer;
+			color: #d1d5db;
+			transition: color 0.15s, transform 0.1s;
+			user-select: none;
+			line-height: 1;
+		}
+
+		.star-btn.active { color: #FFA41C; }
+		.star-btn:hover { transform: scale(1.15); }
+
+		.review-photos-list {
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+		}
+
+		.review-photo-row {
+			display: flex;
+			gap: 8px;
+			align-items: center;
+			animation: slideInRow 0.15s ease;
+		}
+
+		.review-photo-row button {
+			padding: 8px 10px;
+			background: #fef2f2;
+			border: 1.5px solid #fecaca;
+			border-radius: 7px;
+			color: var(--danger);
+			cursor: pointer;
+			font-size: 13px;
+			flex-shrink: 0;
+			transition: all 0.15s;
+		}
+
+		.review-photo-row button:hover { background: #fee2e2; }
+
+		.review-add-photo-btn {
+			width: 100%;
+			padding: 8px;
+			margin-top: 6px;
+			background: #f9fafb;
+			border: 1.5px dashed #d1d5db;
+			border-radius: 7px;
+			font-size: 12px;
+			font-weight: 600;
+			color: #6b7280;
+			cursor: pointer;
+			font-family: inherit;
+			transition: all 0.2s;
+		}
+
+		.review-add-photo-btn:hover {
+			background: #f3f4f6;
+			border-color: var(--gold);
+			color: var(--gold-dark);
 		}
 
 		/* EMPTY STATE */
@@ -914,7 +1088,7 @@
 						<input type="text" id="modalComponentName" placeholder="e.g. title-interactive, changing-bullets, vsl-video" />
 					</div>
 					<p style="font-size: 12px; color: var(--text-muted); margin-top: -8px; line-height: 1.6;">
-						💡 If the name is <strong>"changing-bullets"</strong>, you'll get a visual editor for header &amp; bullet points.
+						💡 Use <strong>"changing-bullets"</strong> for a visual bullet-points editor, or <strong>"customer-reviews"</strong> for a visual testimonials editor.
 					</p>
 				</div>
 				<div class="modal-footer">
@@ -1027,7 +1201,7 @@ e.g.
 		<aside class="sidebar">
 			<div class="sidebar-brand">
 				<div class="brand-logo">
-					<div class="brand-icon">⚡</div>
+					<div class="brand-icon"><img src="assets/GB LOGO.png" alt="GB Logo"></div>
 					<div class="brand-text">
 						<h1>Content Manager</h1>
 						<span>Admin Panel</span>
@@ -1301,10 +1475,16 @@ e.g.
 
 			Object.keys(componentsData).sort().forEach(component => {
 				const content = componentsData[component];
-				
+
 				// Special handling for bullets-type components
 				if (isBulletsComponent(component)) {
 					renderBulletsEditor(component, content);
+					return;
+				}
+
+				// Special handling for testimonials components
+				if (isTestimonialsComponent(component)) {
+					renderTestimonialsEditor(component, content);
 					return;
 				}
 
@@ -1455,6 +1635,215 @@ e.g.
 			}
 		}
 
+		// --- TESTIMONIALS EDITOR HELPERS ---
+
+		const DEFAULT_REVIEW_AVATAR = 'https://lh3.googleusercontent.com/zKmgb_LeFmmzOlBMAex59JNFoyq2fVE5W7OMJQGURFJqeJWLHzSk7xlXMVhYfSkBL2VTKJP7VaGMYee6e-n1gzUKqvPGYNFxy_E=s0';
+
+		function isTestimonialsComponent(name) {
+			return name.toLowerCase() === 'customer-reviews';
+		}
+
+		function parseTestimonialsHtml(html) {
+			const tmp = document.createElement('div');
+			tmp.innerHTML = html;
+			const cards = tmp.querySelectorAll('.review-card');
+			return Array.from(cards).map(card => {
+				const avatarEl = card.querySelector('.review-header img');
+				const nameEl   = card.querySelector('.review-header h4');
+				const dateEl   = card.querySelector('.review-date');
+				const starsEl  = card.querySelector('.stars');
+				const bodyEl   = card.querySelector('.review-body');
+				const photoEls = card.querySelectorAll('.review-photo img');
+				return {
+					avatar: avatarEl ? (avatarEl.getAttribute('src') || '') : DEFAULT_REVIEW_AVATAR,
+					name:   nameEl  ? nameEl.textContent.trim()  : '',
+					date:   dateEl  ? dateEl.textContent.trim()  : '',
+					stars:  starsEl ? (starsEl.textContent.match(/★/g) || []).length : 5,
+					body:   bodyEl  ? bodyEl.textContent.trim()  : '',
+					photos: Array.from(photoEls).map(img => img.getAttribute('src') || '')
+				};
+			});
+		}
+
+		function buildTestimonialsHtml(reviews) {
+			return reviews.map(r => {
+				const starsStr   = '★'.repeat(Math.max(0, Math.min(5, r.stars))) + '☆'.repeat(5 - Math.max(0, Math.min(5, r.stars)));
+				const photosHtml = (r.photos || [])
+					.filter(url => url.trim())
+					.map(url => `\t\t<img src="${url}" alt="Review Image" onclick="openModal(this)">`)
+					.join('\n');
+				return `<div class="review-card" style="display: block !important;">\n\t<div class="review-header">\n\t\t<img src="${r.avatar}" alt="Avatar">\n\t\t<div>\n\t\t\t<h4>${r.name}</h4>\n\t\t\t<p class="review-date">${r.date}</p>\n\t\t</div>\n\t</div>\n\t<div class="stars">${starsStr}</div>\n\t<div class="review-body">${r.body}</div>\n\t<div class="review-photo">\n${photosHtml}\n\t</div>\n</div>`;
+			}).join('\n');
+		}
+
+		function renderTestimonialsEditor(component, content) {
+			const reviews = parseTestimonialsHtml(content);
+			const grid = document.getElementById('contentGrid');
+			const item = document.createElement('div');
+			item.className = 'content-card testimonials-editor-card';
+			item.setAttribute('data-component', component);
+			item.innerHTML = `
+				<div class="card-header">
+					<div class="card-component-name">
+						<div class="component-icon">⭐</div>
+						<span class="component-label">${component}</span>
+					</div>
+					<span class="component-slug-badge">${currentSlug}</span>
+				</div>
+				<div class="card-body">
+					<div id="reviews-list-${component}" class="reviews-editor-list"></div>
+					<button onclick="addReviewBlock('${component}')"
+						style="width:100%; padding:10px; margin-top:12px; background:#f3f4f6; border:1.5px dashed #d1d5db; border-radius:8px; font-size:13px; font-weight:600; color:#6b7280; cursor:pointer; transition:all 0.2s; font-family:inherit;">
+						➕ Add Review
+					</button>
+				</div>
+				<div class="card-footer">
+					<button class="btn-save-card" onclick="saveTestimonialsContent('${component}')">Save Reviews</button>
+					<button class="btn-rename-card" onclick="renameComponent('${component}')" title="Rename component ID">Rename</button>
+					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>
+				</div>
+			`;
+			grid.appendChild(item);
+
+			const container = document.getElementById(`reviews-list-${component}`);
+			if (reviews.length > 0) {
+				reviews.forEach(review => addReviewBlock(component, review));
+			} else {
+				addReviewBlock(component);
+			}
+		}
+
+		function addReviewBlock(component, review = {}) {
+			const container = document.getElementById(`reviews-list-${component}`);
+			const index = container.children.length;
+			const r = {
+				avatar: review.avatar || DEFAULT_REVIEW_AVATAR,
+				name:   review.name  || '',
+				date:   review.date  || 'Reviewed in the United States on January 1, 2025',
+				stars:  review.stars !== undefined ? review.stars : 5,
+				body:   review.body  || '',
+				photos: review.photos || []
+			};
+
+			const block = document.createElement('div');
+			block.className = 'review-editor-block';
+
+			const starsHtml = [1,2,3,4,5].map(n =>
+				`<span class="star-btn${n <= r.stars ? ' active' : ''}" data-val="${n}" onclick="setReviewStars(this)">★</span>`
+			).join('');
+
+			block.innerHTML = `
+				<div class="review-editor-header">
+					<span class="review-editor-index">Review #${index + 1}</span>
+					<button class="review-remove-btn" onclick="this.closest('.review-editor-block').remove(); renumberReviews('${component}')">🗑 Remove</button>
+				</div>
+				<div class="review-editor-fields">
+					<div class="review-field-row">
+						<label>Avatar URL</label>
+						<input class="review-field review-avatar-input" placeholder="https://..." />
+					</div>
+					<div class="review-field-row two-col">
+						<div>
+							<label>Reviewer Name</label>
+							<input class="review-field review-name-input" placeholder="e.g. D.S." />
+						</div>
+						<div>
+							<label>Star Rating</label>
+							<div class="stars-selector" data-rating="${r.stars}">${starsHtml}</div>
+						</div>
+					</div>
+					<div class="review-field-row">
+						<label>Review Date</label>
+						<input class="review-field review-date-field" placeholder="Reviewed in the United States on January 1, 2025" />
+					</div>
+					<div class="review-field-row">
+						<label>Review Text</label>
+						<textarea class="review-field review-body-field" rows="3" placeholder="Enter review text..."></textarea>
+					</div>
+					<div class="review-field-row">
+						<label>Photo URLs</label>
+						<div class="review-photos-list"></div>
+						<button class="review-add-photo-btn" onclick="addReviewPhotoRow(this.previousElementSibling)">➕ Add Photo URL</button>
+					</div>
+				</div>
+			`;
+			container.appendChild(block);
+
+			// Set values via JS to avoid HTML escaping issues
+			block.querySelector('.review-avatar-input').value = r.avatar;
+			block.querySelector('.review-name-input').value   = r.name;
+			block.querySelector('.review-date-field').value   = r.date;
+			block.querySelector('.review-body-field').value   = r.body;
+
+			// Add photo rows
+			const photosList = block.querySelector('.review-photos-list');
+			r.photos.forEach(url => addReviewPhotoRow(photosList, url));
+		}
+
+		function addReviewPhotoRow(photosList, url = '') {
+			const row = document.createElement('div');
+			row.className = 'review-photo-row';
+			row.innerHTML = `
+				<input class="review-field review-photo-url" placeholder="https://image-url.com/photo.jpg" />
+				<button onclick="this.closest('.review-photo-row').remove()">🗑</button>
+			`;
+			row.querySelector('.review-photo-url').value = url;
+			photosList.appendChild(row);
+		}
+
+		function setReviewStars(starEl) {
+			const container = starEl.closest('.stars-selector');
+			const val = parseInt(starEl.getAttribute('data-val'));
+			container.setAttribute('data-rating', val);
+			container.querySelectorAll('.star-btn').forEach(s => {
+				s.classList.toggle('active', parseInt(s.getAttribute('data-val')) <= val);
+			});
+		}
+
+		function renumberReviews(component) {
+			const container = document.getElementById(`reviews-list-${component}`);
+			Array.from(container.querySelectorAll('.review-editor-index')).forEach((el, i) => {
+				el.textContent = `Review #${i + 1}`;
+			});
+		}
+
+		async function saveTestimonialsContent(component) {
+			const container = document.getElementById(`reviews-list-${component}`);
+			const blocks = container.querySelectorAll('.review-editor-block');
+			if (blocks.length === 0) {
+				showNotification('Please add at least one review', 'error');
+				return;
+			}
+
+			const reviews = Array.from(blocks).map(block => {
+				const photos = Array.from(block.querySelectorAll('.review-photo-url'))
+					.map(i => i.value.trim()).filter(v => v);
+				return {
+					avatar: block.querySelector('.review-avatar-input').value.trim() || DEFAULT_REVIEW_AVATAR,
+					name:   block.querySelector('.review-name-input').value.trim(),
+					date:   block.querySelector('.review-date-field').value.trim(),
+					stars:  parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
+					body:   block.querySelector('.review-body-field').value.trim(),
+					photos
+				};
+			});
+
+			const htmlContent = buildTestimonialsHtml(reviews);
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(htmlContent) }
+				);
+				if (response.ok) {
+					showNotification('Reviews saved successfully!', 'success');
+					if (!contentData[component]) contentData[component] = {};
+					contentData[component][currentSlug] = htmlContent;
+				} else throw new Error('Save failed');
+			} catch (error) {
+				showNotification('Error saving reviews', 'error');
+			}
+		}
+
 		async function saveContent(component) {
 			const content = document.getElementById(`content-${component}`).value;
 			try {
@@ -1523,7 +1912,8 @@ e.g.
 			// Update the input to show the sanitized value
 			document.getElementById('modalComponentName').value = name;
 
-			const isBullets = name === 'changing-bullets';
+			const isBullets       = name === 'changing-bullets';
+			const isTestimonials  = isTestimonialsComponent(name);
 
 			document.getElementById('modalStep1').style.display = 'none';
 
@@ -1531,6 +1921,18 @@ e.g.
 				document.getElementById('modalStep2BulletsCompName').textContent = name;
 				document.getElementById('modalStep2Bullets').style.display = 'block';
 				setTimeout(() => document.getElementById('modalBulletsHeader').focus(), 100);
+			} else if (isTestimonials) {
+				// Auto-create with a default empty review, editor card handles the rest
+				closeAddComponentModal();
+				const defaultHtml = buildTestimonialsHtml([{
+					avatar: DEFAULT_REVIEW_AVATAR,
+					name:   'Customer Name',
+					date:   'Reviewed in the United States on January 1, 2025',
+					stars:  5,
+					body:   'Your review text here...',
+					photos: []
+				}]);
+				addNewComponent(name, defaultHtml);
 			} else {
 				document.getElementById('modalStep2CompName').textContent = name;
 				document.getElementById('modalStep2Simple').style.display = 'block';
