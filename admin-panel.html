@@ -1646,7 +1646,7 @@ e.g.
 		function parseTestimonialsHtml(html) {
 			const tmp = document.createElement('div');
 			tmp.innerHTML = html;
-			const cards = tmp.querySelectorAll('.review-card');
+			const cards = tmp.querySelectorAll('.reviews-container .review-card, .review-card');
 			return Array.from(cards).map(card => {
 				const avatarEl = card.querySelector('.review-header img');
 				const nameEl   = card.querySelector('.review-header h4');
@@ -1666,7 +1666,7 @@ e.g.
 		}
 
 		function buildTestimonialsHtml(reviews) {
-			return reviews.map(r => {
+			const cardsHtml = reviews.map(r => {
 				const starsStr   = '★'.repeat(Math.max(0, Math.min(5, r.stars))) + '☆'.repeat(5 - Math.max(0, Math.min(5, r.stars)));
 				const photosHtml = (r.photos || [])
 					.filter(url => url.trim())
@@ -1674,6 +1674,7 @@ e.g.
 					.join('\n');
 				return `<div class="review-card" style="display: block !important;">\n\t<div class="review-header">\n\t\t<img src="${r.avatar}" alt="Avatar">\n\t\t<div>\n\t\t\t<h4>${r.name}</h4>\n\t\t\t<p class="review-date">${r.date}</p>\n\t\t</div>\n\t</div>\n\t<div class="stars">${starsStr}</div>\n\t<div class="review-body">${r.body}</div>\n\t<div class="review-photo">\n${photosHtml}\n\t</div>\n</div>`;
 			}).join('\n');
+			return `<div class="reviews-container">\n${cardsHtml}\n</div>`;
 		}
 
 		function renderTestimonialsEditor(component, content) {
