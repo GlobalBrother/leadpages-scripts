@@ -1646,26 +1646,32 @@ e.g.
 		function parseTestimonialsHtml(html) {
 			const tmp = document.createElement('div');
 			tmp.innerHTML = html;
+			const container = tmp.querySelector('.reviews-container');
+			const initialCount = container ? (parseInt(container.getAttribute('data-initial')) || 5) : 5;
 			const cards = tmp.querySelectorAll('.reviews-container .review-card, .review-card');
-			return Array.from(cards).map(card => {
-				const avatarEl = card.querySelector('.review-header img');
-				const nameEl   = card.querySelector('.review-header h4');
-				const dateEl   = card.querySelector('.review-date');
-				const starsEl  = card.querySelector('.stars');
-				const bodyEl   = card.querySelector('.review-body');
-				const photoEls = card.querySelectorAll('.review-photo img');
-				return {
-					avatar: avatarEl ? (avatarEl.getAttribute('src') || '') : DEFAULT_REVIEW_AVATAR,
-					name:   nameEl  ? nameEl.textContent.trim()  : '',
-					date:   dateEl  ? dateEl.textContent.trim()  : '',
-					stars:  starsEl ? (starsEl.textContent.match(/★/g) || []).length : 5,
-					body:   bodyEl  ? bodyEl.textContent.trim()  : '',
-					photos: Array.from(photoEls).map(img => img.getAttribute('src') || '')
-				};
-			});
+			return {
+				initialCount,
+				reviews: Array.from(cards).map(card => {
+					const avatarEl = card.querySelector('.review-header img');
+					const nameEl   = card.querySelector('.review-header h4');
+					const dateEl   = card.querySelector('.review-date');
+					const starsEl  = card.querySelector('.stars');
+					const bodyEl   = card.querySelector('.review-body');
+					const photoEls = card.querySelectorAll('.review-photo img');
+					return {
+						avatar: avatarEl ? (avatarEl.getAttribute('src') || '') : DEFAULT_REVIEW_AVATAR,
+						name:   nameEl  ? nameEl.textContent.trim()  : '',
+						date:   dateEl  ? dateEl.textContent.trim()  : '',
+						stars:  starsEl ? (starsEl.textContent.match(/★/g) || []).length : 5,
+						body:   bodyEl  ? bodyEl.textContent.trim()  : '',
+						photos: Array.from(photoEls).map(img => img.getAttribute('src') || '')
+					};
+				})
+			};
 		}
 
-		function buildTestimonialsHtml(reviews) {
+		function buildTestimonialsHtml(reviews, initialCount) {
+			if (!initialCount || initialCount < 1) initialCount = 5;
 			const cardsHtml = reviews.map(r => {
 				const starsStr   = '★'.repeat(Math.max(0, Math.min(5, r.stars))) + '☆'.repeat(5 - Math.max(0, Math.min(5, r.stars)));
 				const photosHtml = (r.photos || [])
@@ -1674,11 +1680,16 @@ e.g.
 					.join('\n');
 				return `<div class="review-card" style="display: block !important;">\n\t<div class="review-header">\n\t\t<img src="${r.avatar}" alt="Avatar">\n\t\t<div>\n\t\t\t<h4>${r.name}</h4>\n\t\t\t<p class="review-date">${r.date}</p>\n\t\t</div>\n\t</div>\n\t<div class="stars">${starsStr}</div>\n\t<div class="review-body">${r.body}</div>\n\t<div class="review-photo">\n${photosHtml}\n\t</div>\n</div>`;
 			}).join('\n');
-			return `<div class="reviews-container" style="margin: 0 15px;">\n${cardsHtml}\n</div>`;
+			const toggleBtn = reviews.length > initialCount
+				? `\n<span class="toggle-reviews-btn" style="cursor:pointer;color:#007185;text-decoration:underline;font-size:1.2em;display:block;margin-top:10px;">View More Reviews</span>`
+				: '';
+			return `<div class="reviews-container" data-initial="${initialCount}" style="margin: 0 15px;">\n${cardsHtml}${toggleBtn}\n</div>`;
 		}
 
 		function renderTestimonialsEditor(component, content) {
-			const reviews = parseTestimonialsHtml(content);
+			const parsed = parseTestimonialsHtml(content);
+			const reviews = parsed.reviews;
+			const initialCount = parsed.initialCount;
 			const grid = document.getElementById('contentGrid');
 			const item = document.createElement('div');
 			item.className = 'content-card testimonials-editor-card';
@@ -1692,6 +1703,12 @@ e.g.
 					<span class="component-slug-badge">${currentSlug}</span>
 				</div>
 				<div class="card-body">
+					<div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; padding:10px 12px; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:8px;">
+						<label style="font-size:12px; font-weight:700; color:#6b7280; white-space:nowrap;">Initial reviews shown:</label>
+						<input type="number" id="reviews-initial-count-${component}" min="1" max="50" value="${initialCount}"
+							style="width:70px; padding:6px 10px; border:1.5px solid #e5e7eb; border-radius:6px; font-size:13px; font-family:inherit;">
+						<span style="font-size:12px; color:#9ca3af;">(remaining hidden behind "View More Reviews" button)</span>
+					</div>
 					<div id="reviews-list-${component}" class="reviews-editor-list"></div>
 					<button onclick="addReviewBlock('${component}')"
 						style="width:100%; padding:10px; margin-top:12px; background:#f3f4f6; border:1.5px dashed #d1d5db; border-radius:8px; font-size:13px; font-weight:600; color:#6b7280; cursor:pointer; transition:all 0.2s; font-family:inherit;">
@@ -1829,7 +1846,8 @@ e.g.
 				};
 			});
 
-			const htmlContent = buildTestimonialsHtml(reviews);
+			const initialCount = parseInt(document.getElementById(`reviews-initial-count-${component}`).value) || 5;
+			const htmlContent = buildTestimonialsHtml(reviews, initialCount);
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
@@ -1932,7 +1950,7 @@ e.g.
 					stars:  5,
 					body:   'Your review text here...',
 					photos: []
-				}]);
+				}], 5);
 				addNewComponent(name, defaultHtml);
 			} else {
 				document.getElementById('modalStep2CompName').textContent = name;

@@ -257,6 +257,30 @@
 						// Inject cleaned HTML
 						element.innerHTML = doc.body.innerHTML;
 
+						// Initialize toggle for customer-reviews component
+						var reviewsContainer = element.querySelector('.reviews-container[data-initial]');
+						if (reviewsContainer) {
+							var initialReviews = parseInt(reviewsContainer.getAttribute('data-initial')) || 5;
+							var reviewCards = reviewsContainer.querySelectorAll('.review-card');
+							var toggleBtn = reviewsContainer.querySelector('.toggle-reviews-btn');
+							reviewCards.forEach(function(card, i) {
+								card.style.setProperty('display', i < initialReviews ? 'block' : 'none', 'important');
+							});
+							if (toggleBtn) {
+								toggleBtn.style.display = reviewCards.length > initialReviews ? 'block' : 'none';
+								toggleBtn.addEventListener('click', function() {
+									var isHidden = Array.from(reviewCards).some(function(c) { return c.style.display === 'none'; });
+									if (isHidden) {
+										reviewCards.forEach(function(c) { c.style.setProperty('display', 'block', 'important'); });
+										toggleBtn.textContent = 'View Fewer Reviews';
+									} else {
+										reviewCards.forEach(function(c, i) { c.style.setProperty('display', i < initialReviews ? 'block' : 'none', 'important'); });
+										toggleBtn.textContent = 'View More Reviews';
+									}
+								});
+							}
+						}
+
 						// Execute scripts
 						scripts.forEach(function(scriptData) {
 							const newScript = document.createElement('script');
