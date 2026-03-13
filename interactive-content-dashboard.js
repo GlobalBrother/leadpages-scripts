@@ -229,6 +229,9 @@
 						const newContainer = tmp.querySelector('.amish-container');
 						if (newContainer) {
 							existingContainer.parentNode.replaceChild(newContainer, existingContainer);
+							// Re-run animation on new nodes (old script's closure still points to old nodes)
+							const newBullets = Array.from(newContainer.querySelectorAll('.amish-bullet'));
+							startBulletsAnimation(newBullets);
 						}
 					} else {
 						// Generic HTML injection with DOMParser
