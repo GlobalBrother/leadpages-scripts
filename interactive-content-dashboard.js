@@ -281,6 +281,58 @@
 		});
 	}
 
+	// ── Photo Modal (for customer-reviews component) ────────────────────────────
+	function ensurePhotoModal() {
+		if (document.getElementById('_icd_photo_modal')) return;
+
+		// Inject modal CSS
+		const modalStyle = document.createElement('style');
+		modalStyle.textContent = `
+			#_icd_photo_modal {
+				display: none; position: fixed; z-index: 99999;
+				left: 0; top: 0; width: 100%; height: 100%;
+				background: rgba(0,0,0,0.85); overflow: auto;
+			}
+			#_icd_photo_modal_img {
+				display: block; margin: 5% auto; max-width: 90%; max-height: 85vh;
+				object-fit: contain; border-radius: 6px;
+			}
+			#_icd_photo_modal_close {
+				position: fixed; top: 18px; right: 28px;
+				color: #fff; font-size: 40px; font-weight: bold;
+				cursor: pointer; line-height: 1; user-select: none; z-index: 100000;
+			}
+			#_icd_photo_modal_close:hover { color: #ccc; }
+		`;
+		document.head.appendChild(modalStyle);
+
+		// Inject modal HTML
+		const modal = document.createElement('div');
+		modal.id = '_icd_photo_modal';
+		modal.innerHTML = '<span id="_icd_photo_modal_close">&times;</span><img id="_icd_photo_modal_img" />';
+		document.body.appendChild(modal);
+
+		document.getElementById('_icd_photo_modal_close').addEventListener('click', closeModal);
+		modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
+		document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+	}
+
+	function openModal(imgEl) {
+		ensurePhotoModal();
+		document.getElementById('_icd_photo_modal_img').src = imgEl.src;
+		document.getElementById('_icd_photo_modal').style.display = 'block';
+	}
+
+	function closeModal() {
+		const modal = document.getElementById('_icd_photo_modal');
+		if (modal) modal.style.display = 'none';
+	}
+
+	// Expose globally so onclick="openModal(this)" works
+	window.openModal  = openModal;
+	window.closeModal = closeModal;
+	// ─────────────────────────────────────────────────────────────────────────────
+
 	// Animation for bullets - works on any NodeList of .amish-bullet elements
 	function startBulletsAnimation(bullets) {
 		if (!bullets || bullets.length === 0) return;
