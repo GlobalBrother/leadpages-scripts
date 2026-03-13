@@ -222,7 +222,15 @@
 					// It's HTML - inject directly
 					element.innerHTML = content;
 
-					// Execute any <script> tags inside the injected HTML
+					// Move <style> tags to <head> so they actually apply
+					Array.from(element.querySelectorAll('style')).forEach(function(styleTag) {
+						const newStyle = document.createElement('style');
+						newStyle.textContent = styleTag.textContent;
+						document.head.appendChild(newStyle);
+						styleTag.parentNode.removeChild(styleTag);
+					});
+
+					// Execute <script> tags (innerHTML doesn't run them)
 					Array.from(element.querySelectorAll('script')).forEach(function(oldScript) {
 						const newScript = document.createElement('script');
 						Array.from(oldScript.attributes).forEach(function(attr) {
@@ -231,12 +239,6 @@
 						newScript.textContent = oldScript.textContent;
 						oldScript.parentNode.replaceChild(newScript, oldScript);
 					});
-
-					// If it contains bullets, start the animation
-					const bullets = element.querySelectorAll('.amish-bullet');
-					if (bullets.length > 0) {
-						startBulletsAnimation(bullets);
-					}
 				} else {
 					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');
