@@ -22,6 +22,19 @@
 				font-size: 1.7rem;
 			}
 		}
+
+		/* customer-reviews component styles */
+		.review-date { font-family: Arial, sans-serif; font-size: 14px !important; color: #333 !important; margin: 0; padding: 0; }
+		.review-photo img { width: 100px !important; height: 100px !important; object-fit: cover !important; margin-right: 10px !important; cursor: pointer !important; transition: transform .3s ease !important, filter .3s ease !important; }
+		.stars { color: #FFA41C !important; font-size: 18px; }
+		.toggle-btn { color: #007185 !important; cursor: pointer; font-size: 1.2em; font-weight: bold; text-decoration: underline; margin-top: 10px; display: inline-block; }
+		.reviews-container { padding: 20px; border: 1px solid #ddd; border-radius: 8px; background-color: #fff !important; }
+		.reviews-container h1 { color: #000 !important; text-align: center; font-family: Arial, sans-serif !important; }
+		.review-card { border-bottom: 1px solid #ddd; padding: 15px 0; }
+		.review-header { display: flex; align-items: center; margin-bottom: 10px; }
+		.review-header img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
+		.review-header h4 { margin: 0; font-size: 14px; }
+		.review-body { font-size: 18px !important; line-height: 1.6; color: #555 !important; }
 	`;
 	(document.head || document.documentElement).appendChild(_icdStyles);
 
