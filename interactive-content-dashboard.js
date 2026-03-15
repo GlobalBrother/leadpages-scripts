@@ -123,6 +123,7 @@
 
 			const contentPrefixes = config.content_prefixes || [];
 			const functionalPrefixes = config.functional_prefixes || [];
+			const slugSystems = config.slug_systems || {};
 
 			// Get all configured slugs for this site
 			const allSlugs = getConfiguredSlugs(siteContent);
@@ -133,6 +134,10 @@
 
 			// Detect slug now that we know all configured slugs (URL contains match)
 			const slug = getSlug(allSlugs);
+
+			// Prioritize system sections based on slug → system mapping
+			prioritizeSystemSections(slug, slugSystems);
+
 			// Apply content-based display logic
 			applyContentDisplay(contentPrefixes, allSlugs, slug);
 
@@ -368,6 +373,60 @@
 	// Expose globally so onclick="openModal(this)" works
 	window.openModal  = openModal;
 	window.closeModal = closeModal;
+	// ─────────────────────────────────────────────────────────────────────────────
+
+	// ── System Section Prioritization ────────────────────────────────────────────
+	// Moves the <section> wrappers of the active system (e.g. "respiratory") to the
+	// top of their sibling group so they appear first on the page.
+	//
+	// How it works:
+	//   1. Look up slug → system key in slugSystems  (e.g. "jello-flu-shots" → "respiratory")
+	//   2. Find every element whose id ends with "-system-title" or "-system-content"
+	//      → these are ALL system markers in the page
+	//   3. Walk up to each marker's closest <section> ancestor
+	//   4. Collect the <section>s that belong to the ACTIVE system and those that don't
+	//   5. Prepend active <section>s before the first system <section> found in the DOM
+	//      (preserving relative order of non-active sections underneath)
+	function prioritizeSystemSections(slug, slugSystems) {
+		const systemKey = slugSystems[slug];
+		if (!systemKey) return; // slug has no system mapping — nothing to do
+
+		// Find all elements whose id matches *-system-title or *-system-content
+		const allMarkers = Array.from(
+			document.querySelectorAll('[id$="-system-title"],[id$="-system-content"]')
+		);
+		if (allMarkers.length === 0) return;
+
+		// Collect unique <section> ancestors, preserving DOM order
+		const seen = new Set();
+		const allSections = [];
+		allMarkers.forEach(function(marker) {
+			const section = marker.closest('section') || marker.parentElement;
+			if (section && !seen.has(section)) {
+				seen.add(section);
+				allSections.push({ section: section, markerId: marker.id });
+			}
+		});
+		if (allSections.length === 0) return;
+
+		// The insertion point is just before the first system section in the DOM
+		const firstSection = allSections[0].section;
+		const parent = firstSection.parentNode;
+		if (!parent) return;
+
+		// Split into active-system sections and the rest
+		const activeSections = allSections.filter(function(s) {
+			return s.markerId.startsWith(systemKey + '-system-');
+		});
+		const otherSections = allSections.filter(function(s) {
+			return !s.markerId.startsWith(systemKey + '-system-');
+		});
+
+		// Re-insert: active first, then the rest — all before firstSection's current position
+		const insertBefore = firstSection;
+		activeSections.forEach(function(s) { parent.insertBefore(s.section, insertBefore); });
+		otherSections.forEach(function(s)  { parent.insertBefore(s.section, insertBefore); });
+	}
 	// ─────────────────────────────────────────────────────────────────────────────
 
 	// Animation for bullets - works on any NodeList of .amish-bullet elements

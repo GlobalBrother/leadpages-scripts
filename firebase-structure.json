@@ -80,6 +80,19 @@
     ],
     "functional_prefixes": [
       "popup-interactive"
-    ]
+    ],
+    "systems": {
+      "respiratory": "Respiratory System",
+      "digestive": "Digestive System",
+      "urinary": "Urinary System"
+    },
+    "slug_systems": {
+      "jello-flu-shots": "respiratory",
+      "vinegar-socks": "respiratory",
+      "onion-socks": "respiratory",
+      "amish-cough": "respiratory",
+      "herbal-parasite-flush": "digestive",
+      "gut-health": "digestive"
+    }
   }
 }
