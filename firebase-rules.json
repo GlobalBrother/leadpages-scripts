@@ -7,6 +7,11 @@
     "dynamic_content": {
       ".read": true,
       ".write": true
+    },
+    "archived": {
+      ".read": true,
+      ".write": true
     }
   }
+}
 }

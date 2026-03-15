@@ -819,6 +819,153 @@
 			border-color: var(--danger);
 		}
 
+		.btn-archive-card {
+			padding: 9px 14px;
+			background: white;
+			color: #6b7280;
+			border: 1.5px solid #d1d5db;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-archive-card:hover {
+			background: #f9fafb;
+			border-color: #6b7280;
+			color: #374151;
+		}
+
+		/* ARCHIVED SECTION */
+		.archived-section {
+			margin-top: 32px;
+		}
+
+		.archived-section-header {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin-bottom: 14px;
+			cursor: pointer;
+			user-select: none;
+		}
+
+		.archived-section-title {
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--text-secondary);
+			text-transform: uppercase;
+			letter-spacing: 0.8px;
+		}
+
+		.archived-section-count {
+			font-size: 11px;
+			font-weight: 700;
+			background: #f3f4f6;
+			border: 1px solid #e5e7eb;
+			color: #6b7280;
+			padding: 2px 9px;
+			border-radius: 20px;
+		}
+
+		.archived-toggle-icon {
+			margin-left: auto;
+			font-size: 12px;
+			color: var(--text-muted);
+			transition: transform .2s;
+		}
+
+		.archived-section-header.open .archived-toggle-icon {
+			transform: rotate(180deg);
+		}
+
+		.archived-grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			gap: 16px;
+		}
+
+		.archived-card {
+			background: #f9fafb;
+			border: 1.5px dashed #d1d5db;
+			border-radius: 14px;
+			overflow: hidden;
+			opacity: 0.85;
+		}
+
+		.archived-card-header {
+			padding: 13px 18px;
+			background: #f3f4f6;
+			border-bottom: 1px solid #e5e7eb;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+		}
+
+		.archived-badge {
+			font-size: 10px;
+			font-weight: 700;
+			background: #e5e7eb;
+			color: #6b7280;
+			padding: 2px 8px;
+			border-radius: 20px;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+
+		.archived-card-body {
+			padding: 12px 18px;
+			font-size: 13px;
+			color: var(--text-secondary);
+			min-height: 48px;
+		}
+
+		.archived-card-footer {
+			padding: 10px 18px;
+			border-top: 1px solid #e5e7eb;
+			display: flex;
+			gap: 8px;
+		}
+
+		.btn-restore-card {
+			flex: 1;
+			padding: 8px 14px;
+			background: white;
+			color: #16a34a;
+			border: 1.5px solid #bbf7d0;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 700;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-restore-card:hover {
+			background: #f0fdf4;
+			border-color: #16a34a;
+		}
+
+		.btn-delete-archived-card {
+			padding: 8px 12px;
+			background: white;
+			color: var(--danger);
+			border: 1.5px solid #fecaca;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+		}
+
+		.btn-delete-archived-card:hover {
+			background: #fef2f2;
+			border-color: var(--danger);
+		}
+
 		/* BULLETS EDITOR SPECIFIC STYLES */
 		.bullets-editor-card .card-body {
 			background: #fafafa;
@@ -1742,6 +1889,17 @@ e.g.
 
 				<div id="contentGrid" class="content-grid"></div>
 
+				<!-- ARCHIVED COMPONENTS SECTION -->
+				<div id="archivedSection" class="archived-section" style="display:none;">
+					<div class="archived-section-header" onclick="toggleArchivedSection(this)">
+						<span>📦</span>
+						<span class="archived-section-title">Archived Components</span>
+						<span class="archived-section-count" id="archivedCount">0</span>
+						<span class="archived-toggle-icon">▼</span>
+					</div>
+					<div id="archivedGrid" class="archived-grid" style="display:none;"></div>
+				</div>
+
 				<div id="emptyState" class="empty-state">
 					<div class="empty-state-icon">📝</div>
 					<h3>Nothing to display</h3>
@@ -1866,6 +2024,7 @@ e.g.
 			document.getElementById('breadcrumbSystem').style.display = 'none';
 			document.getElementById('editDeleteSlugBtn').style.display = 'none';
 			document.getElementById('slugMetaBar').style.display = 'none';
+			document.getElementById('archivedSection').style.display = 'none';
 
 			try {
 				showLoader(true);
@@ -1940,6 +2099,9 @@ e.g.
 			document.getElementById('metaBadgeSlug').textContent = slug;
 			document.getElementById('metaBadgeSite').textContent = firebaseKeyToHostname(currentSite);
 			document.getElementById('metaCount').textContent = `${count} component${count !== 1 ? 's' : ''}`;
+
+			// Load archived components for this slug
+			loadArchivedComponents(slug);
 		}
 
 		function getComponentIcon(name) {
@@ -2056,6 +2218,7 @@ e.g.
 				footer.innerHTML = `
 					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">Save Bullets</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
+					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 			} else if (isTestimonialsComponent(component)) {
 				const editorDiv = document.createElement('div');
@@ -2065,6 +2228,7 @@ e.g.
 				footer.innerHTML = `
 					<button class="btn-save-card" onclick="saveTestimonialsContent('${component}')">Save Reviews</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
+					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 			} else {
 				body.innerHTML = `
@@ -2072,6 +2236,7 @@ e.g.
 				footer.innerHTML = `
 					<button class="btn-save-card" onclick="saveContent('${component}')">Save</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
+					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 			}
 
@@ -2450,6 +2615,127 @@ e.g.
 				showNotification('Error deleting content', 'error');
 			}
 		}
+
+		// ─── ARCHIVE / RESTORE ───────────────────────────────────────────────────────
+
+		async function archiveComponent(component) {
+			if (!confirm(`Archive "${component}" for slug "${currentSlug}"?\n\nIt will be hidden from the live site until you restore it.`)) return;
+			try {
+				const content = contentData[component][currentSlug];
+
+				// Write to archived node
+				await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(content) });
+
+				// Delete from dynamic_content
+				await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'DELETE' });
+
+				// Update local cache
+				delete contentData[component][currentSlug];
+				delete _currentComponentsData[component];
+
+				closeComponentEditor();
+				showNotification(`"${component}" archived successfully!`, 'success');
+				loadSlugContent();
+			} catch(e) {
+				showNotification('Error archiving component', 'error');
+			}
+		}
+
+		async function restoreComponent(component) {
+			try {
+				const res = await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`);
+				const content = await res.json();
+				if (content === null) { showNotification('Archived data not found', 'error'); return; }
+
+				// Write back to dynamic_content
+				await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(content) });
+
+				// Delete from archived
+				await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'DELETE' });
+
+				// Update local cache
+				if (!contentData[component]) contentData[component] = {};
+				contentData[component][currentSlug] = content;
+
+				showNotification(`"${component}" restored successfully!`, 'success');
+				loadSlugContent();
+			} catch(e) {
+				showNotification('Error restoring component', 'error');
+			}
+		}
+
+		async function deleteArchivedComponent(component) {
+			if (!confirm(`Permanently delete archived component "${component}"?\n\nThis cannot be undone.`)) return;
+			try {
+				await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'DELETE' });
+				showNotification(`"${component}" permanently deleted.`, 'success');
+				loadSlugContent();
+			} catch(e) {
+				showNotification('Error deleting archived component', 'error');
+			}
+		}
+
+		async function loadArchivedComponents(slug) {
+			const archivedSection = document.getElementById('archivedSection');
+			const archivedGrid = document.getElementById('archivedGrid');
+			const archivedCount = document.getElementById('archivedCount');
+			archivedGrid.innerHTML = '';
+
+			try {
+				const res = await fetch(`${firebaseUrl}/archived/${currentSite}.json`);
+				const allArchived = await res.json();
+				if (!allArchived) { archivedSection.style.display = 'none'; return; }
+
+				const components = Object.keys(allArchived).filter(comp =>
+					allArchived[comp] && allArchived[comp][slug] !== undefined
+				);
+
+				if (components.length === 0) { archivedSection.style.display = 'none'; return; }
+
+				archivedCount.textContent = components.length;
+				archivedSection.style.display = 'block';
+
+				components.forEach(component => {
+					const content = allArchived[component][slug];
+					const preview = typeof content === 'string'
+						? escapeHtml(stripHtml(content).slice(0, 80) || '(no preview)') + (stripHtml(content).length > 80 ? '…' : '')
+						: '(complex content)';
+					const icon = getComponentIcon(component);
+
+					const card = document.createElement('div');
+					card.className = 'archived-card';
+					card.innerHTML = `
+						<div class="archived-card-header">
+							<div style="display:flex; align-items:center; gap:8px;">
+								<span>${icon}</span>
+								<span style="font-size:14px; font-weight:700; color:var(--text-secondary);">${escapeHtml(component)}</span>
+							</div>
+							<span class="archived-badge">Archived</span>
+						</div>
+						<div class="archived-card-body">${preview}</div>
+						<div class="archived-card-footer">
+							<button class="btn-restore-card" onclick="restoreComponent('${component}')">↩ Restore</button>
+							<button class="btn-delete-archived-card" onclick="deleteArchivedComponent('${component}')">🗑</button>
+						</div>`;
+					archivedGrid.appendChild(card);
+				});
+			} catch(e) {
+				archivedSection.style.display = 'none';
+			}
+		}
+
+		function toggleArchivedSection(header) {
+			const grid = document.getElementById('archivedGrid');
+			const isOpen = header.classList.toggle('open');
+			grid.style.display = isOpen ? 'grid' : 'none';
+		}
+
+		// ─────────────────────────────────────────────────────────────────────────
 
 		function showAddComponentModal() {
 			if (!currentSlug) { showNotification('Please select a slug first', 'error'); return; }
