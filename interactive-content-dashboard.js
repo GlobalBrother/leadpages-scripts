@@ -389,43 +389,58 @@
 	//      (preserving relative order of non-active sections underneath)
 	function prioritizeSystemSections(slug, slugSystems) {
 		const systemKey = slugSystems[slug];
-		if (!systemKey) return; // slug has no system mapping — nothing to do
+		if (!systemKey) return;
 
-		// Find all elements whose id matches *-system-title or *-system-content
+		// Find every element with id ending in "-system-title" or "-system-content"
 		const allMarkers = Array.from(
 			document.querySelectorAll('[id$="-system-title"],[id$="-system-content"]')
 		);
 		if (allMarkers.length === 0) return;
 
-		// Collect unique <section> ancestors, preserving DOM order
+		// Map each marker → its system key (everything before "-system-")
+		// e.g. "respiratory-system-title" → "respiratory"
+		//      "nervous-system-content"   → "nervous"
+		function markerToSystemKey(id) {
+			const m = id.match(/^(.+)-system-(?:title|content)$/);
+			return m ? m[1] : null;
+		}
+
+		// Collect unique <section> ancestors in DOM order,
+		// storing which system they belong to
 		const seen = new Set();
-		const allSections = [];
+		const allSections = []; // [{ section, sysKey }]
 		allMarkers.forEach(function(marker) {
 			const section = marker.closest('section') || marker.parentElement;
 			if (section && !seen.has(section)) {
 				seen.add(section);
-				allSections.push({ section: section, markerId: marker.id });
+				allSections.push({ section: section, sysKey: markerToSystemKey(marker.id) });
 			}
 		});
 		if (allSections.length === 0) return;
 
-		// The insertion point is just before the first system section in the DOM
-		const firstSection = allSections[0].section;
-		const parent = firstSection.parentNode;
+		const parent = allSections[0].section.parentNode;
 		if (!parent) return;
 
-		// Split into active-system sections and the rest
-		const activeSections = allSections.filter(function(s) {
-			return s.markerId.startsWith(systemKey + '-system-');
-		});
-		const otherSections = allSections.filter(function(s) {
-			return !s.markerId.startsWith(systemKey + '-system-');
-		});
+		// Find the anchor: the first <section> in DOM that belongs to ANY system
+		// We will insert everything starting from this position.
+		const anchor = allSections[0].section;
 
-		// Re-insert: active first, then the rest — all before firstSection's current position
-		const insertBefore = firstSection;
-		activeSections.forEach(function(s) { parent.insertBefore(s.section, insertBefore); });
-		otherSections.forEach(function(s)  { parent.insertBefore(s.section, insertBefore); });
+		// Separate active-system sections from the rest (preserve relative order within each group)
+		const activeSections = allSections.filter(function(s) { return s.sysKey === systemKey; });
+		const otherSections  = allSections.filter(function(s) { return s.sysKey !== systemKey; });
+
+		// Insert active sections first (before anchor), then other sections — in their original order.
+		// Use a moving reference so that each insertBefore puts the next item directly after the previous.
+		var ref = anchor;
+		activeSections.forEach(function(s) {
+			parent.insertBefore(s.section, ref);
+			// After inserting before ref, the new section is just before ref — move ref to stay consistent
+		});
+		// Now insert all other sections after the active block, preserving their relative order
+		// They go right before the current `ref` (which is the original first section, now after active ones)
+		otherSections.forEach(function(s) {
+			parent.insertBefore(s.section, ref);
+		});
 	}
 	// ─────────────────────────────────────────────────────────────────────────────
 
