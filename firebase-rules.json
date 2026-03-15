@@ -2,7 +2,7 @@
   "rules": {
     "config": {
       ".read": true,
-      ".write": false
+      ".write": true
     },
     "dynamic_content": {
       ".read": true,
