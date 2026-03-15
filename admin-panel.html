@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ro">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,7 +23,11 @@
 		}
 
 
-		* { margin: 0; padding: 0; box-sizing: border-box; }
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
 
 		body {
 			font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -48,7 +53,7 @@
 			padding: 48px 40px;
 			width: 100%;
 			max-width: 460px;
-			box-shadow: 0 32px 80px rgba(0,0,0,0.4);
+			box-shadow: 0 32px 80px rgba(0, 0, 0, 0.4);
 			text-align: center;
 		}
 
@@ -140,7 +145,7 @@
 
 		.sidebar-brand {
 			padding: 22px 18px 18px;
-			border-bottom: 1px solid rgba(255,255,255,0.06);
+			border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 			position: relative;
 		}
 
@@ -151,8 +156,8 @@
 		}
 
 		.brand-icon {
-			width:80px;
-			height:80px;
+			width: 80px;
+			height: 80px;
 			border-radius: 10px;
 			display: flex;
 			align-items: center;
@@ -176,7 +181,7 @@
 
 		.brand-text span {
 			font-size: 13px;
-			color: rgba(255,255,255,0.35);
+			color: rgba(255, 255, 255, 0.35);
 			font-weight: 500;
 		}
 
@@ -188,7 +193,7 @@
 		.sidebar-section-label {
 			font-size: 10px;
 			font-weight: 700;
-			color: rgba(255,255,255,0.45);
+			color: rgba(255, 255, 255, 0.45);
 			text-transform: uppercase;
 			letter-spacing: 1.2px;
 			margin-bottom: 7px;
@@ -197,8 +202,8 @@
 		.sidebar-select {
 			width: 100%;
 			padding: 9px 12px;
-			background: rgba(255,255,255,0.06);
-			border: 1px solid rgba(255,255,255,0.1);
+			background: rgba(255, 255, 255, 0.06);
+			border: 1px solid rgba(255, 255, 255, 0.1);
 			border-radius: 8px;
 			color: white;
 			font-size: 13px;
@@ -220,7 +225,7 @@
 
 		.sidebar-divider {
 			height: 1px;
-			background: rgba(255,255,255,0.06);
+			background: rgba(255, 255, 255, 0.06);
 			margin: 18px 16px;
 		}
 
@@ -228,7 +233,7 @@
 			padding: 0 18px;
 			font-size: 10px;
 			font-weight: 700;
-			color: rgba(255,255,255,0.45);
+			color: rgba(255, 255, 255, 0.45);
 			text-transform: uppercase;
 			letter-spacing: 1.2px;
 			margin-bottom: 6px;
@@ -249,7 +254,7 @@
 			border-radius: 8px;
 			border: none;
 			background: transparent;
-			color: rgba(255,255,255,0.6);
+			color: rgba(255, 255, 255, 0.6);
 			font-size: 13px;
 			font-weight: 500;
 			font-family: inherit;
@@ -267,7 +272,7 @@
 		.btn-icon {
 			width: 30px;
 			height: 30px;
-			background: rgba(255,255,255,0.05);
+			background: rgba(255, 255, 255, 0.05);
 			border-radius: 7px;
 			display: flex;
 			align-items: center;
@@ -283,7 +288,7 @@
 		.sidebar-footer {
 			margin-top: auto;
 			padding: 14px 10px;
-			border-top: 1px solid rgba(255,255,255,0.06);
+			border-top: 1px solid rgba(255, 255, 255, 0.06);
 		}
 
 		.sidebar-refresh-btn {
@@ -331,32 +336,65 @@
 			transition: all 0.2s;
 			flex-shrink: 0;
 		}
+
 		.sidebar-toggle-btn:hover {
 			color: var(--gold);
 			border-color: var(--gold);
 		}
 
 		/* COLLAPSED SIDEBAR STATE */
-		.sidebar.collapsed { width: 80px; }
-		.app-layout.sidebar-collapsed .main-content { margin-left: 80px; }
+		.sidebar.collapsed {
+			width: 80px;
+		}
+
+		.app-layout.sidebar-collapsed .main-content {
+			margin-left: 80px;
+		}
 
 		.sidebar.collapsed .brand-text,
 		.sidebar.collapsed .sidebar-section,
 		.sidebar.collapsed .sidebar-nav-label,
-		.sidebar.collapsed .sidebar-text-label { display: none; }
+		.sidebar.collapsed .sidebar-text-label {
+			display: none;
+		}
 
 		.sidebar.collapsed .sidebar-brand {
 			padding: 14px 0;
 			display: flex;
 			justify-content: center;
 		}
-		.sidebar.collapsed .brand-logo { justify-content: center; }
-		.sidebar.collapsed .brand-icon { width: 44px; height: 44px; }
-		.sidebar.collapsed .sidebar-divider { margin: 10px 12px; }
-		.sidebar.collapsed .sidebar-actions { padding: 0 10px; align-items: center; }
-		.sidebar.collapsed .sidebar-btn { justify-content: center; padding: 9px 0; gap: 0; }
-		.sidebar.collapsed .sidebar-footer { padding: 14px 10px; }
-		.sidebar.collapsed .sidebar-refresh-btn { gap: 0; }
+
+		.sidebar.collapsed .brand-logo {
+			justify-content: center;
+		}
+
+		.sidebar.collapsed .brand-icon {
+			width: 44px;
+			height: 44px;
+		}
+
+		.sidebar.collapsed .sidebar-divider {
+			margin: 10px 12px;
+		}
+
+		.sidebar.collapsed .sidebar-actions {
+			padding: 0 10px;
+			align-items: center;
+		}
+
+		.sidebar.collapsed .sidebar-btn {
+			justify-content: center;
+			padding: 9px 0;
+			gap: 0;
+		}
+
+		.sidebar.collapsed .sidebar-footer {
+			padding: 14px 10px;
+		}
+
+		.sidebar.collapsed .sidebar-refresh-btn {
+			gap: 0;
+		}
 
 		/* MAIN CONTENT */
 		.main-content {
@@ -423,8 +461,15 @@
 		}
 
 		@keyframes pulse {
-			0%, 100% { opacity: 1; }
-			50% { opacity: 0.4; }
+
+			0%,
+			100% {
+				opacity: 1;
+			}
+
+			50% {
+				opacity: 0.4;
+			}
 		}
 
 		.page-body {
@@ -444,7 +489,10 @@
 			font-size: 15px;
 		}
 
-		.meta-label { color: var(--text-muted); font-weight: 500; }
+		.meta-label {
+			color: var(--text-muted);
+			font-weight: 500;
+		}
 
 		.meta-badge {
 			background: rgba(201, 162, 39, 0.1);
@@ -535,7 +583,7 @@
 			font-size: 12px;
 			font-weight: 600;
 			border-top: 1px solid var(--border);
-			background: rgba(201,162,39,0.03);
+			background: rgba(201, 162, 39, 0.03);
 			letter-spacing: 0.3px;
 		}
 
@@ -543,7 +591,7 @@
 		#componentEditorModal {
 			position: fixed;
 			inset: 0;
-			background: rgba(15,17,25,0.55);
+			background: rgba(15, 17, 25, 0.55);
 			backdrop-filter: blur(3px);
 			z-index: 200;
 			display: flex;
@@ -560,14 +608,21 @@
 			max-height: 88vh;
 			display: flex;
 			flex-direction: column;
-			box-shadow: 0 24px 80px rgba(0,0,0,0.22);
+			box-shadow: 0 24px 80px rgba(0, 0, 0, 0.22);
 			overflow: hidden;
 			animation: modalSlideIn 0.2s ease;
 		}
 
 		@keyframes modalSlideIn {
-			from { opacity: 0; transform: translateY(18px) scale(0.97); }
-			to   { opacity: 1; transform: translateY(0) scale(1); }
+			from {
+				opacity: 0;
+				transform: translateY(18px) scale(0.97);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0) scale(1);
+			}
 		}
 
 		.comp-editor-header {
@@ -586,7 +641,9 @@
 			gap: 10px;
 		}
 
-		.comp-editor-title .component-icon { flex-shrink: 0; }
+		.comp-editor-title .component-icon {
+			flex-shrink: 0;
+		}
 
 		.comp-editor-title h3 {
 			font-size: 16px;
@@ -594,7 +651,9 @@
 			color: var(--text-primary);
 		}
 
-		.comp-editor-title .component-slug-badge { margin-left: 4px; }
+		.comp-editor-title .component-slug-badge {
+			margin-left: 4px;
+		}
 
 		.comp-editor-close {
 			width: 32px;
@@ -611,7 +670,11 @@
 			transition: all 0.15s;
 		}
 
-		.comp-editor-close:hover { background: #fef2f2; color: var(--danger); border-color: #fecaca; }
+		.comp-editor-close:hover {
+			background: #fef2f2;
+			color: var(--danger);
+			border-color: #fecaca;
+		}
 
 		.comp-editor-body {
 			flex: 1;
@@ -674,9 +737,10 @@
 			padding: 16px 18px;
 			height: calc(100% - 117px);
 		}
+
 		.testimonials-editor-card .card-body {
 			max-height: 610px;
-    	overflow: auto;
+			overflow: auto;
 			height: auto;
 		}
 
@@ -702,10 +766,11 @@
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.08);
 			background: white;
 		}
+
 		#bullets-list-changing-bullets {
 			max-height: 375px;
 			height: 100%;
-    	overflow: auto;
+			overflow: auto;
 		}
 
 		.card-footer {
@@ -764,8 +829,15 @@
 		}
 
 		@keyframes slideInRow {
-			from { opacity: 0; transform: translateX(-10px); }
-			to { opacity: 1; transform: translateX(0); }
+			from {
+				opacity: 0;
+				transform: translateX(-10px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateX(0);
+			}
 		}
 
 		.bullet-input:focus {
@@ -819,7 +891,9 @@
 			transition: all 0.15s;
 		}
 
-		.review-remove-btn:hover { background: #fee2e2; }
+		.review-remove-btn:hover {
+			background: #fee2e2;
+		}
 
 		.review-editor-fields {
 			padding: 14px;
@@ -889,8 +963,13 @@
 			line-height: 1;
 		}
 
-		.star-btn.active { color: #FFA41C; }
-		.star-btn:hover { transform: scale(1.15); }
+		.star-btn.active {
+			color: #FFA41C;
+		}
+
+		.star-btn:hover {
+			transform: scale(1.15);
+		}
 
 		.review-photos-list {
 			display: flex;
@@ -917,7 +996,9 @@
 			transition: all 0.15s;
 		}
 
-		.review-photo-row button:hover { background: #fee2e2; }
+		.review-photo-row button:hover {
+			background: #fee2e2;
+		}
 
 		.review-add-photo-btn {
 			width: 100%;
@@ -977,8 +1058,15 @@
 		}
 
 		/* LOADER */
-		.loader { display: none; text-align: center; padding: 60px; }
-		.loader.show { display: block; }
+		.loader {
+			display: none;
+			text-align: center;
+			padding: 60px;
+		}
+
+		.loader.show {
+			display: block;
+		}
 
 		.spinner {
 			width: 36px;
@@ -990,9 +1078,17 @@
 			margin: 0 auto 14px;
 		}
 
-		@keyframes spin { to { transform: rotate(360deg); } }
+		@keyframes spin {
+			to {
+				transform: rotate(360deg);
+			}
+		}
 
-		.loader p { font-size: 14px; color: var(--text-secondary); font-weight: 500; }
+		.loader p {
+			font-size: 14px;
+			color: var(--text-secondary);
+			font-weight: 500;
+		}
 
 		/* NOTIFICATION */
 		.notification {
@@ -1002,7 +1098,7 @@
 			padding: 13px 18px;
 			background: white;
 			border-radius: 10px;
-			box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+			box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 			display: none;
 			align-items: center;
 			gap: 10px;
@@ -1015,19 +1111,34 @@
 		}
 
 		@keyframes slideIn {
-			from { transform: translateX(120%); opacity: 0; }
-			to   { transform: translateX(0);    opacity: 1; }
+			from {
+				transform: translateX(120%);
+				opacity: 0;
+			}
+
+			to {
+				transform: translateX(0);
+				opacity: 1;
+			}
 		}
 
-		.notification.success { border-left: 4px solid var(--gold); }
-		.notification.error   { border-left: 4px solid var(--danger); }
-		.notification.show    { display: flex; }
+		.notification.success {
+			border-left: 4px solid var(--gold);
+		}
+
+		.notification.error {
+			border-left: 4px solid var(--danger);
+		}
+
+		.notification.show {
+			display: flex;
+		}
 
 		/* MODAL */
 		.modal-overlay {
 			position: fixed;
 			inset: 0;
-			background: rgba(0,0,0,0.5);
+			background: rgba(0, 0, 0, 0.5);
 			display: flex;
 			align-items: center;
 			justify-content: center;
@@ -1042,7 +1153,7 @@
 			max-width: 520px;
 			max-height: 90vh;
 			overflow-y: auto;
-			box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+			box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
 		}
 
 		.modal-header {
@@ -1073,11 +1184,17 @@
 			color: var(--text-secondary);
 		}
 
-		.modal-close:hover { background: #e5e7eb; }
+		.modal-close:hover {
+			background: #e5e7eb;
+		}
 
-		.modal-body { padding: 20px 24px; }
+		.modal-body {
+			padding: 20px 24px;
+		}
 
-		.modal-field { margin-bottom: 16px; }
+		.modal-field {
+			margin-bottom: 16px;
+		}
 
 		.modal-field label {
 			display: block;
@@ -1106,7 +1223,9 @@
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
 		}
 
-		.modal-bullets-list { margin-bottom: 10px; }
+		.modal-bullets-list {
+			margin-bottom: 10px;
+		}
 
 		.modal-bullet-row {
 			display: flex;
@@ -1145,7 +1264,9 @@
 			transition: all 0.15s;
 		}
 
-		.modal-bullet-remove:hover { background: #fee2e2; }
+		.modal-bullet-remove:hover {
+			background: #fee2e2;
+		}
 
 		.modal-add-bullet {
 			width: 100%;
@@ -1174,7 +1295,9 @@
 			gap: 10px;
 		}
 
-		.modal-footer .btn-save-card { flex: 1; }
+		.modal-footer .btn-save-card {
+			flex: 1;
+		}
 
 		.modal-footer .btn-cancel {
 			padding: 9px 18px;
@@ -1189,11 +1312,16 @@
 			transition: all 0.15s;
 		}
 
-		.modal-footer .btn-cancel:hover { background: #f3f4f6; }
+		.modal-footer .btn-cancel:hover {
+			background: #f3f4f6;
+		}
 
 		/* Step 1 modal */
-		.modal-step { }
-		.modal-step.hidden { display: none; }
+		.modal-step {}
+
+		.modal-step.hidden {
+			display: none;
+		}
 
 		/* Custom component modal */
 		.modal-box.modal-wide {
@@ -1237,7 +1365,11 @@
 			margin-top: 10px;
 		}
 
-		.code-hint-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+		.code-hint-icon {
+			font-size: 15px;
+			flex-shrink: 0;
+			margin-top: 1px;
+		}
 
 		/* Edit component name button */
 		.btn-rename-card {
@@ -1263,6 +1395,7 @@
 		}
 	</style>
 </head>
+
 <body>
 
 	<!-- NOTIFICATION -->
@@ -1299,10 +1432,12 @@
 				<div class="modal-body">
 					<div class="modal-field">
 						<label>Component Name</label>
-						<input type="text" id="modalComponentName" placeholder="e.g. title-interactive, changing-bullets, vsl-video" />
+						<input type="text" id="modalComponentName"
+							placeholder="e.g. title-interactive, changing-bullets, vsl-video" />
 					</div>
 					<p style="font-size: 12px; color: var(--text-muted); margin-top: -8px; line-height: 1.6;">
-						💡 Use <strong>"changing-bullets"</strong> for a visual bullet-points editor, or <strong>"customer-reviews"</strong> for a visual testimonials editor.
+						💡 Use <strong>"changing-bullets"</strong> for a visual bullet-points editor, or
+						<strong>"customer-reviews"</strong> for a visual testimonials editor.
 					</p>
 				</div>
 				<div class="modal-footer">
@@ -1368,14 +1503,19 @@
 			<div class="modal-body">
 				<div class="modal-field">
 					<label>Slug Name</label>
-					<input type="text" id="newSlugName" placeholder="e.g. jello-flu-shots, vinegar-socks" onkeydown="if(event.key==='Enter')document.getElementById('newSlugSystemSelect').focus()" />
+					<input type="text" id="newSlugName" placeholder="e.g. jello-flu-shots, vinegar-socks"
+						onkeydown="if(event.key==='Enter')document.getElementById('newSlugSystemSelect').focus()" />
 				</div>
 				<div class="modal-field" style="margin-bottom:0;">
 					<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
-						<label style="margin-bottom:0;">Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
-						<button onclick="openManageSystemsModal()" style="padding:4px 10px; background:rgba(201,162,39,0.08); border:1.5px solid rgba(201,162,39,0.3); border-radius:6px; font-size:11px; font-weight:700; color:var(--gold-dark); cursor:pointer; font-family:inherit; letter-spacing:0.3px;">⚙ Manage Systems</button>
+						<label style="margin-bottom:0;">Body System <span
+								style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
+						<button onclick="openManageSystemsModal()"
+							style="padding:4px 10px; background:rgba(201,162,39,0.08); border:1.5px solid rgba(201,162,39,0.3); border-radius:6px; font-size:11px; font-weight:700; color:var(--gold-dark); cursor:pointer; font-family:inherit; letter-spacing:0.3px;">⚙
+							Manage Systems</button>
 					</div>
-					<select id="newSlugSystemSelect" style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s;">
+					<select id="newSlugSystemSelect"
+						style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s;">
 						<option value="">— No system —</option>
 					</select>
 				</div>
@@ -1398,10 +1538,13 @@
 			<div class="modal-body">
 				<p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
 					Define the systems that appear in the slug dropdown.<br>
-					<strong>Key</strong> = internal ID (e.g. <code>respiratory</code>) &nbsp;·&nbsp; <strong>Label</strong> = display name (e.g. <code>Respiratory System</code>)
+					<strong>Key</strong> = internal ID (e.g. <code>respiratory</code>) &nbsp;·&nbsp; <strong>Label</strong> =
+					display name (e.g. <code>Respiratory System</code>)
 				</p>
 				<div id="manageSystemsRows" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;"></div>
-				<button onclick="addManageSystemRow()" style="width:100%; padding:9px; background:#f9fafb; border:1.5px dashed #d1d5db; border-radius:8px; font-size:13px; font-weight:600; color:var(--text-secondary); cursor:pointer; font-family:inherit; transition:all .2s;">➕ Add System</button>
+				<button onclick="addManageSystemRow()"
+					style="width:100%; padding:9px; background:#f9fafb; border:1.5px dashed #d1d5db; border-radius:8px; font-size:13px; font-weight:600; color:var(--text-secondary); cursor:pointer; font-family:inherit; transition:all .2s;">➕
+					Add System</button>
 			</div>
 			<div class="modal-footer">
 				<button class="btn-cancel" onclick="closeManageSystemsModal()">Cancel</button>
@@ -1435,7 +1578,9 @@ e.g.
 				</div>
 				<div class="code-hint">
 					<span class="code-hint-icon">💡</span>
-					<span>The snippet will be injected as <code>innerHTML</code> into the element with <code>id="[component name]"</code> on your Leadpages page. Include <code>&lt;style&gt;</code> and <code>&lt;script&gt;</code> tags freely — they will all be executed.</span>
+					<span>The snippet will be injected as <code>innerHTML</code> into the element with
+						<code>id="[component name]"</code> on your Leadpages page. Include <code>&lt;style&gt;</code> and
+						<code>&lt;script&gt;</code> tags freely — they will all be executed.</span>
 				</div>
 			</div>
 			<div class="modal-footer">
@@ -1451,8 +1596,10 @@ e.g.
 			<div class="auth-icon">🔐</div>
 			<h2>Content Manager</h2>
 			<p>Introdu parola de admin pentru a accesa panoul.</p>
-			<input type="password" id="adminPassword" placeholder="Parolă" onkeydown="if(event.key==='Enter')loginWithPassword()">
-			<div id="authPasswordError" style="display:none; color:#dc2626; font-size:13px; margin:-8px 0 12px; text-align:left;">
+			<input type="password" id="adminPassword" placeholder="Parolă"
+				onkeydown="if(event.key==='Enter')loginWithPassword()">
+			<div id="authPasswordError"
+				style="display:none; color:#dc2626; font-size:13px; margin:-8px 0 12px; text-align:left;">
 				Parolă incorectă. Încearcă din nou.
 			</div>
 			<button class="btn-connect" onclick="loginWithPassword()">Intră →</button>
@@ -1465,7 +1612,8 @@ e.g.
 		<!-- SIDEBAR -->
 		<aside class="sidebar">
 			<div class="sidebar-brand">
-				<button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Toggle sidebar">&#8249;</button>
+				<button class="sidebar-toggle-btn" id="sidebarToggleBtn" onclick="toggleSidebar()"
+					title="Toggle sidebar">&#8249;</button>
 				<div class="brand-logo">
 					<div class="brand-icon"><img src="assets/GB LOGO.png" alt="GB Logo"></div>
 					<div class="brand-text">
@@ -1509,11 +1657,18 @@ e.g.
 					<span class="btn-icon">🧩</span>
 					<span class="sidebar-text-label">Add Custom Component</span>
 				</button>
+				<button class="sidebar-btn" id="deleteSlugBtn" onclick="deleteSlug()" title="Delete Current Slug" style="display:none; color:rgba(220,38,38,0.8); border-color:rgba(220,38,38,0.2);">
+					<span class="btn-icon">🗑</span>
+					<span class="sidebar-text-label">Delete Slug</span>
+				</button>
 			</div>
 
 			<div class="sidebar-footer" style="display:flex; flex-direction:column; gap:8px;">
-				<button class="sidebar-refresh-btn" onclick="refreshData()" title="Refresh">↺<span class="sidebar-text-label"> &nbsp;Refresh</span></button>
-				<button class="sidebar-refresh-btn" onclick="logout()" title="Logout" style="color:rgba(220,38,38,0.7); border-color:rgba(220,38,38,0.25);">⇠<span class="sidebar-text-label"> &nbsp;Logout</span></button>
+				<button class="sidebar-refresh-btn" onclick="refreshData()" title="Refresh">↺<span class="sidebar-text-label">
+						&nbsp;Refresh</span></button>
+				<button class="sidebar-refresh-btn" onclick="logout()" title="Logout"
+					style="color:rgba(220,38,38,0.7); border-color:rgba(220,38,38,0.25);">⇠<span class="sidebar-text-label">
+						&nbsp;Logout</span></button>
 			</div>
 		</aside>
 
@@ -1524,7 +1679,8 @@ e.g.
 					<span class="breadcrumb-item" id="breadcrumbSite">All sites</span>
 					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>
 					<span class="breadcrumb-item active" id="breadcrumbSlug" style="display:none;"></span>
-					<span id="breadcrumbSystem" style="display:none; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); padding:2px 10px; border-radius:20px; letter-spacing:0.3px;"></span>
+					<span id="breadcrumbSystem"
+						style="display:none; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); padding:2px 10px; border-radius:20px; letter-spacing:0.3px;"></span>
 				</div>
 				<div id="connectionStatus" class="topbar-status" style="display:none;">
 					<div class="status-dot"></div>
@@ -1568,13 +1724,13 @@ e.g.
 		let _currentComponentsData = {}; // cache for the current slug's components
 
 		// ─── CONFIG (edit these two values) ──────────────────────────────────────
-		const FIREBASE_URL    = 'https://content-manager-8da5c-default-rtdb.europe-west1.firebasedatabase.app';
-		const ADMIN_PASSWORD  = '121212'; // ← schimbă cu parola ta
+		const FIREBASE_URL = 'https://content-manager-8da5c-default-rtdb.europe-west1.firebasedatabase.app';
+		const ADMIN_PASSWORD = '121212'; // ← schimbă cu parola ta
 		// ──────────────────────────────────────────────────────────────────────────
 
 		// ─── AUTH ─────────────────────────────────────────────────────────────────
 
-		const SESSION_KEY      = 'cm_session_until';
+		const SESSION_KEY = 'cm_session_until';
 		const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 ore în ms
 
 		function initAuthUI() {
@@ -1583,7 +1739,7 @@ e.g.
 				// Sesiune validă — intră direct
 				firebaseUrl = FIREBASE_URL;
 				document.getElementById('authOverlay').style.display = 'none';
-				document.getElementById('appLayout').style.display   = 'flex';
+				document.getElementById('appLayout').style.display = 'flex';
 				document.getElementById('connectionStatus').style.display = 'flex';
 				loadSites();
 				return;
@@ -1595,7 +1751,7 @@ e.g.
 		}
 
 		function loginWithPassword() {
-			const input   = document.getElementById('adminPassword').value;
+			const input = document.getElementById('adminPassword').value;
 			const errorEl = document.getElementById('authPasswordError');
 			errorEl.style.display = 'none';
 
@@ -1613,7 +1769,7 @@ e.g.
 
 			firebaseUrl = FIREBASE_URL;
 			document.getElementById('authOverlay').style.display = 'none';
-			document.getElementById('appLayout').style.display   = 'flex';
+			document.getElementById('appLayout').style.display = 'flex';
 			document.getElementById('connectionStatus').style.display = 'flex';
 			loadSites();
 		}
@@ -1624,12 +1780,12 @@ e.g.
 			currentSite = '';
 			currentSlug = '';
 			contentData = {};
-			document.getElementById('appLayout').style.display        = 'none';
+			document.getElementById('appLayout').style.display = 'none';
 			document.getElementById('connectionStatus').style.display = 'none';
-			document.getElementById('adminPassword').value            = '';
+			document.getElementById('adminPassword').value = '';
 			document.getElementById('authPasswordError').style.display = 'none';
 			document.getElementById('authCardPassword').style.display = 'block';
-			document.getElementById('authOverlay').style.display      = 'flex';
+			document.getElementById('authOverlay').style.display = 'flex';
 			setTimeout(() => document.getElementById('adminPassword').focus(), 100);
 		}
 
@@ -1709,6 +1865,7 @@ e.g.
 			document.getElementById('breadcrumbSep').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').textContent = slug;
+			document.getElementById('deleteSlugBtn').style.display = 'flex';
 
 			// Show system badge if slug has a system mapping
 			const systemBadge = document.getElementById('breadcrumbSystem');
@@ -1748,9 +1905,9 @@ e.g.
 
 		function getComponentIcon(name) {
 			if (name.includes('title') || name.includes('titlu')) return '✏️';
-			if (name.includes('video') || name.includes('vsl'))   return '🎬';
-			if (name.includes('image') || name.includes('img'))   return '🖼️';
-			if (name.includes('button') || name.includes('btn'))  return '🔘';
+			if (name.includes('video') || name.includes('vsl')) return '🎬';
+			if (name.includes('image') || name.includes('img')) return '🖼️';
+			if (name.includes('button') || name.includes('btn')) return '🔘';
 			return '📄';
 		}
 
@@ -1841,9 +1998,9 @@ e.g.
 
 		function openComponentEditor(component) {
 			const content = _currentComponentsData[component];
-			const modal   = document.getElementById('componentEditorModal');
-			const body    = document.getElementById('compEditorBody');
-			const footer  = document.getElementById('compEditorFooter');
+			const modal = document.getElementById('componentEditorModal');
+			const body = document.getElementById('compEditorBody');
+			const footer = document.getElementById('compEditorFooter');
 
 			document.getElementById('compEditorIcon').textContent = getComponentIcon(component);
 			document.getElementById('compEditorTitle').textContent = component;
@@ -1895,7 +2052,7 @@ e.g.
 		function refreshPreviewCard(component) {
 			const content = _currentComponentsData[component];
 			const grid = document.getElementById('contentGrid');
-			const old  = grid.querySelector(`[data-component="${component}"]`);
+			const old = grid.querySelector(`[data-component="${component}"]`);
 			if (!old) return;
 			const newCard = buildPreviewCard(component, content);
 			grid.replaceChild(newCard, old);
@@ -2024,17 +2181,17 @@ e.g.
 				initialCount,
 				reviews: Array.from(cards).map(card => {
 					const avatarEl = card.querySelector('.review-header img');
-					const nameEl   = card.querySelector('.review-header h4');
-					const dateEl   = card.querySelector('.review-date');
-					const starsEl  = card.querySelector('.stars');
-					const bodyEl   = card.querySelector('.review-body');
+					const nameEl = card.querySelector('.review-header h4');
+					const dateEl = card.querySelector('.review-date');
+					const starsEl = card.querySelector('.stars');
+					const bodyEl = card.querySelector('.review-body');
 					const photoEls = card.querySelectorAll('.review-photo img');
 					return {
 						avatar: avatarEl ? (avatarEl.getAttribute('src') || '') : DEFAULT_REVIEW_AVATAR,
-						name:   nameEl  ? nameEl.textContent.trim()  : '',
-						date:   dateEl  ? dateEl.textContent.trim()  : '',
-						stars:  starsEl ? (starsEl.textContent.match(/★/g) || []).length : 5,
-						body:   bodyEl  ? bodyEl.textContent.trim()  : '',
+						name: nameEl ? nameEl.textContent.trim() : '',
+						date: dateEl ? dateEl.textContent.trim() : '',
+						stars: starsEl ? (starsEl.textContent.match(/★/g) || []).length : 5,
+						body: bodyEl ? bodyEl.textContent.trim() : '',
 						photos: Array.from(photoEls).map(img => img.getAttribute('src') || '')
 					};
 				})
@@ -2044,7 +2201,7 @@ e.g.
 		function buildTestimonialsHtml(reviews, initialCount) {
 			if (!initialCount || initialCount < 1) initialCount = 5;
 			const cardsHtml = reviews.map(r => {
-				const starsStr   = '★'.repeat(Math.max(0, Math.min(5, r.stars))) + '☆'.repeat(5 - Math.max(0, Math.min(5, r.stars)));
+				const starsStr = '★'.repeat(Math.max(0, Math.min(5, r.stars))) + '☆'.repeat(5 - Math.max(0, Math.min(5, r.stars)));
 				const photosHtml = (r.photos || [])
 					.filter(url => url.trim())
 					.map(url => `\t\t<img src="${url}" alt="Review Image" onclick="openModal(this)">`)
@@ -2088,17 +2245,17 @@ e.g.
 			const index = container.children.length;
 			const r = {
 				avatar: review.avatar || DEFAULT_REVIEW_AVATAR,
-				name:   review.name  || '',
-				date:   review.date  || 'Reviewed in the United States on January 1, 2025',
-				stars:  review.stars !== undefined ? review.stars : 5,
-				body:   review.body  || '',
+				name: review.name || '',
+				date: review.date || 'Reviewed in the United States on January 1, 2025',
+				stars: review.stars !== undefined ? review.stars : 5,
+				body: review.body || '',
 				photos: review.photos || []
 			};
 
 			const block = document.createElement('div');
 			block.className = 'review-editor-block';
 
-			const starsHtml = [1,2,3,4,5].map(n =>
+			const starsHtml = [1, 2, 3, 4, 5].map(n =>
 				`<span class="star-btn${n <= r.stars ? ' active' : ''}" data-val="${n}" onclick="setReviewStars(this)">★</span>`
 			).join('');
 
@@ -2141,9 +2298,9 @@ e.g.
 
 			// Set values via JS to avoid HTML escaping issues
 			block.querySelector('.review-avatar-input').value = r.avatar;
-			block.querySelector('.review-name-input').value   = r.name;
-			block.querySelector('.review-date-field').value   = r.date;
-			block.querySelector('.review-body-field').value   = r.body;
+			block.querySelector('.review-name-input').value = r.name;
+			block.querySelector('.review-date-field').value = r.date;
+			block.querySelector('.review-body-field').value = r.body;
 
 			// Add photo rows
 			const photosList = block.querySelector('.review-photos-list');
@@ -2190,10 +2347,10 @@ e.g.
 					.map(i => i.value.trim()).filter(v => v);
 				return {
 					avatar: block.querySelector('.review-avatar-input').value.trim() || DEFAULT_REVIEW_AVATAR,
-					name:   block.querySelector('.review-name-input').value.trim(),
-					date:   block.querySelector('.review-date-field').value.trim(),
-					stars:  parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
-					body:   block.querySelector('.review-body-field').value.trim(),
+					name: block.querySelector('.review-name-input').value.trim(),
+					date: block.querySelector('.review-date-field').value.trim(),
+					stars: parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
+					body: block.querySelector('.review-body-field').value.trim(),
 					photos
 				};
 			});
@@ -2290,8 +2447,8 @@ e.g.
 			// Update the input to show the sanitized value
 			document.getElementById('modalComponentName').value = name;
 
-			const isBullets       = name === 'changing-bullets';
-			const isTestimonials  = isTestimonialsComponent(name);
+			const isBullets = name === 'changing-bullets';
+			const isTestimonials = isTestimonialsComponent(name);
 
 			document.getElementById('modalStep1').style.display = 'none';
 
@@ -2304,10 +2461,10 @@ e.g.
 				closeAddComponentModal();
 				const defaultHtml = buildTestimonialsHtml([{
 					avatar: DEFAULT_REVIEW_AVATAR,
-					name:   'Customer Name',
-					date:   'Reviewed in the United States on January 1, 2025',
-					stars:  5,
-					body:   'Your review text here...',
+					name: 'Customer Name',
+					date: 'Reviewed in the United States on January 1, 2025',
+					stars: 5,
+					body: 'Your review text here...',
 					photos: []
 				}], 5);
 				addNewComponent(name, defaultHtml);
@@ -2448,7 +2605,7 @@ e.g.
 					opt.textContent = label || key;
 					select.appendChild(opt);
 				});
-			} catch(e) { /* no systems defined yet — that's ok */ }
+			} catch (e) { /* no systems defined yet — that's ok */ }
 
 			document.getElementById('newSlugName').value = '';
 			select.value = '';
@@ -2460,9 +2617,60 @@ e.g.
 			document.getElementById('addSlugModal').style.display = 'none';
 		}
 
+		async function deleteSlug() {
+			if (!currentSite || !currentSlug) return;
+
+			const confirmed = confirm(`⚠️ Delete slug "${currentSlug}" from site "${firebaseKeyToHostname(currentSite)}"?\n\nThis will permanently delete ALL components for this slug and cannot be undone.`);
+			if (!confirmed) return;
+
+			try {
+				showLoader(true);
+
+				// Delete this slug's entry from every component in Firebase
+				const deletePromises = Object.keys(contentData).map(component =>
+					fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+						{ method: 'DELETE' })
+				);
+
+				// Also delete the slug→system mapping (if any)
+				deletePromises.push(
+					fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' })
+				);
+
+				await Promise.all(deletePromises);
+
+				// Update local cache — remove this slug from every component
+				Object.keys(contentData).forEach(component => {
+					delete contentData[component][currentSlug];
+				});
+
+				showLoader(false);
+				showNotification(`Slug "${currentSlug}" deleted successfully!`, 'success');
+
+				// Reset UI
+				const slugSelect = document.getElementById('slugSelect');
+				const optionToRemove = slugSelect.querySelector(`option[value="${currentSlug}"]`);
+				if (optionToRemove) optionToRemove.remove();
+
+				currentSlug = '';
+				document.getElementById('deleteSlugBtn').style.display = 'none';
+				document.getElementById('breadcrumbSep').style.display = 'none';
+				document.getElementById('breadcrumbSlug').style.display = 'none';
+				document.getElementById('breadcrumbSystem').style.display = 'none';
+				document.getElementById('slugMetaBar').style.display = 'none';
+				document.getElementById('contentGrid').innerHTML = '';
+				document.getElementById('emptyState').style.display = 'flex';
+				slugSelect.value = '';
+
+			} catch (error) {
+				showLoader(false);
+				showNotification('Error deleting slug: ' + error.message, 'error');
+			}
+		}
+
 		async function confirmAddSlug() {
 			const rawName = document.getElementById('newSlugName').value.trim();
-			const system  = document.getElementById('newSlugSystemSelect').value;
+			const system = document.getElementById('newSlugSystemSelect').value;
 
 			if (!rawName) { showNotification('Please enter a slug name', 'error'); return; }
 
@@ -2479,8 +2687,8 @@ e.g.
 			if (system) {
 				try {
 					await fetch(`${firebaseUrl}/config/slug_systems/${slugName}.json`,
-						{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(system) });
-				} catch(e) { console.warn('Could not save slug→system mapping', e); }
+						{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(system) });
+				} catch (e) { console.warn('Could not save slug→system mapping', e); }
 			}
 
 			addNewSlug(slugName);
@@ -2539,7 +2747,7 @@ e.g.
 				showLoader(true);
 				const minimalStructure = {
 					"main-title": { "default": "Generic Title – Edit from Admin Panel" },
-					"vsl-video":  { "default": "https://player.vimeo.com/video/YOUR_VIDEO_ID" }
+					"vsl-video": { "default": "https://player.vimeo.com/video/YOUR_VIDEO_ID" }
 				};
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${firebaseKey}.json`,
@@ -2576,8 +2784,8 @@ e.g.
 
 		function toggleSidebar() {
 			const sidebar = document.querySelector('.sidebar');
-			const layout  = document.getElementById('appLayout');
-			const btn     = document.getElementById('sidebarToggleBtn');
+			const layout = document.getElementById('appLayout');
+			const btn = document.getElementById('sidebarToggleBtn');
 			const isCollapsed = sidebar.classList.contains('collapsed');
 			sidebar.classList.toggle('collapsed');
 			layout.classList.toggle('sidebar-collapsed', !isCollapsed);
@@ -2602,7 +2810,7 @@ e.g.
 				const res = await fetch(`${firebaseUrl}/config/systems.json`);
 				const systems = await res.json() || {};
 				Object.entries(systems).forEach(([key, label]) => addManageSystemRow(key, label));
-			} catch(e) { /* empty — user can add fresh */ }
+			} catch (e) { /* empty — user can add fresh */ }
 			if (rows.children.length === 0) addManageSystemRow(); // start with one empty row
 			document.getElementById('manageSystemsModal').style.display = 'flex';
 		}
@@ -2631,13 +2839,13 @@ e.g.
 			const rows = document.querySelectorAll('#manageSystemsRows > div');
 			const systems = {};
 			rows.forEach(row => {
-				const k = row.querySelector('.sys-key').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+				const k = row.querySelector('.sys-key').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 				const l = row.querySelector('.sys-label').value.trim();
 				if (k) systems[k] = l;
 			});
 			try {
 				await fetch(`${firebaseUrl}/config/systems.json`,
-					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(systems) });
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(systems) });
 				showNotification('Systems saved!', 'success');
 				closeManageSystemsModal();
 				// Re-populate the slug modal dropdown
@@ -2650,7 +2858,7 @@ e.g.
 					select.appendChild(opt);
 				});
 				select.value = current;
-			} catch(e) {
+			} catch (e) {
 				showNotification('Error saving systems', 'error');
 			}
 		}
@@ -2661,4 +2869,5 @@ e.g.
 		initAuthUI();
 	</script>
 </body>
+
 </html>
