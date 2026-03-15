@@ -1530,25 +1530,33 @@
 	<!-- ADD CUSTOM COMPONENT MODAL -->
 	<!-- MANAGE SYSTEMS MODAL (z-index:300 to appear above the slug modal) -->
 
-	<!-- EDIT SLUG SYSTEM MODAL -->
-	<div id="editSystemModal" class="modal-overlay" style="display:none;">
-		<div class="modal-box" style="max-width:400px;">
+	<!-- EDIT / DELETE SLUG MODAL -->
+	<div id="editDeleteSlugModal" class="modal-overlay" style="display:none;">
+		<div class="modal-box" style="max-width:420px;">
 			<div class="modal-header">
-				<h3>⚙ Edit System for Slug</h3>
-				<button class="modal-close" onclick="closeEditSystemModal()">✕</button>
+				<h3>🔖 Edit Slug: <span id="editDeleteSlugName" style="color:var(--gold-dark);"></span></h3>
+				<button class="modal-close" onclick="closeEditDeleteSlugModal()">✕</button>
 			</div>
 			<div class="modal-body">
 				<div class="modal-field" style="margin-bottom:0;">
-					<label>Body System for <span id="editSystemSlugName" style="color:var(--gold-dark);"></span></label>
-					<select id="editSystemSelect"
+					<label>Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
+					<select id="editDeleteSlugSystemSelect"
 						style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s; margin-top:4px;">
 						<option value="">— No system —</option>
 					</select>
 				</div>
+				<div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
+					<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
+						⚠️ Deleting this slug will permanently remove <strong>all components</strong> for this slug and cannot be undone.
+					</p>
+					<button onclick="deleteSlug()" style="width:100%; padding:10px; background:#fef2f2; border:1.5px solid #fecaca; border-radius:8px; font-size:13px; font-weight:700; color:var(--danger); cursor:pointer; font-family:inherit; transition:all .15s;">
+						🗑 Delete Slug permanently
+					</button>
+				</div>
 			</div>
 			<div class="modal-footer">
-				<button class="btn-cancel" onclick="closeEditSystemModal()">Cancel</button>
-				<button class="btn-save-card" onclick="saveEditSystem()">💾 Save</button>
+				<button class="btn-cancel" onclick="closeEditDeleteSlugModal()">Cancel</button>
+				<button class="btn-save-card" onclick="saveEditDeleteSlug()">💾 Save Changes</button>
 			</div>
 		</div>
 	</div>
@@ -1680,9 +1688,9 @@ e.g.
 					<span class="btn-icon">🧩</span>
 					<span class="sidebar-text-label">Add Custom Component</span>
 				</button>
-				<button class="sidebar-btn" id="deleteSlugBtn" onclick="deleteSlug()" title="Delete Current Slug" style="display:none; color:rgba(220,38,38,0.8); border-color:rgba(220,38,38,0.2);">
+				<button class="sidebar-btn" id="editDeleteSlugBtn" onclick="showEditDeleteSlugModal()" title="Edit / Delete Current Slug" style="display:none; color:rgba(220,38,38,0.8); border-color:rgba(220,38,38,0.2);">
 					<span class="btn-icon">🗑</span>
-					<span class="sidebar-text-label">Delete Slug</span>
+					<span class="sidebar-text-label">Edit / Delete Slug</span>
 				</button>
 			</div>
 
@@ -1704,8 +1712,6 @@ e.g.
 					<span class="breadcrumb-item active" id="breadcrumbSlug" style="display:none;"></span>
 					<span id="breadcrumbSystem"
 						style="display:none; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); padding:2px 10px; border-radius:20px; letter-spacing:0.3px;"></span>
-					<button id="editSystemBtn" onclick="showEditSystemModal()" title="Edit system for this slug"
-						style="display:none; margin-left:6px; padding:2px 8px; background:rgba(201,162,39,0.08); border:1.5px solid rgba(201,162,39,0.3); border-radius:6px; font-size:11px; font-weight:700; color:var(--gold-dark); cursor:pointer; font-family:inherit; letter-spacing:0.3px; transition:all .15s;">⚙ Add System</button>
 				</div>
 				<div id="connectionStatus" class="topbar-status" style="display:none;">
 					<div class="status-dot"></div>
@@ -1852,8 +1858,7 @@ e.g.
 			document.getElementById('breadcrumbSep').style.display = 'none';
 			document.getElementById('breadcrumbSlug').style.display = 'none';
 			document.getElementById('breadcrumbSystem').style.display = 'none';
-			document.getElementById('deleteSlugBtn').style.display = 'none';
-			document.getElementById('editSystemBtn').style.display = 'none';
+			document.getElementById('editDeleteSlugBtn').style.display = 'none';
 			document.getElementById('slugMetaBar').style.display = 'none';
 
 			try {
@@ -1893,8 +1898,7 @@ e.g.
 			document.getElementById('breadcrumbSep').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').textContent = slug;
-			document.getElementById('deleteSlugBtn').style.display = 'flex';
-			document.getElementById('editSystemBtn').style.display = 'inline-block';
+			document.getElementById('editDeleteSlugBtn').style.display = 'flex';
 
 			// Show system badge if slug has a system mapping
 			const systemBadge = document.getElementById('breadcrumbSystem');
@@ -2646,66 +2650,13 @@ e.g.
 			document.getElementById('addSlugModal').style.display = 'none';
 		}
 
-		async function deleteSlug() {
-			if (!currentSite || !currentSlug) return;
-
-			const confirmed = confirm(`⚠️ Delete slug "${currentSlug}" from site "${firebaseKeyToHostname(currentSite)}"?\n\nThis will permanently delete ALL components for this slug and cannot be undone.`);
-			if (!confirmed) return;
-
-			try {
-				showLoader(true);
-
-				// Delete this slug's entry from every component in Firebase
-				const deletePromises = Object.keys(contentData).map(component =>
-					fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
-						{ method: 'DELETE' })
-				);
-
-				// Also delete the slug→system mapping (if any)
-				deletePromises.push(
-					fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' })
-				);
-
-				await Promise.all(deletePromises);
-
-				// Update local cache — remove this slug from every component
-				Object.keys(contentData).forEach(component => {
-					delete contentData[component][currentSlug];
-				});
-
-				showLoader(false);
-				showNotification(`Slug "${currentSlug}" deleted successfully!`, 'success');
-
-				// Reset UI
-				const slugSelect = document.getElementById('slugSelect');
-				const optionToRemove = slugSelect.querySelector(`option[value="${currentSlug}"]`);
-				if (optionToRemove) optionToRemove.remove();
-
-				currentSlug = '';
-				document.getElementById('deleteSlugBtn').style.display = 'none';
-				document.getElementById('editSystemBtn').style.display = 'none';
-				document.getElementById('breadcrumbSep').style.display = 'none';
-				document.getElementById('breadcrumbSlug').style.display = 'none';
-				document.getElementById('breadcrumbSystem').style.display = 'none';
-				document.getElementById('slugMetaBar').style.display = 'none';
-				document.getElementById('contentGrid').innerHTML = '';
-				document.getElementById('emptyState').style.display = 'flex';
-				slugSelect.value = '';
-
-			} catch (error) {
-				showLoader(false);
-				showNotification('Error deleting slug: ' + error.message, 'error');
-			}
-		}
-
-		async function showEditSystemModal() {
+		async function showEditDeleteSlugModal() {
 			if (!currentSlug) return;
 
-			// Populate the label
-			document.getElementById('editSystemSlugName').textContent = currentSlug;
+			document.getElementById('editDeleteSlugName').textContent = currentSlug;
 
-			// Load systems from Firebase
-			const select = document.getElementById('editSystemSelect');
+			// Load systems dropdown
+			const select = document.getElementById('editDeleteSlugSystemSelect');
 			select.innerHTML = '<option value="">— No system —</option>';
 			try {
 				const res = await fetch(`${firebaseUrl}/config/systems.json`);
@@ -2725,29 +2676,27 @@ e.g.
 				select.value = currentSystem || '';
 			} catch(e) { select.value = ''; }
 
-			document.getElementById('editSystemModal').style.display = 'flex';
+			document.getElementById('editDeleteSlugModal').style.display = 'flex';
 		}
 
-		function closeEditSystemModal() {
-			document.getElementById('editSystemModal').style.display = 'none';
+		function closeEditDeleteSlugModal() {
+			document.getElementById('editDeleteSlugModal').style.display = 'none';
 		}
 
-		async function saveEditSystem() {
-			const system = document.getElementById('editSystemSelect').value;
+		async function saveEditDeleteSlug() {
+			const system = document.getElementById('editDeleteSlugSystemSelect').value;
 			try {
 				if (system) {
 					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`,
 						{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(system) });
 				} else {
-					// Remove the mapping entirely if "No system" was chosen
-					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`,
-						{ method: 'DELETE' });
+					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' });
 				}
 
-				closeEditSystemModal();
-				showNotification('System updated!', 'success');
+				closeEditDeleteSlugModal();
+				showNotification('Slug updated!', 'success');
 
-				// Refresh the system badge in the topbar
+				// Refresh system badge in topbar
 				const systemBadge = document.getElementById('breadcrumbSystem');
 				if (system) {
 					const res = await fetch(`${firebaseUrl}/config/systems/${system}.json`);
@@ -2758,7 +2707,53 @@ e.g.
 					systemBadge.style.display = 'none';
 				}
 			} catch(e) {
-				showNotification('Error saving system', 'error');
+				showNotification('Error saving slug changes', 'error');
+			}
+		}
+
+		async function deleteSlug() {
+			if (!currentSite || !currentSlug) return;
+
+			const confirmed = confirm(`⚠️ Delete slug "${currentSlug}" from site "${firebaseKeyToHostname(currentSite)}"?\n\nThis will permanently delete ALL components for this slug and cannot be undone.`);
+			if (!confirmed) return;
+
+			closeEditDeleteSlugModal();
+
+			try {
+				showLoader(true);
+
+				const deletePromises = Object.keys(contentData).map(component =>
+					fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`, { method: 'DELETE' })
+				);
+				deletePromises.push(
+					fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' })
+				);
+				await Promise.all(deletePromises);
+
+				Object.keys(contentData).forEach(component => {
+					delete contentData[component][currentSlug];
+				});
+
+				showLoader(false);
+				showNotification(`Slug "${currentSlug}" deleted successfully!`, 'success');
+
+				const slugSelect = document.getElementById('slugSelect');
+				const optionToRemove = slugSelect.querySelector(`option[value="${currentSlug}"]`);
+				if (optionToRemove) optionToRemove.remove();
+
+				currentSlug = '';
+				document.getElementById('editDeleteSlugBtn').style.display = 'none';
+				document.getElementById('breadcrumbSep').style.display = 'none';
+				document.getElementById('breadcrumbSlug').style.display = 'none';
+				document.getElementById('breadcrumbSystem').style.display = 'none';
+				document.getElementById('slugMetaBar').style.display = 'none';
+				document.getElementById('contentGrid').innerHTML = '';
+				document.getElementById('emptyState').style.display = 'flex';
+				slugSelect.value = '';
+
+			} catch (error) {
+				showLoader(false);
+				showNotification('Error deleting slug: ' + error.message, 'error');
 			}
 		}
 
