@@ -1534,10 +1534,16 @@
 	<div id="editDeleteSlugModal" class="modal-overlay" style="display:none;">
 		<div class="modal-box" style="max-width:420px;">
 			<div class="modal-header">
-				<h3>🔖 Edit Slug: <span id="editDeleteSlugName" style="color:var(--gold-dark);"></span></h3>
+				<h3>🔖 Edit Slug</h3>
 				<button class="modal-close" onclick="closeEditDeleteSlugModal()">✕</button>
 			</div>
 			<div class="modal-body">
+				<div class="modal-field">
+					<label>Slug Name</label>
+					<input type="text" id="editDeleteSlugInput"
+						style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); transition:border-color .2s, box-shadow .2s;"
+						oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-')" />
+				</div>
 				<div class="modal-field" style="margin-bottom:0;">
 					<label>Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
 					<select id="editDeleteSlugSystemSelect"
@@ -2653,7 +2659,7 @@ e.g.
 		async function showEditDeleteSlugModal() {
 			if (!currentSlug) return;
 
-			document.getElementById('editDeleteSlugName').textContent = currentSlug;
+			document.getElementById('editDeleteSlugInput').value = currentSlug;
 
 			// Load systems dropdown
 			const select = document.getElementById('editDeleteSlugSystemSelect');
@@ -2685,16 +2691,72 @@ e.g.
 
 		async function saveEditDeleteSlug() {
 			const system = document.getElementById('editDeleteSlugSystemSelect').value;
+			const rawName = document.getElementById('editDeleteSlugInput').value.trim();
+			const newSlug = rawName.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+			if (!newSlug) { showNotification('Invalid slug name', 'error'); return; }
+
+			const nameChanged = newSlug !== currentSlug;
+
+			// If renaming, check for conflicts
+			if (nameChanged) {
+				const allSlugs = Array.from(document.getElementById('slugSelect').options).map(o => o.value);
+				if (allSlugs.includes(newSlug)) {
+					showNotification(`Slug "${newSlug}" already exists!`, 'error');
+					return;
+				}
+			}
+
 			try {
+				// ── 1. Rename across all components if needed ──
+				if (nameChanged) {
+					showLoader(true);
+					// For each component, copy old slug value to new slug key, then delete old
+					const renamePromises = Object.keys(contentData).map(async component => {
+						const val = contentData[component][currentSlug];
+						if (val === undefined) return;
+						await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${newSlug}.json`,
+							{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(val) });
+						await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+							{ method: 'DELETE' });
+					});
+					await Promise.all(renamePromises);
+
+					// Update local cache
+					Object.keys(contentData).forEach(component => {
+						if (contentData[component][currentSlug] !== undefined) {
+							contentData[component][newSlug] = contentData[component][currentSlug];
+							delete contentData[component][currentSlug];
+						}
+					});
+
+					// Update slug dropdown option
+					const slugSelect = document.getElementById('slugSelect');
+					const opt = slugSelect.querySelector(`option[value="${currentSlug}"]`);
+					if (opt) { opt.value = newSlug; opt.textContent = newSlug; }
+					slugSelect.value = newSlug;
+
+					// Update breadcrumb
+					document.getElementById('breadcrumbSlug').textContent = newSlug;
+					currentSlug = newSlug;
+					showLoader(false);
+				}
+
+				// ── 2. Save system mapping ──
 				if (system) {
 					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`,
 						{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(system) });
 				} else {
+					// Delete old mapping — covers both old and new slug name
+					if (nameChanged) {
+						await fetch(`${firebaseUrl}/config/slug_systems/${rawName.replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')}.json`,
+							{ method: 'DELETE' });
+					}
 					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' });
 				}
 
 				closeEditDeleteSlugModal();
-				showNotification('Slug updated!', 'success');
+				showNotification(nameChanged ? `Slug renamed to "${newSlug}" and saved!` : 'Slug updated!', 'success');
 
 				// Refresh system badge in topbar
 				const systemBadge = document.getElementById('breadcrumbSystem');
@@ -2707,6 +2769,7 @@ e.g.
 					systemBadge.style.display = 'none';
 				}
 			} catch(e) {
+				showLoader(false);
 				showNotification('Error saving slug changes', 'error');
 			}
 		}
