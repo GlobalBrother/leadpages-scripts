@@ -1371,7 +1371,10 @@
 					<input type="text" id="newSlugName" placeholder="e.g. jello-flu-shots, vinegar-socks" onkeydown="if(event.key==='Enter')document.getElementById('newSlugSystemSelect').focus()" />
 				</div>
 				<div class="modal-field" style="margin-bottom:0;">
-					<label>Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional — controls section ordering on page)</span></label>
+					<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+						<label style="margin-bottom:0;">Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
+						<button onclick="openManageSystemsModal()" style="padding:4px 10px; background:rgba(201,162,39,0.08); border:1.5px solid rgba(201,162,39,0.3); border-radius:6px; font-size:11px; font-weight:700; color:var(--gold-dark); cursor:pointer; font-family:inherit; letter-spacing:0.3px;">⚙ Manage Systems</button>
+					</div>
 					<select id="newSlugSystemSelect" style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s;">
 						<option value="">— No system —</option>
 					</select>
@@ -1385,6 +1388,28 @@
 	</div>
 
 	<!-- ADD CUSTOM COMPONENT MODAL -->
+	<!-- MANAGE SYSTEMS MODAL (z-index:300 to appear above the slug modal) -->
+	<div id="manageSystemsModal" class="modal-overlay" style="display:none; z-index:300;">
+		<div class="modal-box" style="max-width:480px;">
+			<div class="modal-header">
+				<h3>⚙ Manage Body Systems</h3>
+				<button class="modal-close" onclick="closeManageSystemsModal()">✕</button>
+			</div>
+			<div class="modal-body">
+				<p style="font-size:12px; color:var(--text-muted); margin-bottom:14px; line-height:1.6;">
+					Define the systems that appear in the slug dropdown.<br>
+					<strong>Key</strong> = internal ID (e.g. <code>respiratory</code>) &nbsp;·&nbsp; <strong>Label</strong> = display name (e.g. <code>Respiratory System</code>)
+				</p>
+				<div id="manageSystemsRows" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;"></div>
+				<button onclick="addManageSystemRow()" style="width:100%; padding:9px; background:#f9fafb; border:1.5px dashed #d1d5db; border-radius:8px; font-size:13px; font-weight:600; color:var(--text-secondary); cursor:pointer; font-family:inherit; transition:all .2s;">➕ Add System</button>
+			</div>
+			<div class="modal-footer">
+				<button class="btn-cancel" onclick="closeManageSystemsModal()">Cancel</button>
+				<button class="btn-save-card" onclick="saveManageSystems()">💾 Save Systems</button>
+			</div>
+		</div>
+	</div>
+
 	<div id="addCustomComponentModal" class="modal-overlay" style="display:none;">
 		<div class="modal-box modal-wide">
 			<div class="modal-header">
@@ -2568,6 +2593,68 @@ e.g.
 				if (btn) btn.textContent = '›';
 			}
 		}
+
+		// ─── MANAGE SYSTEMS ───────────────────────────────────────────────────────
+		async function openManageSystemsModal() {
+			const rows = document.getElementById('manageSystemsRows');
+			rows.innerHTML = '';
+			try {
+				const res = await fetch(`${firebaseUrl}/config/systems.json`);
+				const systems = await res.json() || {};
+				Object.entries(systems).forEach(([key, label]) => addManageSystemRow(key, label));
+			} catch(e) { /* empty — user can add fresh */ }
+			if (rows.children.length === 0) addManageSystemRow(); // start with one empty row
+			document.getElementById('manageSystemsModal').style.display = 'flex';
+		}
+
+		function closeManageSystemsModal() {
+			document.getElementById('manageSystemsModal').style.display = 'none';
+		}
+
+		function addManageSystemRow(key = '', label = '') {
+			const rows = document.getElementById('manageSystemsRows');
+			const row = document.createElement('div');
+			row.style.cssText = 'display:flex; gap:8px; align-items:center;';
+			row.innerHTML = `
+				<input type="text" placeholder="key (e.g. respiratory)" value="${escapeHtml(key)}"
+					style="flex:0 0 150px; padding:8px 10px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; color:var(--text-primary);" class="sys-key">
+				<input type="text" placeholder="Label (e.g. Respiratory System)" value="${escapeHtml(label)}"
+					style="flex:1; padding:8px 10px; border:1.5px solid var(--border); border-radius:7px; font-size:13px; font-family:inherit; color:var(--text-primary);" class="sys-label">
+				<button onclick="this.closest('div').remove()"
+					style="padding:8px 10px; background:#fef2f2; border:1.5px solid #fecaca; border-radius:7px; color:var(--danger); cursor:pointer; font-size:13px; flex-shrink:0;">🗑</button>
+			`;
+			rows.appendChild(row);
+			if (!key) row.querySelector('.sys-key').focus();
+		}
+
+		async function saveManageSystems() {
+			const rows = document.querySelectorAll('#manageSystemsRows > div');
+			const systems = {};
+			rows.forEach(row => {
+				const k = row.querySelector('.sys-key').value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g,'-').replace(/^-|-$/g,'');
+				const l = row.querySelector('.sys-label').value.trim();
+				if (k) systems[k] = l;
+			});
+			try {
+				await fetch(`${firebaseUrl}/config/systems.json`,
+					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(systems) });
+				showNotification('Systems saved!', 'success');
+				closeManageSystemsModal();
+				// Re-populate the slug modal dropdown
+				const select = document.getElementById('newSlugSystemSelect');
+				const current = select.value;
+				select.innerHTML = '<option value="">— No system —</option>';
+				Object.entries(systems).forEach(([k, l]) => {
+					const opt = document.createElement('option');
+					opt.value = k; opt.textContent = l || k;
+					select.appendChild(opt);
+				});
+				select.value = current;
+			} catch(e) {
+				showNotification('Error saving systems', 'error');
+			}
+		}
+		// ─────────────────────────────────────────────────────────────────────────
 
 		// Boot
 		initSidebarState();
