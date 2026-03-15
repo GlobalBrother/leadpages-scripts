@@ -1358,6 +1358,32 @@
 		</div>
 	</div>
 
+	<!-- ADD NEW SLUG MODAL -->
+	<div id="addSlugModal" class="modal-overlay" style="display:none;">
+		<div class="modal-box" style="max-width:460px;">
+			<div class="modal-header">
+				<h3>🔖 Add New Slug</h3>
+				<button class="modal-close" onclick="closeAddSlugModal()">✕</button>
+			</div>
+			<div class="modal-body">
+				<div class="modal-field">
+					<label>Slug Name</label>
+					<input type="text" id="newSlugName" placeholder="e.g. jello-flu-shots, vinegar-socks" onkeydown="if(event.key==='Enter')document.getElementById('newSlugSystemSelect').focus()" />
+				</div>
+				<div class="modal-field" style="margin-bottom:0;">
+					<label>Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional — controls section ordering on page)</span></label>
+					<select id="newSlugSystemSelect" style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s;">
+						<option value="">— No system —</option>
+					</select>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn-cancel" onclick="closeAddSlugModal()">Cancel</button>
+				<button class="btn-save-card" onclick="confirmAddSlug()">Add Slug →</button>
+			</div>
+		</div>
+	</div>
+
 	<!-- ADD CUSTOM COMPONENT MODAL -->
 	<div id="addCustomComponentModal" class="modal-overlay" style="display:none;">
 		<div class="modal-box modal-wide">
@@ -1498,10 +1524,6 @@ e.g.
 					<span class="btn-icon">🧩</span>
 					<span class="sidebar-text-label">Add Custom Component</span>
 				</button>
-				<button class="sidebar-btn" onclick="showSystemMappingsModal()" title="System Mappings">
-					<span class="btn-icon">🗂️</span>
-					<span class="sidebar-text-label">System Mappings</span>
-				</button>
 			</div>
 
 			<div class="sidebar-footer" style="display:flex; flex-direction:column; gap:8px;">
@@ -1517,6 +1539,7 @@ e.g.
 					<span class="breadcrumb-item" id="breadcrumbSite">All sites</span>
 					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>
 					<span class="breadcrumb-item active" id="breadcrumbSlug" style="display:none;"></span>
+					<span id="breadcrumbSystem" style="display:none; margin-left:8px; font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg,var(--gold),var(--gold-dark)); padding:2px 10px; border-radius:20px; letter-spacing:0.3px;"></span>
 				</div>
 				<div id="connectionStatus" class="topbar-status" style="display:none;">
 					<div class="status-dot"></div>
@@ -1701,6 +1724,25 @@ e.g.
 			document.getElementById('breadcrumbSep').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').style.display = 'inline';
 			document.getElementById('breadcrumbSlug').textContent = slug;
+
+			// Show system badge if slug has a system mapping
+			const systemBadge = document.getElementById('breadcrumbSystem');
+			fetch(`${firebaseUrl}/config/slug_systems/${slug}.json`)
+				.then(r => r.json())
+				.then(systemKey => {
+					if (systemKey) {
+						// Fetch system label
+						return fetch(`${firebaseUrl}/config/systems/${systemKey}.json`)
+							.then(r => r.json())
+							.then(label => {
+								systemBadge.textContent = '🫁 ' + (label || systemKey);
+								systemBadge.style.display = 'inline';
+							});
+					} else {
+						systemBadge.style.display = 'none';
+					}
+				})
+				.catch(() => { systemBadge.style.display = 'none'; });
 
 			const componentsData = {};
 			Object.keys(contentData).forEach(component => {
@@ -2406,16 +2448,57 @@ e.g.
 			}
 		}
 
-		function showAddNewSlugModal() {
+		async function showAddNewSlugModal() {
 			if (!currentSite) { showNotification('Please select a site first', 'error'); return; }
-			const slugName = prompt('Enter the new slug name (e.g. product-1, reactive-site, book):');
-			if (!slugName) return;
-			const sanitizedSlug = slugName.toLowerCase()
+
+			// Populate systems dropdown from Firebase config
+			const select = document.getElementById('newSlugSystemSelect');
+			select.innerHTML = '<option value="">— No system —</option>';
+			try {
+				const res = await fetch(`${firebaseUrl}/config/systems.json`);
+				const systems = await res.json() || {};
+				Object.entries(systems).forEach(([key, label]) => {
+					const opt = document.createElement('option');
+					opt.value = key;
+					opt.textContent = label || key;
+					select.appendChild(opt);
+				});
+			} catch(e) { /* no systems defined yet — that's ok */ }
+
+			document.getElementById('newSlugName').value = '';
+			select.value = '';
+			document.getElementById('addSlugModal').style.display = 'flex';
+			setTimeout(() => document.getElementById('newSlugName').focus(), 100);
+		}
+
+		function closeAddSlugModal() {
+			document.getElementById('addSlugModal').style.display = 'none';
+		}
+
+		async function confirmAddSlug() {
+			const rawName = document.getElementById('newSlugName').value.trim();
+			const system  = document.getElementById('newSlugSystemSelect').value;
+
+			if (!rawName) { showNotification('Please enter a slug name', 'error'); return; }
+
+			const slugName = rawName.toLowerCase()
 				.replace(/[^a-z0-9-]/g, '-')
 				.replace(/-+/g, '-')
 				.replace(/^-|-$/g, '');
-			if (!sanitizedSlug) { showNotification('Invalid slug name!', 'error'); return; }
-			addNewSlug(sanitizedSlug);
+
+			if (!slugName) { showNotification('Invalid slug name!', 'error'); return; }
+
+			closeAddSlugModal();
+
+			// If a system was chosen, save the mapping to config/slug_systems
+			if (system) {
+				try {
+					await fetch(`${firebaseUrl}/config/slug_systems/${slugName}.json`,
+						{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(system) });
+				} catch(e) { console.warn('Could not save slug→system mapping', e); }
+			}
+
+			addNewSlug(slugName);
 		}
 
 		async function addNewSlug(slugName) {
