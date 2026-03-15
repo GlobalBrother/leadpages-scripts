@@ -384,9 +384,9 @@
 	//   2. Find every element whose id ends with "-system-title" or "-system-content"
 	//      → these are ALL system markers in the page
 	//   3. Walk up to each marker's closest <section> ancestor
-	//   4. Collect the <section>s that belong to the ACTIVE system and those that don't
-	//   5. Prepend active <section>s before the first system <section> found in the DOM
-	//      (preserving relative order of non-active sections underneath)
+	//   4. Collect the <section>s that belong to the ACTIVE system only
+	//   5. Move ONLY the active system's <section>s before the first system <section> found in the DOM
+	//      — all other sections are left completely untouched in their original DOM positions
 	function prioritizeSystemSections(slug, slugSystems) {
 		const systemKey = slugSystems[slug];
 		if (!systemKey) return;
@@ -425,21 +425,12 @@
 		// We will insert everything starting from this position.
 		const anchor = allSections[0].section;
 
-		// Separate active-system sections from the rest (preserve relative order within each group)
+		// Only move the active system's sections — insert them before the anchor.
+		// All other sections are left completely untouched in their original positions.
 		const activeSections = allSections.filter(function(s) { return s.sysKey === systemKey; });
-		const otherSections  = allSections.filter(function(s) { return s.sysKey !== systemKey; });
 
-		// Insert active sections first (before anchor), then other sections — in their original order.
-		// Use a moving reference so that each insertBefore puts the next item directly after the previous.
-		var ref = anchor;
 		activeSections.forEach(function(s) {
-			parent.insertBefore(s.section, ref);
-			// After inserting before ref, the new section is just before ref — move ref to stay consistent
-		});
-		// Now insert all other sections after the active block, preserving their relative order
-		// They go right before the current `ref` (which is the original first section, now after active ones)
-		otherSections.forEach(function(s) {
-			parent.insertBefore(s.section, ref);
+			parent.insertBefore(s.section, anchor);
 		});
 	}
 	// ─────────────────────────────────────────────────────────────────────────────
