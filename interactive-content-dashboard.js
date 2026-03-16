@@ -125,12 +125,31 @@
 			const functionalPrefixes = config.functional_prefixes || [];
 			const slugSystems = config.slug_systems || {};
 
-			// Get all configured slugs for this site
-			const allSlugs = getConfiguredSlugs(siteContent);
+			// Also fetch archived components (so we can reveal them without replacing their content)
+			let archivedContent = null;
+			try {
+				const archivedResponse = await fetch(`${FIREBASE_CONFIG.databaseURL}/archived/${currentSite}.json`);
+				if (archivedResponse.ok) archivedContent = await archivedResponse.json();
+			} catch(e) { /* fail silently — archived fetch is best-effort */ }
+
+			// Get all configured slugs for this site (merge dynamic + archived for robust slug detection)
+			let allSlugs = getConfiguredSlugs(siteContent);
+			if (archivedContent) {
+				const archivedSlugs = getConfiguredSlugs(archivedContent);
+				allSlugs = [...new Set([...allSlugs, ...archivedSlugs])];
+			}
 			const componentIds = Object.keys(siteContent);
 
 			// Safety timeout: show components after 3s even if something fails later
-			_icdSafetyTimeout = setTimeout(function() { revealComponents(componentIds); }, 3000);
+			_icdSafetyTimeout = setTimeout(function() {
+				revealComponents(componentIds);
+				if (archivedContent) {
+					const archivedIds = Object.keys(archivedContent).filter(id =>
+						archivedContent[id] && archivedContent[id][slug]
+					);
+					revealComponents(archivedIds);
+				}
+			}, 3000);
 
 			// Detect slug now that we know all configured slugs (URL contains match)
 			const slug = getSlug(allSlugs);
@@ -150,6 +169,15 @@
 			// Show all component elements after content is applied
 			clearTimeout(_icdSafetyTimeout);
 			revealComponents(componentIds);
+
+			// Reveal archived component elements for the current slug.
+			// Their original Leadpages content is preserved — we just un-hide the element.
+			if (archivedContent) {
+				const archivedIds = Object.keys(archivedContent).filter(id =>
+					archivedContent[id] && archivedContent[id][slug]
+				);
+				revealComponents(archivedIds);
+			}
 
 		} catch (error) {
 			console.error('Error loading Firebase content:', error);
