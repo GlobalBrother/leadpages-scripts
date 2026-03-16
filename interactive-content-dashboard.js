@@ -9,7 +9,6 @@
 	// Inject styles for dynamic components
 	const _icdStyles = document.createElement('style');
 	_icdStyles.textContent = `
-		#main-title { display: block !important; }
 		#main-title h2 {
 			font-family: "Noto Serif", sans-serif;
 			font-size: 3rem;
