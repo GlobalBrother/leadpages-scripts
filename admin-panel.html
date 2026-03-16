@@ -1297,7 +1297,7 @@
 			background: white;
 			border-radius: 16px;
 			width: 100%;
-			max-width: 520px;
+			max-width: 1000px;
 			max-height: 90vh;
 			overflow-y: auto;
 			box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
@@ -1413,6 +1413,50 @@
 
 		.modal-bullet-remove:hover {
 			background: #fee2e2;
+		}
+
+		.modal-special-components {
+			display: flex;
+			gap: 8px;
+			margin-bottom: 14px;
+		}
+
+		.modal-special-btn {
+			flex: 1;
+			padding: 9px 10px;
+			border: 1.5px solid rgba(201,162,39,0.3);
+			border-radius: 8px;
+			background: rgba(201,162,39,0.05);
+			color: var(--gold-dark);
+			font-size: 12px;
+			font-weight: 700;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.15s;
+			text-align: center;
+			line-height: 1.4;
+		}
+
+		.modal-special-btn:hover {
+			background: rgba(201,162,39,0.12);
+			border-color: var(--gold);
+		}
+
+		.modal-special-btn .special-btn-icon {
+			display: block;
+			font-size: 18px;
+			margin-bottom: 3px;
+		}
+
+		.modal-special-label {
+			display: block;
+			font-size: 10px;
+			font-weight: 700;
+			color: rgba(255,255,255,0.45);
+			text-transform: uppercase;
+			letter-spacing: 1px;
+			margin-bottom: 6px;
+			color: var(--text-muted);
 		}
 
 		.modal-add-bullet {
@@ -1577,15 +1621,22 @@
 					<button class="modal-close" onclick="closeAddComponentModal()">✕</button>
 				</div>
 				<div class="modal-body">
+					<span class="modal-special-label">Special components</span>
+					<div class="modal-special-components">
+						<button class="modal-special-btn" onclick="modalSelectSpecial('changing-bullets')">
+							<span class="special-btn-icon">📋</span>
+							Changing Bullets
+						</button>
+						<button class="modal-special-btn" onclick="modalSelectSpecial('customer-reviews')">
+							<span class="special-btn-icon">⭐</span>
+							Customer Reviews
+						</button>
+					</div>
 					<div class="modal-field">
 						<label>Component Name</label>
 						<input type="text" id="modalComponentName"
-							placeholder="e.g. title-interactive, changing-bullets, vsl-video" />
+							placeholder="e.g. title-interactive, vsl-video" />
 					</div>
-					<p style="font-size: 12px; color: var(--text-muted); margin-top: -8px; line-height: 1.6;">
-						💡 Use <strong>"changing-bullets"</strong> for a visual bullet-points editor, or
-						<strong>"customer-reviews"</strong> for a visual testimonials editor.
-					</p>
 				</div>
 				<div class="modal-footer">
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
@@ -1634,6 +1685,31 @@
 				<div class="modal-footer">
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSaveBullets()">Save</button>
+				</div>
+			</div>
+
+			<!-- STEP 2c: Testimonials visual editor -->
+			<div id="modalStep2Testimonials" style="display:none;">
+				<div class="modal-header">
+					<h3>⭐ Add Reviews</h3>
+					<button class="modal-close" onclick="closeAddComponentModal()">✕</button>
+				</div>
+				<div class="modal-body" style="max-height:60vh;overflow-y:auto;">
+					<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;">
+						<label style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;">Initial reviews shown:</label>
+						<input type="number" id="modalReviewsInitialCount" min="1" max="50" value="5"
+							style="width:70px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;">
+						<span style="font-size:12px;color:#9ca3af;">(remaining hidden behind "View More Reviews")</span>
+					</div>
+					<div id="reviews-list-__modal__" class="reviews-editor-list"></div>
+					<button onclick="modalAddReviewBlock()"
+						style="width:100%;padding:10px;margin-top:12px;background:#f3f4f6;border:1.5px dashed #d1d5db;border-radius:8px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;font-family:inherit;">
+						➕ Add Review
+					</button>
+				</div>
+				<div class="modal-footer">
+					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
+					<button class="btn-save-card" onclick="modalSaveTestimonials()">Save Reviews</button>
 				</div>
 			</div>
 
@@ -2743,6 +2819,9 @@ e.g.
 			document.getElementById('modalStep1').style.display = 'block';
 			document.getElementById('modalStep2Simple').style.display = 'none';
 			document.getElementById('modalStep2Bullets').style.display = 'none';
+			document.getElementById('modalStep2Testimonials').style.display = 'none';
+			document.getElementById('reviews-list-__modal__').innerHTML = '';
+			document.getElementById('modalReviewsInitialCount').value = '5';
 			document.getElementById('modalComponentName').value = '';
 			document.getElementById('modalSimpleContent').value = '';
 			document.getElementById('modalBulletsHeader').value = '';
@@ -2755,6 +2834,11 @@ e.g.
 
 		function closeAddComponentModal() {
 			document.getElementById('addComponentModal').style.display = 'none';
+		}
+
+		function modalSelectSpecial(name) {
+			document.getElementById('modalComponentName').value = name;
+			modalStep1Next();
 		}
 
 		function modalStep1Next() {
@@ -2782,22 +2866,45 @@ e.g.
 				document.getElementById('modalStep2Bullets').style.display = 'block';
 				setTimeout(() => document.getElementById('modalBulletsHeader').focus(), 100);
 			} else if (isTestimonials) {
-				// Auto-create with a default empty review, editor card handles the rest
-				closeAddComponentModal();
-				const defaultHtml = buildTestimonialsHtml([{
-					avatar: DEFAULT_REVIEW_AVATAR,
-					name: 'Customer Name',
-					date: 'Reviewed in the United States on January 1, 2025',
-					stars: 5,
-					body: 'Your review text here...',
-					photos: []
-				}], 5);
-				addNewComponent(name, defaultHtml);
+				document.getElementById('reviews-list-__modal__').innerHTML = '';
+				document.getElementById('modalReviewsInitialCount').value = 5;
+				modalAddReviewBlock();
+				document.getElementById('modalStep2Testimonials').style.display = 'block';
 			} else {
 				document.getElementById('modalStep2CompName').textContent = name;
 				document.getElementById('modalStep2Simple').style.display = 'block';
 				setTimeout(() => document.getElementById('modalSimpleContent').focus(), 100);
 			}
+		}
+
+		function modalAddReviewBlock() {
+			addReviewBlock('__modal__');
+		}
+
+		async function modalSaveTestimonials() {
+			const name = 'customer-reviews';
+			const container = document.getElementById('reviews-list-__modal__');
+			if (!container) { showNotification('No reviews list found', 'error'); return; }
+			const blocks = container.querySelectorAll('.review-editor-block');
+			if (blocks.length === 0) { showNotification('Please add at least one review', 'error'); return; }
+
+			const reviews = Array.from(blocks).map(block => {
+				const photos = Array.from(block.querySelectorAll('.review-photo-url'))
+					.map(i => i.value.trim()).filter(v => v);
+				return {
+					avatar: block.querySelector('.review-avatar-input').value.trim() || DEFAULT_REVIEW_AVATAR,
+					name:   block.querySelector('.review-name-input').value.trim(),
+					date:   block.querySelector('.review-date-field').value.trim(),
+					stars:  parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
+					body:   block.querySelector('.review-body-field').value.trim(),
+					photos
+				};
+			});
+
+			const initialCount = parseInt(document.getElementById('modalReviewsInitialCount').value) || 5;
+			const htmlContent = buildTestimonialsHtml(reviews, initialCount);
+			closeAddComponentModal();
+			await addNewComponent(name, htmlContent);
 		}
 
 		function modalAddBulletRow() {
