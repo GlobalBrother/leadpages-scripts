@@ -367,7 +367,7 @@
 				align-items: center;
 			}
 			#_icd_photo_modal_img {
-				display: block; margin: 5% auto; max-width: 90%; max-height: 85vh;
+				display: block; margin: 20px auto; max-width: 90%; max-height: 85vh;
 				object-fit: contain; border-radius: 6px;
 			}
 			#_icd_photo_modal_close {
