@@ -190,7 +190,8 @@
 
 		Object.keys(siteContent).forEach(componentId => {
 			Object.keys(siteContent[componentId]).forEach(slug => {
-				slugs.add(slug);
+				// Skip internal sentinel keys (e.g. _placeholder kept to prevent node auto-deletion)
+				if (!slug.startsWith('_')) slugs.add(slug);
 			});
 		});
 

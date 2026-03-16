@@ -2684,6 +2684,18 @@ e.g.
 				if (response.ok) {
 					showNotification('Deleted successfully!', 'success');
 					delete contentData[component][currentSlug];
+
+					// If this was the last real slug, keep the Firebase node alive with a placeholder
+					// so the dashboard script still reveals the element (shows native LeadPages content)
+					const realSlugs = Object.keys(contentData[component]).filter(k => !k.startsWith('_'));
+					if (realSlugs.length === 0) {
+						contentData[component]['_placeholder'] = true;
+						await fetch(
+							`${firebaseUrl}/dynamic_content/${currentSite}/${component}/_placeholder.json`,
+							{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: 'true' }
+						);
+					}
+
 					closeComponentEditor();
 					loadSlugContent();
 				} else throw new Error('Delete failed');
