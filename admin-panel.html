@@ -2110,8 +2110,12 @@ e.g.
 
 				const slugsSet = new Set();
 				Object.keys(contentData).forEach(component => {
-					Object.keys(contentData[component]).forEach(slug => slugsSet.add(slug));
+					Object.keys(contentData[component]).forEach(slug => {
+						if (!slug.startsWith('_')) slugsSet.add(slug);
+					});
 				});
+				// 'default' is always a valid slug (shows native LeadPages content)
+				slugsSet.add('default');
 
 				const slugSelect = document.getElementById('slugSelect');
 				slugSelect.innerHTML = '<option value="">Select slug...</option>';
