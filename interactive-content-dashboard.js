@@ -403,8 +403,11 @@
 	}
 
 	// Expose globally so onclick="_icdOpenModal(this)" works in our injected content
+	// openModal alias kept for content saved before the rename
 	window._icdOpenModal  = _icdOpenModal;
 	window._icdCloseModal = _icdCloseModal;
+	window.openModal      = _icdOpenModal;
+	window.closeModal     = _icdCloseModal;
 	// ─────────────────────────────────────────────────────────────────────────────
 
 	// ── System Section Prioritization ────────────────────────────────────────────
