@@ -276,8 +276,7 @@
 				} else if (content.startsWith('<')) {
 					// Title component: content is rich HTML (spans with --fs-d/--fs-m) → inject into the h2
 					if (componentId === 'main-title') {
-						var titleH2 = element.querySelector('h2') || element;
-						titleH2.innerHTML = content;
+						_injectMainTitle(element, content);
 						return;
 					}
 
@@ -364,14 +363,28 @@
 					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');
 					if (componentId === 'main-title') {
-						var titleH2 = element.querySelector('h2') || element;
-						titleH2.innerHTML = contentWithBreaks;
+						_injectMainTitle(element, contentWithBreaks);
 					} else {
 						element.innerHTML = contentWithBreaks;
 					}
 				}
 			}
 		});
+	}
+
+	// Inject content into #main-title: write to the first h2, remove any extra h2 siblings
+	// (LeadPages creates one <h2> per visual line when text wraps)
+	function _injectMainTitle(element, htmlContent) {
+		var allH2s = Array.from(element.querySelectorAll('h2'));
+		if (allH2s.length === 0) {
+			element.innerHTML = '<h2>' + htmlContent + '</h2>';
+			return;
+		}
+		allH2s[0].innerHTML = htmlContent;
+		// Remove extra h2 elements LeadPages may have added for line-wrapping
+		for (var i = 1; i < allH2s.length; i++) {
+			allH2s[i].parentNode.removeChild(allH2s[i]);
+		}
 	}
 
 	// ── Photo Modal (for customer-reviews component) ────────────────────────────
