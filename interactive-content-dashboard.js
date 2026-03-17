@@ -377,12 +377,20 @@
 		var allH2s = Array.from(element.querySelectorAll('h2'));
 		if (allH2s.length === 0) {
 			element.innerHTML = '<h2>' + htmlContent + '</h2>';
-			return;
+		} else {
+			allH2s[0].innerHTML = htmlContent;
+			// Remove extra h2 elements LeadPages may have added for line-wrapping
+			for (var i = 1; i < allH2s.length; i++) {
+				allH2s[i].parentNode.removeChild(allH2s[i]);
+			}
 		}
-		allH2s[0].innerHTML = htmlContent;
-		// Remove extra h2 elements LeadPages may have added for line-wrapping
-		for (var i = 1; i < allH2s.length; i++) {
-			allH2s[i].parentNode.removeChild(allH2s[i]);
+		// Re-apply font-size with !important so LeadPages stylesheets cannot override it
+		var h2 = element.querySelector('h2');
+		if (h2) {
+			h2.querySelectorAll('span[style]').forEach(function(span) {
+				var fs = span.style.fontSize;
+				if (fs) span.style.setProperty('font-size', fs, 'important');
+			});
 		}
 	}
 

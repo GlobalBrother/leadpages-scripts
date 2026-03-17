@@ -2448,16 +2448,43 @@ e.g.
 				<div id="titleRichEditor" class="title-rich-editable" contenteditable="true" spellcheck="false"></div>
 				<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Select text → adjust sizes with −/+ → click Apply.</div>
 			`;
-			document.getElementById('titleRichEditor').innerHTML = content || '';
+			const editor = document.getElementById('titleRichEditor');
+			editor.innerHTML = content || '';
+			// Init steppers from first formatted span already in content
+			const _initSpan = editor.querySelector('span[style*="font-size"]');
+			if (_initSpan) {
+				const _fs  = _initSpan.style.fontSize;
+				const _fsm = _initSpan.style.getPropertyValue('--fs-m');
+				const dEl  = document.getElementById('titleFontDesktopVal');
+				const mEl  = document.getElementById('titleFontMobileVal');
+				if (dEl && _fs)  dEl.textContent = parseFloat(_fs).toFixed(1);
+				if (mEl && _fsm) mEl.textContent = parseFloat(_fsm).toFixed(1);
+			}
 
 			_savedTitleRange = null;
 			if (_titleSelectionHandler) document.removeEventListener('selectionchange', _titleSelectionHandler);
 			_titleSelectionHandler = function() {
 				const sel = window.getSelection();
 				const editor = document.getElementById('titleRichEditor');
-				if (!editor || !sel || !sel.rangeCount || sel.isCollapsed) return;
+				if (!editor || !sel || !sel.rangeCount) return;
 				const r = sel.getRangeAt(0);
-				if (editor.contains(r.commonAncestorContainer)) _savedTitleRange = r.cloneRange();
+				if (!editor.contains(r.commonAncestorContainer)) return;
+				if (!sel.isCollapsed) _savedTitleRange = r.cloneRange();
+				// Update stepper values to reflect font-size of node at cursor
+				let node = r.startContainer;
+				if (node.nodeType === 3) node = node.parentNode;
+				while (node && node !== editor) {
+					const fs = node.style && node.style.fontSize;
+					const fsm = node.style && node.style.getPropertyValue('--fs-m');
+					if (fs && fsm) {
+						const dEl = document.getElementById('titleFontDesktopVal');
+						const mEl = document.getElementById('titleFontMobileVal');
+						if (dEl) dEl.textContent = parseFloat(fs).toFixed(1);
+						if (mEl) mEl.textContent = parseFloat(fsm).toFixed(1);
+						break;
+					}
+					node = node.parentNode;
+				}
 			};
 			document.addEventListener('selectionchange', _titleSelectionHandler);
 		}
@@ -2481,52 +2508,61 @@ e.g.
 		function applyTitleSpan() {
 			const desktop = parseFloat(document.getElementById('titleFontDesktopVal').textContent) || 3;
 			const mobile  = parseFloat(document.getElementById('titleFontMobileVal').textContent)  || 1.5;
+			const editor  = document.getElementById('titleRichEditor');
+			if (!editor) return;
 
-			// Use saved range — it's always the last non-empty selection inside the editor,
-			// regardless of whether the browser kept or dropped the live selection.
-			const range = _savedTitleRange;
-			if (!range) { showNotification('Select some text first', 'error'); return; }
+			if (!_savedTitleRange) { showNotification('Select some text first', 'error'); return; }
 
-			const editor = document.getElementById('titleRichEditor');
-			if (!editor.contains(range.commonAncestorContainer)) {
-				showNotification('Select text inside the title editor', 'error'); return;
+			// Focus editor and programmatically restore the saved selection.
+			// This is the most reliable method — does not depend on browser
+			// preserving the selection through the button click.
+			editor.focus();
+			const sel = window.getSelection();
+			sel.removeAllRanges();
+			try { sel.addRange(_savedTitleRange); } catch(e) {
+				_savedTitleRange = null;
+				showNotification('Selection lost — please re-select the text', 'error');
+				return;
 			}
-			try {
-				const span = document.createElement('span');
-				span.style.setProperty('--fs-m', mobile + 'rem');
-				span.style.setProperty('font-size', desktop + 'rem');
-				span.appendChild(range.extractContents());
-				range.insertNode(span);
-			} catch(e) {
-				showNotification('Could not apply — try a simpler selection', 'error');
-			}
+			if (sel.isCollapsed) { showNotification('Select some text first', 'error'); return; }
+
+			// Clone innerHTML of selection (preserves any nested formatting)
+			const range = sel.getRangeAt(0);
+			const tmp   = document.createElement('div');
+			tmp.appendChild(range.cloneContents());
+			const spanHtml = '<span style="font-size:' + desktop + 'rem;--fs-m:' + mobile + 'rem">' + tmp.innerHTML + '</span>';
+
+			// execCommand handles all contenteditable DOM surgery reliably
+			document.execCommand('insertHTML', false, spanHtml);
 			_savedTitleRange = null;
-			window.getSelection().removeAllRanges();
+		}
+
+		function _isTitleSpan(node) {
+			return node && node.nodeType === 1 && node.style &&
+				node.style.fontSize && node.style.getPropertyValue('--fs-m');
+		}
+
+		function _unwrapNode(node) {
+			const parent = node.parentNode;
+			while (node.firstChild) parent.insertBefore(node.firstChild, node);
+			parent.removeChild(node);
 		}
 
 		function clearTitleSpan() {
 			const editor = document.getElementById('titleRichEditor');
 			const sel    = window.getSelection();
 			if (sel && sel.rangeCount && !sel.isCollapsed) {
-				// Unwrap the styled span containing the selection start
+				// Unwrap the title-span containing the selection start
 				let node = sel.getRangeAt(0).startContainer;
+				if (node.nodeType === 3) node = node.parentNode;
 				while (node && node !== editor) {
-					if (node.nodeType === 1 && node.style && node.style.getPropertyValue('--fs-d')) {
-						const parent = node.parentNode;
-						while (node.firstChild) parent.insertBefore(node.firstChild, node);
-						parent.removeChild(node);
-						break;
-					}
+					if (_isTitleSpan(node)) { _unwrapNode(node); break; }
 					node = node.parentNode;
 				}
 			} else {
-				// Nothing selected — clear ALL styled spans
+				// Nothing selected — clear ALL title-spans
 				Array.from(editor.querySelectorAll('span')).forEach(span => {
-					if (span.style.getPropertyValue('--fs-d')) {
-						const parent = span.parentNode;
-						while (span.firstChild) parent.insertBefore(span.firstChild, span);
-						parent.removeChild(span);
-					}
+					if (_isTitleSpan(span)) _unwrapNode(span);
 				});
 			}
 			sel && sel.removeAllRanges();
