@@ -2612,7 +2612,10 @@ e.g.
 		async function saveMainTitleContent(component) {
 			const editor = document.getElementById('titleRichEditor');
 			if (!editor) { showNotification('Editor not found', 'error'); return; }
-			const content = editor.innerHTML.trim();
+			// Normalize: &nbsp; between closing and opening spans is a line-break intent
+			let content = editor.innerHTML.trim()
+				.replace(/(<\/span>)\s*(?:&nbsp;|\u00a0)+\s*(<span)/gi, '$1<br>$2')
+				.replace(/(<\/span>)\s*(?:&nbsp;|\u00a0)+\s*$/gi, '$1'); // trailing nbsp after last span
 			try {
 				const response = await fetch(
 					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,

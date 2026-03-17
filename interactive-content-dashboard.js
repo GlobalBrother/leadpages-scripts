@@ -376,8 +376,9 @@
 	// Inject content into #main-title: write to the first h2, remove any extra h2 siblings
 	// (LeadPages creates one <h2> per visual line when text wraps)
 	function _injectMainTitle(element, htmlContent) {
-		// Strip <div> wrappers that contenteditable may insert — invalid inside h2
+		// Normalize: &nbsp; between spans is a line-break intent; strip <div> wrappers (invalid in h2)
 		htmlContent = htmlContent
+			.replace(/(<\/span>)\s*(?:&nbsp;|\u00a0)+\s*(<span)/gi, '$1<br>$2')
 			.replace(/<div>/gi, '')
 			.replace(/<\/div>/gi, '<br>')
 			.replace(/(<br\s*\/?>\s*)+$/i, '');
