@@ -19,12 +19,14 @@
 		#main-title .main-title-wrapper {
 			padding: 17px;
 		}
+		/* desktop size for styled title spans — high specificity beats LeadPages */
+		#main-title h2 span[style*="--fs-d"] { font-size: var(--fs-d) !important; }
 		@media (max-width: 767px) {
 			#main-title h2, h2, h2 span, h2 p {
 				font-size: 1.5rem;
 			}
-			/* override with mobile size for individually-styled spans */
-			[style*="--fs-m"] { font-size: var(--fs-m); }
+			/* mobile size — comes after desktop rule in source order, so wins on mobile */
+			#main-title h2 span[style*="--fs-m"] { font-size: var(--fs-m) !important; }
 			#main-title .main-title-wrapper {
 				padding: 8px;
 			}
@@ -383,14 +385,6 @@
 			for (var i = 1; i < allH2s.length; i++) {
 				allH2s[i].parentNode.removeChild(allH2s[i]);
 			}
-		}
-		// Re-apply font-size with !important so LeadPages stylesheets cannot override it
-		var h2 = element.querySelector('h2');
-		if (h2) {
-			h2.querySelectorAll('span[style]').forEach(function(span) {
-				var fs = span.style.fontSize;
-				if (fs) span.style.setProperty('font-size', fs, 'important');
-			});
 		}
 	}
 

@@ -791,6 +791,8 @@
 		.title-toolbar .toolbar-apply:hover { opacity: 0.88; }
 		.title-toolbar .toolbar-clear { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 		.title-toolbar .toolbar-clear:hover { background: #fee2e2; }
+		/* preview font sizes in the title rich editor */
+		.title-rich-editable [style*="--fs-d"] { font-size: var(--fs-d); }
 
 		.card-body {
 			padding: 16px 18px;
@@ -2451,13 +2453,13 @@ e.g.
 			const editor = document.getElementById('titleRichEditor');
 			editor.innerHTML = content || '';
 			// Init steppers from first formatted span already in content
-			const _initSpan = editor.querySelector('span[style*="font-size"]');
+			const _initSpan = editor.querySelector('span[style*="--fs-d"]');
 			if (_initSpan) {
-				const _fs  = _initSpan.style.fontSize;
+				const _fsd = _initSpan.style.getPropertyValue('--fs-d');
 				const _fsm = _initSpan.style.getPropertyValue('--fs-m');
 				const dEl  = document.getElementById('titleFontDesktopVal');
 				const mEl  = document.getElementById('titleFontMobileVal');
-				if (dEl && _fs)  dEl.textContent = parseFloat(_fs).toFixed(1);
+				if (dEl && _fsd) dEl.textContent = parseFloat(_fsd).toFixed(1);
 				if (mEl && _fsm) mEl.textContent = parseFloat(_fsm).toFixed(1);
 			}
 
@@ -2474,12 +2476,12 @@ e.g.
 				let node = r.startContainer;
 				if (node.nodeType === 3) node = node.parentNode;
 				while (node && node !== editor) {
-					const fs = node.style && node.style.fontSize;
+					const fsd = node.style && node.style.getPropertyValue('--fs-d');
 					const fsm = node.style && node.style.getPropertyValue('--fs-m');
-					if (fs && fsm) {
+					if (fsd && fsm) {
 						const dEl = document.getElementById('titleFontDesktopVal');
 						const mEl = document.getElementById('titleFontMobileVal');
-						if (dEl) dEl.textContent = parseFloat(fs).toFixed(1);
+						if (dEl) dEl.textContent = parseFloat(fsd).toFixed(1);
 						if (mEl) mEl.textContent = parseFloat(fsm).toFixed(1);
 						break;
 					}
@@ -2530,16 +2532,20 @@ e.g.
 			const range = sel.getRangeAt(0);
 			const tmp   = document.createElement('div');
 			tmp.appendChild(range.cloneContents());
-			const spanHtml = '<span style="font-size:' + desktop + 'rem;--fs-m:' + mobile + 'rem">' + tmp.innerHTML + '</span>';
+			// Store sizes as CSS custom properties only — font-size comes from CSS rules
+			// so it never becomes an inline !important that breaks mobile override.
+			const spanHtml = '<span style="--fs-d:' + desktop + 'rem;--fs-m:' + mobile + 'rem">' + tmp.innerHTML + '</span>';
 
 			// execCommand handles all contenteditable DOM surgery reliably
 			document.execCommand('insertHTML', false, spanHtml);
 			_savedTitleRange = null;
+			// Collapse selection so result is immediately visible
+			window.getSelection().collapseToEnd();
 		}
 
 		function _isTitleSpan(node) {
 			return node && node.nodeType === 1 && node.style &&
-				node.style.fontSize && node.style.getPropertyValue('--fs-m');
+				node.style.getPropertyValue('--fs-d') && node.style.getPropertyValue('--fs-m');
 		}
 
 		function _unwrapNode(node) {
