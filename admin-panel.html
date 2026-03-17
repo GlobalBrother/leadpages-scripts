@@ -2249,11 +2249,12 @@ e.g.
 
 			card.innerHTML = `
 				<div class="card-header">
+					<span class="component-slug-badge">${escapeHtml(currentSlug)}</span>
 					<div class="card-component-name">
 						<div class="component-icon">${icon}</div>
 						<span class="component-label">${escapeHtml(component)}</span>
 					</div>
-					<span class="component-slug-badge">${escapeHtml(currentSlug)}</span>
+
 				</div>
 				<div class="card-preview-body">${previewHtml}</div>
 				<div class="card-preview-edit-hint">✏️ Click to edit</div>
