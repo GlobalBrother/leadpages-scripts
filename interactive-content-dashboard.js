@@ -19,12 +19,14 @@
 		#main-title .main-title-wrapper {
 			padding: 17px;
 		}
+		/* apply desktop size for individually-styled spans */
+		[style*="--fs-d"] { font-size: var(--fs-d) !important; }
 
 		@media (max-width: 767px) {
 			#main-title h2, h2, h2 span, h2 p {
 				font-size: 1.5rem;
 			}
-			/* override base mobile size for individually-styled spans */
+			/* override with mobile size for individually-styled spans */
 			[style*="--fs-m"] { font-size: var(--fs-m) !important; }
 			#main-title .main-title-wrapper {
 				padding: 8px;

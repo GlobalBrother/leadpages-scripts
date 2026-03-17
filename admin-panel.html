@@ -766,14 +766,17 @@
 			font-size: 12px;
 			font-family: 'Inter', sans-serif;
 		}
-		.title-toolbar label { font-weight: 600; color: #6b7280; white-space: nowrap; }
-		.title-toolbar input[type="number"] {
-			width: 58px;
-			padding: 5px 8px;
-			border: 1.5px solid #e5e7eb;
-			border-radius: 6px;
-			font-size: 12px;
-			font-family: inherit;
+		.title-toolbar .stepper { display:inline-flex; align-items:center; gap:4px; }
+		.title-toolbar .stepper-btn {
+			width:24px; height:24px; border-radius:5px; border:1.5px solid #e5e7eb;
+			background:#fff; font-size:14px; font-weight:700; line-height:1;
+			cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
+			color:var(--text-primary); padding:0; font-family:inherit;
+		}
+		.title-toolbar .stepper-btn:hover { background:#f3f4f6; }
+		.title-toolbar .stepper-val {
+			min-width:38px; text-align:center; font-size:13px; font-weight:700;
+			color:var(--text-primary);
 		}
 		.title-toolbar .toolbar-btn {
 			padding: 5px 12px;
@@ -2393,6 +2396,11 @@ e.g.
 		function closeComponentEditor() {
 			document.getElementById('componentEditorModal').style.display = 'none';
 			document.removeEventListener('keydown', _editorEscHandler);
+			if (_titleSelectionHandler) {
+				document.removeEventListener('selectionchange', _titleSelectionHandler);
+				_titleSelectionHandler = null;
+			}
+			_savedTitleRange = null;
 		}
 
 		function refreshPreviewCard(component) {
@@ -2416,31 +2424,69 @@ e.g.
 			return n.includes('title') || n.includes('titlu');
 		}
 
+		var _savedTitleRange = null;
+		var _titleSelectionHandler = null;
+
 		function renderMainTitleEditorInto(targetEl, component, content) {
 			targetEl.innerHTML = `
-				<div class="title-toolbar">
-					<label>🖥 Desktop:</label>
-					<input type="number" id="titleFontDesktop" step="0.1" min="0.5" max="10" value="3"> rem
-					<label style="margin-left:6px;">📱 Mobile:</label>
-					<input type="number" id="titleFontMobile" step="0.1" min="0.5" max="10" value="1.5"> rem
-					<button class="toolbar-btn toolbar-apply" onclick="applyTitleSpan()">Apply to selection</button>
-					<button class="toolbar-btn toolbar-clear" onclick="clearTitleSpan()">✕ Remove formatting</button>
+				<div class="title-toolbar" id="titleToolbar">
+					<label>🖥</label>
+					<div class="stepper">
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('d',-0.1)">−</button>
+						<span class="stepper-val" id="titleFontDesktopVal">3.0</span> rem
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('d',0.1)">+</button>
+					</div>
+					<label style="margin-left:6px;">📱</label>
+					<div class="stepper">
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('m',-0.1)">−</button>
+						<span class="stepper-val" id="titleFontMobileVal">1.5</span> rem
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('m',0.1)">+</button>
+					</div>
+					<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="applyTitleSpan()">Apply to selection</button>
+					<button class="toolbar-btn toolbar-clear" onmousedown="event.preventDefault()" onclick="clearTitleSpan()">✕ Remove formatting</button>
 				</div>
 				<div id="titleRichEditor" class="title-rich-editable" contenteditable="true" spellcheck="false"></div>
-				<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Select text in the editor → set sizes → click Apply. Click ✕ to remove formatting from the span under the cursor (or all spans if nothing selected).</div>
+				<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Select text → adjust sizes with −/+ → click Apply.</div>
 			`;
-			// Set innerHTML after render to avoid escaping issues
 			document.getElementById('titleRichEditor').innerHTML = content || '';
+
+			_savedTitleRange = null;
+			if (_titleSelectionHandler) document.removeEventListener('selectionchange', _titleSelectionHandler);
+			_titleSelectionHandler = function() {
+				const sel = window.getSelection();
+				const editor = document.getElementById('titleRichEditor');
+				if (!editor || !sel || !sel.rangeCount || sel.isCollapsed) return;
+				const r = sel.getRangeAt(0);
+				if (editor.contains(r.commonAncestorContainer)) _savedTitleRange = r.cloneRange();
+			};
+			document.addEventListener('selectionchange', _titleSelectionHandler);
+		}
+
+		function stepTitleFont(which, delta) {
+			const id = which === 'd' ? 'titleFontDesktopVal' : 'titleFontMobileVal';
+			const el = document.getElementById(id);
+			if (!el) return;
+			const val = Math.round((parseFloat(el.textContent) + delta) * 10) / 10;
+			el.textContent = Math.max(0.5, Math.min(10, val)).toFixed(1);
+		}
+
+		function _restoreTitleRange() {
+			if (!_savedTitleRange) return null;
+			const sel = window.getSelection();
+			sel.removeAllRanges();
+			sel.addRange(_savedTitleRange);
+			return _savedTitleRange;
 		}
 
 		function applyTitleSpan() {
-			const desktop = parseFloat(document.getElementById('titleFontDesktop').value) || 3;
-			const mobile  = parseFloat(document.getElementById('titleFontMobile').value)  || 1.5;
-			const sel = window.getSelection();
-			if (!sel || !sel.rangeCount || sel.isCollapsed) {
-				showNotification('Select some text first', 'error'); return;
-			}
-			const range  = sel.getRangeAt(0);
+			const desktop = parseFloat(document.getElementById('titleFontDesktopVal').textContent) || 3;
+			const mobile  = parseFloat(document.getElementById('titleFontMobileVal').textContent)  || 1.5;
+
+			// Use saved range — it's always the last non-empty selection inside the editor,
+			// regardless of whether the browser kept or dropped the live selection.
+			const range = _savedTitleRange;
+			if (!range) { showNotification('Select some text first', 'error'); return; }
+
 			const editor = document.getElementById('titleRichEditor');
 			if (!editor.contains(range.commonAncestorContainer)) {
 				showNotification('Select text inside the title editor', 'error'); return;
@@ -2449,13 +2495,14 @@ e.g.
 				const span = document.createElement('span');
 				span.style.setProperty('--fs-d', desktop + 'rem');
 				span.style.setProperty('--fs-m', mobile  + 'rem');
-				span.style.fontSize = 'var(--fs-d)';
+				span.style.setProperty('font-size', 'var(--fs-d)');
 				span.appendChild(range.extractContents());
 				range.insertNode(span);
 			} catch(e) {
 				showNotification('Could not apply — try a simpler selection', 'error');
 			}
-			sel.removeAllRanges();
+			_savedTitleRange = null;
+			window.getSelection().removeAllRanges();
 		}
 
 		function clearTitleSpan() {
