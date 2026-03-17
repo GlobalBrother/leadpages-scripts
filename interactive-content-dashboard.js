@@ -44,6 +44,21 @@
 		.review-header img { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
 		.review-header h4 { margin: 0; font-size: 14px; }
 		.review-body { font-size: 18px !important; line-height: 1.6; color: #555 !important; }
+
+		/* Video component styles - ensure proper sizing */
+		[id*="video"], [id*="vsl"] {
+			min-height: 315px;
+			width: 100%;
+			display: block !important;
+			position: relative;
+		}
+		[id*="video"] iframe, [id*="vsl"] iframe {
+			width: 100%;
+			height: 100%;
+			min-height: 315px;
+			border: none;
+			display: block;
+		}
 	`;
 	(document.head || document.documentElement).appendChild(_icdStyles);
 
@@ -269,10 +284,19 @@
 					} else if (element.tagName === 'A') {
 						element.href = content;
 					} else if (element.tagName === 'DIV') {
-						const nestedIframe = element.querySelector('iframe');
-						if (nestedIframe) {
-							nestedIframe.src = content;
+						let nestedIframe = element.querySelector('iframe');
+						if (!nestedIframe) {
+							// Create iframe if it doesn't exist (fixes white space video bug)
+							nestedIframe = document.createElement('iframe');
+							nestedIframe.width = '100%';
+							nestedIframe.height = '100%';
+							nestedIframe.style.border = 'none';
+							nestedIframe.style.aspectRatio = '16/9';
+							nestedIframe.allow = 'autoplay; fullscreen; picture-in-picture';
+							nestedIframe.allowFullscreen = true;
+							element.appendChild(nestedIframe);
 						}
+						nestedIframe.src = content;
 					}
 				} else if (content.startsWith('<')) {
 					// Title component: content is rich HTML (spans with --fs-d/--fs-m) → inject into the h2
