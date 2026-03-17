@@ -386,25 +386,25 @@
 		modal.innerHTML = '<span id="_icd_photo_modal_close">&times;</span><img id="_icd_photo_modal_img" />';
 		document.body.appendChild(modal);
 
-		document.getElementById('_icd_photo_modal_close').addEventListener('click', closeModal);
-		modal.addEventListener('click', function(e) { if (e.target === modal) closeModal(); });
-		document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+		document.getElementById('_icd_photo_modal_close').addEventListener('click', _icdCloseModal);
+		modal.addEventListener('click', function(e) { if (e.target === modal) _icdCloseModal(); });
+		document.addEventListener('keydown', function(e) { if (e.key === 'Escape') _icdCloseModal(); });
 	}
 
-	function openModal(imgEl) {
+	function _icdOpenModal(imgEl) {
 		ensurePhotoModal();
 		document.getElementById('_icd_photo_modal_img').src = imgEl.src;
 		document.getElementById('_icd_photo_modal').style.display = 'flex';
 	}
 
-	function closeModal() {
+	function _icdCloseModal() {
 		const modal = document.getElementById('_icd_photo_modal');
 		if (modal) modal.style.display = 'none';
 	}
 
-	// Expose globally so onclick="openModal(this)" works
-	window.openModal  = openModal;
-	window.closeModal = closeModal;
+	// Expose globally so onclick="_icdOpenModal(this)" works in our injected content
+	window._icdOpenModal  = _icdOpenModal;
+	window._icdCloseModal = _icdCloseModal;
 	// ─────────────────────────────────────────────────────────────────────────────
 
 	// ── System Section Prioritization ────────────────────────────────────────────
