@@ -787,7 +787,7 @@
 			font-family: inherit;
 			border: 1.5px solid;
 		}
-		.title-toolbar .toolbar-apply { background: var(--primary); color: #fff; border-color: var(--primary); }
+		.title-toolbar .toolbar-apply { background: var(--primary); color: green; border-color: var(--primary); }
 		.title-toolbar .toolbar-apply:hover { opacity: 0.88; }
 		.title-toolbar .toolbar-clear { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
 		.title-toolbar .toolbar-clear:hover { background: #fee2e2; }
@@ -2489,6 +2489,22 @@ e.g.
 				}
 			};
 			document.addEventListener('selectionchange', _titleSelectionHandler);
+
+			// Prevent Enter from creating <div> blocks — insert <br> instead
+			editor.addEventListener('keydown', function(e) {
+				if (e.key !== 'Enter') return;
+				e.preventDefault();
+				const s = window.getSelection();
+				if (!s || !s.rangeCount) return;
+				const r = s.getRangeAt(0);
+				r.deleteContents();
+				const br = document.createElement('br');
+				r.insertNode(br);
+				r.setStartAfter(br);
+				r.collapse(true);
+				s.removeAllRanges();
+				s.addRange(r);
+			});
 		}
 
 		function stepTitleFont(which, delta) {
@@ -2513,39 +2529,58 @@ e.g.
 			const editor  = document.getElementById('titleRichEditor');
 			if (!editor) return;
 
-			if (!_savedTitleRange) { showNotification('Select some text first', 'error'); return; }
-
-			// Focus editor and programmatically restore the saved selection.
-			// This is the most reliable method — does not depend on browser
-			// preserving the selection through the button click.
-			editor.focus();
+			// onmousedown=preventDefault keeps the selection alive through the click.
+			// Use the live selection directly; fall back to saved range if needed.
 			const sel = window.getSelection();
-			sel.removeAllRanges();
-			try { sel.addRange(_savedTitleRange); } catch(e) {
-				_savedTitleRange = null;
-				showNotification('Selection lost — please re-select the text', 'error');
-				return;
+			let range = null;
+			if (sel && sel.rangeCount && !sel.isCollapsed) {
+				const r = sel.getRangeAt(0);
+				if (editor.contains(r.commonAncestorContainer)) range = r;
 			}
-			if (sel.isCollapsed) { showNotification('Select some text first', 'error'); return; }
+			if (!range && _savedTitleRange) {
+				editor.focus();
+				sel.removeAllRanges();
+				try { sel.addRange(_savedTitleRange); } catch(e) {}
+				if (sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0);
+			}
+			if (!range) { showNotification('Select some text first', 'error'); return; }
 
-			// Clone innerHTML of selection (preserves any nested formatting)
-			const range = sel.getRangeAt(0);
-			const tmp   = document.createElement('div');
-			tmp.appendChild(range.cloneContents());
-			// Store sizes as CSS custom properties only — font-size comes from CSS rules
-			// so it never becomes an inline !important that breaks mobile override.
-			const spanHtml = '<span style="--fs-d:' + desktop + 'rem;--fs-m:' + mobile + 'rem">' + tmp.innerHTML + '</span>';
+			// If selection is inside an existing title-span, update sizes in-place
+			// (avoids nested spans).
+			let ancestor = range.commonAncestorContainer;
+			if (ancestor.nodeType === 3) ancestor = ancestor.parentNode;
+			let existingSpan = null;
+			let nd = ancestor;
+			while (nd && nd !== editor) {
+				if (_isTitleSpan(nd)) { existingSpan = nd; break; }
+				nd = nd.parentNode;
+			}
 
-			// execCommand handles all contenteditable DOM surgery reliably
-			document.execCommand('insertHTML', false, spanHtml);
+			if (existingSpan) {
+				// Update the existing span in-place
+				existingSpan.style.setProperty('--fs-d', desktop + 'rem');
+				existingSpan.style.setProperty('--fs-m', mobile + 'rem');
+				// Migrate old format: remove legacy font-size inline
+				existingSpan.style.removeProperty('font-size');
+			} else {
+				const span = document.createElement('span');
+				span.style.setProperty('--fs-d', desktop + 'rem');
+				span.style.setProperty('--fs-m', mobile + 'rem');
+				span.appendChild(range.extractContents());
+				range.insertNode(span);
+				range.setStartAfter(span);
+				range.collapse(true);
+				sel.removeAllRanges();
+				sel.addRange(range);
+			}
 			_savedTitleRange = null;
-			// Collapse selection so result is immediately visible
-			window.getSelection().collapseToEnd();
 		}
 
 		function _isTitleSpan(node) {
-			return node && node.nodeType === 1 && node.style &&
-				node.style.getPropertyValue('--fs-d') && node.style.getPropertyValue('--fs-m');
+			if (!node || node.nodeType !== 1 || !node.style) return false;
+			if (node.style.getPropertyValue('--fs-d') && node.style.getPropertyValue('--fs-m')) return true;
+			if (node.style.fontSize && node.style.getPropertyValue('--fs-m')) return true;
+			return false;
 		}
 
 		function _unwrapNode(node) {

@@ -376,6 +376,11 @@
 	// Inject content into #main-title: write to the first h2, remove any extra h2 siblings
 	// (LeadPages creates one <h2> per visual line when text wraps)
 	function _injectMainTitle(element, htmlContent) {
+		// Strip <div> wrappers that contenteditable may insert — invalid inside h2
+		htmlContent = htmlContent
+			.replace(/<div>/gi, '')
+			.replace(/<\/div>/gi, '<br>')
+			.replace(/(<br\s*\/?>\s*)+$/i, '');
 		var allH2s = Array.from(element.querySelectorAll('h2'));
 		if (allH2s.length === 0) {
 			element.innerHTML = '<h2>' + htmlContent + '</h2>';
