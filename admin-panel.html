@@ -749,10 +749,12 @@
 			cursor: text;
 			width: 100%;
 		}
+
 		.title-rich-editable:focus {
 			border-color: var(--primary);
 			background: #fff;
 		}
+
 		.title-toolbar {
 			display: flex;
 			align-items: center;
@@ -766,18 +768,42 @@
 			font-size: 12px;
 			font-family: 'Inter', sans-serif;
 		}
-		.title-toolbar .stepper { display:inline-flex; align-items:center; gap:4px; }
+
+		.title-toolbar .stepper {
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+		}
+
 		.title-toolbar .stepper-btn {
-			width:24px; height:24px; border-radius:5px; border:1.5px solid #e5e7eb;
-			background:#fff; font-size:14px; font-weight:700; line-height:1;
-			cursor:pointer; display:inline-flex; align-items:center; justify-content:center;
-			color:var(--text-primary); padding:0; font-family:inherit;
+			width: 24px;
+			height: 24px;
+			border-radius: 5px;
+			border: 1.5px solid #e5e7eb;
+			background: #fff;
+			font-size: 14px;
+			font-weight: 700;
+			line-height: 1;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			color: var(--text-primary);
+			padding: 0;
+			font-family: inherit;
 		}
-		.title-toolbar .stepper-btn:hover { background:#f3f4f6; }
+
+		.title-toolbar .stepper-btn:hover {
+			background: #f3f4f6;
+		}
+
 		.title-toolbar .stepper-val {
-			min-width:38px; text-align:center; font-size:13px; font-weight:700;
-			color:var(--text-primary);
+			text-align: center;
+			font-size: 13px;
+			font-weight: 700;
+			color: var(--text-primary);
 		}
+
 		.title-toolbar .toolbar-btn {
 			padding: 5px 12px;
 			border-radius: 6px;
@@ -787,12 +813,40 @@
 			font-family: inherit;
 			border: 1.5px solid;
 		}
-		.title-toolbar .toolbar-apply { background: var(--primary); color: green; border-color: var(--primary); }
-		.title-toolbar .toolbar-apply:hover { opacity: 0.88; }
-		.title-toolbar .toolbar-clear { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
-		.title-toolbar .toolbar-clear:hover { background: #fee2e2; }
-		/* preview font sizes in the title rich editor */
-		.title-rich-editable [style*="--fs-d"] { font-size: var(--fs-d); }
+
+		.title-toolbar .toolbar-apply {
+			background: var(--primary);
+			color: green;
+			border-color: var(--primary);
+		}
+
+		.title-toolbar .toolbar-apply:hover {
+			opacity: 0.88;
+		}
+
+		.title-toolbar .toolbar-clear {
+			background: #fef2f2;
+			color: #dc2626;
+			border-color: #fecaca;
+		}
+
+		.title-toolbar .toolbar-clear:hover {
+			background: #fee2e2;
+		}
+		.title-toolbar-sep { width:1px; height:20px; background:#e5e7eb; margin:0 4px; flex-shrink:0; }
+		.title-toolbar .toolbar-toggle-btn {
+			width:28px; height:24px; border-radius:5px; border:1.5px solid #e5e7eb;
+			background:#fff; font-size:13px; cursor:pointer;
+			display:inline-flex; align-items:center; justify-content:center;
+			color:var(--text-primary); font-family:serif; font-weight:700; padding:0;
+		}
+		.title-toolbar .toolbar-toggle-btn:hover:not(.active) { background:#f3f4f6; }
+		.title-toolbar .toolbar-toggle-btn.active { background:#1a1d24; color:#fff; border-color:#1a1d24; }
+
+		/* preview font sizes + bold/italic/lh in the title rich editor */
+		.title-rich-editable [style*="--fs-d"] {
+			font-size: var(--fs-d);
+		}
 
 		.card-body {
 			padding: 16px 18px;
@@ -1484,9 +1538,9 @@
 		.modal-special-btn {
 			flex: 1;
 			padding: 9px 10px;
-			border: 1.5px solid rgba(201,162,39,0.3);
+			border: 1.5px solid rgba(201, 162, 39, 0.3);
 			border-radius: 8px;
-			background: rgba(201,162,39,0.05);
+			background: rgba(201, 162, 39, 0.05);
 			color: var(--gold-dark);
 			font-size: 12px;
 			font-weight: 700;
@@ -1498,7 +1552,7 @@
 		}
 
 		.modal-special-btn:hover {
-			background: rgba(201,162,39,0.12);
+			background: rgba(201, 162, 39, 0.12);
 			border-color: var(--gold);
 		}
 
@@ -1512,7 +1566,7 @@
 			display: block;
 			font-size: 10px;
 			font-weight: 700;
-			color: rgba(255,255,255,0.45);
+			color: rgba(255, 255, 255, 0.45);
 			text-transform: uppercase;
 			letter-spacing: 1px;
 			margin-bottom: 6px;
@@ -1691,8 +1745,7 @@
 					</div>
 					<div class="modal-field">
 						<label>Component Name</label>
-						<input type="text" id="modalComponentName"
-							placeholder="e.g. main-title, vsl-video" />
+						<input type="text" id="modalComponentName" placeholder="e.g. main-title, vsl-video" />
 					</div>
 				</div>
 				<div class="modal-footer">
@@ -1752,8 +1805,10 @@
 					<button class="modal-close" onclick="closeAddComponentModal()">✕</button>
 				</div>
 				<div class="modal-body" style="max-height:67vh;overflow-y:auto;">
-					<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;">
-						<label style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;">Initial reviews shown:</label>
+					<div
+						style="display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:8px;">
+						<label style="font-size:12px;font-weight:700;color:#6b7280;white-space:nowrap;">Initial reviews
+							shown:</label>
 						<input type="number" id="modalReviewsInitialCount" min="1" max="50" value="5"
 							style="width:70px;padding:6px 10px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:13px;font-family:inherit;">
 						<span style="font-size:12px;color:#9ca3af;">(remaining hidden behind "View More Reviews")</span>
@@ -1825,7 +1880,8 @@
 						oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-')" />
 				</div>
 				<div class="modal-field" style="margin-bottom:0;">
-					<label>Body System <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
+					<label>Body System <span
+							style="font-weight:400; text-transform:none; color:var(--text-muted);">(optional)</span></label>
 					<select id="editDeleteSlugSystemSelect"
 						style="width:100%; padding:10px 13px; border:1.5px solid var(--border); border-radius:8px; font-size:14px; font-family:inherit; color:var(--text-primary); background:white; cursor:pointer; transition:border-color .2s; margin-top:4px;">
 						<option value="">— No system —</option>
@@ -1833,9 +1889,11 @@
 				</div>
 				<div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--border);">
 					<p style="font-size:12px; color:var(--text-muted); margin-bottom:10px; line-height:1.6;">
-						⚠️ Deleting this slug will permanently remove <strong>all components</strong> for this slug and cannot be undone.
+						⚠️ Deleting this slug will permanently remove <strong>all components</strong> for this slug and cannot be
+						undone.
 					</p>
-					<button onclick="deleteSlug()" style="width:100%; padding:10px; background:#fef2f2; border:1.5px solid #fecaca; border-radius:8px; font-size:13px; font-weight:700; color:var(--danger); cursor:pointer; font-family:inherit; transition:all .15s;">
+					<button onclick="deleteSlug()"
+						style="width:100%; padding:10px; background:#fef2f2; border:1.5px solid #fecaca; border-radius:8px; font-size:13px; font-weight:700; color:var(--danger); cursor:pointer; font-family:inherit; transition:all .15s;">
 						🗑 Delete Slug permanently
 					</button>
 				</div>
@@ -1974,7 +2032,9 @@ e.g.
 					<span class="btn-icon">🧩</span>
 					<span class="sidebar-text-label">Add Custom Component</span>
 				</button>
-				<button class="sidebar-btn" id="editDeleteSlugBtn" onclick="showEditDeleteSlugModal()" title="Edit / Delete Current Slug" style="display:none; color:rgba(220,38,38,0.8); border-color:rgba(220,38,38,0.2);">
+				<button class="sidebar-btn" id="editDeleteSlugBtn" onclick="showEditDeleteSlugModal()"
+					title="Edit / Delete Current Slug"
+					style="display:none; color:rgba(220,38,38,0.8); border-color:rgba(220,38,38,0.2);">
 					<span class="btn-icon">🗑</span>
 					<span class="sidebar-text-label">Edit / Delete Slug</span>
 				</button>
@@ -2434,15 +2494,29 @@ e.g.
 				<div class="title-toolbar" id="titleToolbar">
 					<label>🖥</label>
 					<div class="stepper">
+						<span>Desktop:</span>
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('d',-0.1)">−</button>
-						<span class="stepper-val" id="titleFontDesktopVal">3.0</span> rem
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('d',0.1)">+</button>
+
+						<span class="stepper-val" id="titleFontDesktopVal">3.0</span>rem
 					</div>
 					<label style="margin-left:6px;">📱</label>
 					<div class="stepper">
+						<span>Mobile:</span>
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('m',-0.1)">−</button>
-						<span class="stepper-val" id="titleFontMobileVal">1.5</span> rem
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleFont('m',0.1)">+</button>
+
+						<span class="stepper-val" id="titleFontMobileVal">1.5</span>rem
+					</div>
+					<div class="title-toolbar-sep"></div>
+					<button class="toolbar-toggle-btn" id="titleBoldBtn" onmousedown="event.preventDefault()" onclick="toggleTitleFormat('bold')"><b>B</b></button>
+					<button class="toolbar-toggle-btn" id="titleItalicBtn" onmousedown="event.preventDefault()" onclick="toggleTitleFormat('italic')"><i>I</i></button>
+					<div class="title-toolbar-sep"></div>
+					<label>↕</label>
+					<div class="stepper">
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleLH(-0.1)">−</button>
+						<span class="stepper-val" id="titleLineHeightVal">1.2</span>
+						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleLH(0.1)">+</button>
 					</div>
 					<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="applyTitleSpan()">Apply to selection</button>
 					<button class="toolbar-btn toolbar-clear" onmousedown="event.preventDefault()" onclick="clearTitleSpan()">✕ Remove formatting</button>
@@ -2457,15 +2531,21 @@ e.g.
 			if (_initSpan) {
 				const _fsd = _initSpan.style.getPropertyValue('--fs-d');
 				const _fsm = _initSpan.style.getPropertyValue('--fs-m');
-				const dEl  = document.getElementById('titleFontDesktopVal');
-				const mEl  = document.getElementById('titleFontMobileVal');
+				const dEl = document.getElementById('titleFontDesktopVal');
+				const mEl = document.getElementById('titleFontMobileVal');
 				if (dEl && _fsd) dEl.textContent = parseFloat(_fsd).toFixed(1);
 				if (mEl && _fsm) mEl.textContent = parseFloat(_fsm).toFixed(1);
+				const _boldBtn   = document.getElementById('titleBoldBtn');
+				const _italicBtn = document.getElementById('titleItalicBtn');
+				const _lhEl      = document.getElementById('titleLineHeightVal');
+				if (_boldBtn)   _boldBtn.classList.toggle('active', _initSpan.style.fontWeight === 'bold' || _initSpan.style.fontWeight === '700');
+				if (_italicBtn) _italicBtn.classList.toggle('active', _initSpan.style.fontStyle === 'italic');
+				if (_lhEl && _initSpan.style.lineHeight) _lhEl.textContent = parseFloat(_initSpan.style.lineHeight).toFixed(1);
 			}
 
 			_savedTitleRange = null;
 			if (_titleSelectionHandler) document.removeEventListener('selectionchange', _titleSelectionHandler);
-			_titleSelectionHandler = function() {
+			_titleSelectionHandler = function () {
 				const sel = window.getSelection();
 				const editor = document.getElementById('titleRichEditor');
 				if (!editor || !sel || !sel.rangeCount) return;
@@ -2479,10 +2559,16 @@ e.g.
 					const fsd = node.style && node.style.getPropertyValue('--fs-d');
 					const fsm = node.style && node.style.getPropertyValue('--fs-m');
 					if (fsd && fsm) {
-						const dEl = document.getElementById('titleFontDesktopVal');
-						const mEl = document.getElementById('titleFontMobileVal');
+						const dEl      = document.getElementById('titleFontDesktopVal');
+						const mEl      = document.getElementById('titleFontMobileVal');
+						const boldBtn  = document.getElementById('titleBoldBtn');
+						const italBtn  = document.getElementById('titleItalicBtn');
+						const lhEl     = document.getElementById('titleLineHeightVal');
 						if (dEl) dEl.textContent = parseFloat(fsd).toFixed(1);
 						if (mEl) mEl.textContent = parseFloat(fsm).toFixed(1);
+						if (boldBtn)  boldBtn.classList.toggle('active', node.style.fontWeight === 'bold' || node.style.fontWeight === '700');
+						if (italBtn)  italBtn.classList.toggle('active', node.style.fontStyle === 'italic');
+						if (lhEl && node.style.lineHeight) lhEl.textContent = parseFloat(node.style.lineHeight).toFixed(1);
 						break;
 					}
 					node = node.parentNode;
@@ -2491,7 +2577,7 @@ e.g.
 			document.addEventListener('selectionchange', _titleSelectionHandler);
 
 			// Prevent Enter from creating <div> blocks — insert <br> instead
-			editor.addEventListener('keydown', function(e) {
+			editor.addEventListener('keydown', function (e) {
 				if (e.key !== 'Enter') return;
 				e.preventDefault();
 				const s = window.getSelection();
@@ -2515,6 +2601,18 @@ e.g.
 			el.textContent = Math.max(0.5, Math.min(10, val)).toFixed(1);
 		}
 
+		function stepTitleLH(delta) {
+			const el = document.getElementById('titleLineHeightVal');
+			if (!el) return;
+			const val = Math.round((parseFloat(el.textContent) + delta) * 10) / 10;
+			el.textContent = Math.max(0.7, Math.min(3, val)).toFixed(1);
+		}
+
+		function toggleTitleFormat(which) {
+			const btn = document.getElementById(which === 'bold' ? 'titleBoldBtn' : 'titleItalicBtn');
+			if (btn) btn.classList.toggle('active');
+		}
+
 		function _restoreTitleRange() {
 			if (!_savedTitleRange) return null;
 			const sel = window.getSelection();
@@ -2524,9 +2622,12 @@ e.g.
 		}
 
 		function applyTitleSpan() {
-			const desktop = parseFloat(document.getElementById('titleFontDesktopVal').textContent) || 3;
-			const mobile  = parseFloat(document.getElementById('titleFontMobileVal').textContent)  || 1.5;
-			const editor  = document.getElementById('titleRichEditor');
+			const desktop  = parseFloat(document.getElementById('titleFontDesktopVal').textContent) || 3;
+			const mobile   = parseFloat(document.getElementById('titleFontMobileVal').textContent) || 1.5;
+			const lh       = parseFloat(document.getElementById('titleLineHeightVal')?.textContent) || 1.2;
+			const isBold   = document.getElementById('titleBoldBtn')?.classList.contains('active');
+			const isItalic = document.getElementById('titleItalicBtn')?.classList.contains('active');
+			const editor   = document.getElementById('titleRichEditor');
 			if (!editor) return;
 
 			// onmousedown=preventDefault keeps the selection alive through the click.
@@ -2540,7 +2641,7 @@ e.g.
 			if (!range && _savedTitleRange) {
 				editor.focus();
 				sel.removeAllRanges();
-				try { sel.addRange(_savedTitleRange); } catch(e) {}
+				try { sel.addRange(_savedTitleRange); } catch (e) { }
 				if (sel.rangeCount && !sel.isCollapsed) range = sel.getRangeAt(0);
 			}
 			if (!range) { showNotification('Select some text first', 'error'); return; }
@@ -2556,16 +2657,19 @@ e.g.
 				nd = nd.parentNode;
 			}
 
+			const _applyToSpan = function(s) {
+				s.style.setProperty('--fs-d', desktop + 'rem');
+				s.style.setProperty('--fs-m', mobile + 'rem');
+				s.style.removeProperty('font-size'); // migrate old format
+				s.style.fontWeight  = isBold   ? 'bold'   : '';
+				s.style.fontStyle   = isItalic ? 'italic' : '';
+				s.style.lineHeight  = lh;
+			};
 			if (existingSpan) {
-				// Update the existing span in-place
-				existingSpan.style.setProperty('--fs-d', desktop + 'rem');
-				existingSpan.style.setProperty('--fs-m', mobile + 'rem');
-				// Migrate old format: remove legacy font-size inline
-				existingSpan.style.removeProperty('font-size');
+				_applyToSpan(existingSpan);
 			} else {
 				const span = document.createElement('span');
-				span.style.setProperty('--fs-d', desktop + 'rem');
-				span.style.setProperty('--fs-m', mobile + 'rem');
+				_applyToSpan(span);
 				span.appendChild(range.extractContents());
 				range.insertNode(span);
 				range.setStartAfter(span);
@@ -2591,7 +2695,7 @@ e.g.
 
 		function clearTitleSpan() {
 			const editor = document.getElementById('titleRichEditor');
-			const sel    = window.getSelection();
+			const sel = window.getSelection();
 			if (sel && sel.rangeCount && !sel.isCollapsed) {
 				// Unwrap the title-span containing the selection start
 				let node = sel.getRangeAt(0).startContainer;
@@ -3002,7 +3106,7 @@ e.g.
 
 				// Write to archived node
 				await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`,
-					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(content) });
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) });
 
 				// Delete from dynamic_content
 				await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
@@ -3015,7 +3119,7 @@ e.g.
 				closeComponentEditor();
 				showNotification(`"${component}" archived successfully!`, 'success');
 				loadSlugContent();
-			} catch(e) {
+			} catch (e) {
 				showNotification('Error archiving component', 'error');
 			}
 		}
@@ -3028,7 +3132,7 @@ e.g.
 
 				// Write back to dynamic_content
 				await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
-					{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(content) });
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) });
 
 				// Delete from archived
 				await fetch(`${firebaseUrl}/archived/${currentSite}/${component}/${currentSlug}.json`,
@@ -3040,7 +3144,7 @@ e.g.
 
 				showNotification(`"${component}" restored successfully!`, 'success');
 				loadSlugContent();
-			} catch(e) {
+			} catch (e) {
 				showNotification('Error restoring component', 'error');
 			}
 		}
@@ -3052,7 +3156,7 @@ e.g.
 					{ method: 'DELETE' });
 				showNotification(`"${component}" permanently deleted.`, 'success');
 				loadSlugContent();
-			} catch(e) {
+			} catch (e) {
 				showNotification('Error deleting archived component', 'error');
 			}
 		}
@@ -3101,7 +3205,7 @@ e.g.
 						</div>`;
 					archivedGrid.appendChild(card);
 				});
-			} catch(e) {
+			} catch (e) {
 				archivedSection.style.display = 'none';
 			}
 		}
@@ -3194,10 +3298,10 @@ e.g.
 					.map(i => i.value.trim()).filter(v => v);
 				return {
 					avatar: block.querySelector('.review-avatar-input').value.trim() || DEFAULT_REVIEW_AVATAR,
-					name:   block.querySelector('.review-name-input').value.trim(),
-					date:   block.querySelector('.review-date-field').value.trim(),
-					stars:  parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
-					body:   block.querySelector('.review-body-field').value.trim(),
+					name: block.querySelector('.review-name-input').value.trim(),
+					date: block.querySelector('.review-date-field').value.trim(),
+					stars: parseInt(block.querySelector('.stars-selector').getAttribute('data-rating')) || 5,
+					body: block.querySelector('.review-body-field').value.trim(),
 					photos
 				};
 			});
@@ -3367,14 +3471,14 @@ e.g.
 					opt.textContent = label || key;
 					select.appendChild(opt);
 				});
-			} catch(e) { /* no systems yet */ }
+			} catch (e) { /* no systems yet */ }
 
 			// Pre-select current system (if any)
 			try {
 				const res = await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`);
 				const currentSystem = await res.json();
 				select.value = currentSystem || '';
-			} catch(e) { select.value = ''; }
+			} catch (e) { select.value = ''; }
 
 			document.getElementById('editDeleteSlugModal').style.display = 'flex';
 		}
@@ -3410,7 +3514,7 @@ e.g.
 						const val = contentData[component][currentSlug];
 						if (val === undefined) return;
 						await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${newSlug}.json`,
-							{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(val) });
+							{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(val) });
 						await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 							{ method: 'DELETE' });
 					});
@@ -3439,11 +3543,11 @@ e.g.
 				// ── 2. Save system mapping ──
 				if (system) {
 					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`,
-						{ method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(system) });
+						{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(system) });
 				} else {
 					// Delete old mapping — covers both old and new slug name
 					if (nameChanged) {
-						await fetch(`${firebaseUrl}/config/slug_systems/${rawName.replace(/[^a-z0-9-]/g,'-').replace(/-+/g,'-').replace(/^-|-$/g,'')}.json`,
+						await fetch(`${firebaseUrl}/config/slug_systems/${rawName.replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')}.json`,
 							{ method: 'DELETE' });
 					}
 					await fetch(`${firebaseUrl}/config/slug_systems/${currentSlug}.json`, { method: 'DELETE' });
@@ -3462,7 +3566,7 @@ e.g.
 				} else {
 					systemBadge.style.display = 'none';
 				}
-			} catch(e) {
+			} catch (e) {
 				showLoader(false);
 				showNotification('Error saving slug changes', 'error');
 			}
