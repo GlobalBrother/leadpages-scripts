@@ -17,8 +17,8 @@
 			text-align: center;
 		}
 		@media (max-width: 767px) {
-			#main-title h2 {
-				font-size: 1.7rem;
+			#main-title h2, h2, h2 span, h2 p {
+				font-size: 1.5rem;
 			}
 		}
 
