@@ -2493,9 +2493,8 @@ e.g.
 			}
 			try {
 				const span = document.createElement('span');
-				span.style.setProperty('--fs-d', desktop + 'rem');
-				span.style.setProperty('--fs-m', mobile  + 'rem');
-				span.style.setProperty('font-size', 'var(--fs-d)');
+				span.style.setProperty('--fs-m', mobile + 'rem');
+				span.style.setProperty('font-size', desktop + 'rem');
 				span.appendChild(range.extractContents());
 				range.insertNode(span);
 			} catch(e) {
