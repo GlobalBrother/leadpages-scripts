@@ -2529,6 +2529,7 @@ e.g.
 			`;
 			const editor = document.getElementById('titleRichEditor');
 			editor.innerHTML = content || '';
+			_normalizeTitleSpans(editor);
 			// Init steppers from first formatted span already in content
 			const _initSpan = editor.querySelector('span[style*="--fs-d"]');
 			if (_initSpan) {
@@ -2649,8 +2650,16 @@ e.g.
 			}
 			if (!range) { showNotification('Select some text first', 'error'); return; }
 
-			// If selection is inside an existing title-span, update sizes in-place
-			// (avoids nested spans).
+			const _applyToSpan = function(s) {
+				s.style.setProperty('--fs-d', desktop + 'rem');
+				s.style.setProperty('--fs-m', mobile + 'rem');
+				s.style.removeProperty('font-size'); // migrate old format
+				s.style.fontWeight  = isBold   ? 'bold'   : '';
+				s.style.fontStyle   = isItalic ? 'italic' : '';
+				s.style.lineHeight  = lh;
+			};
+
+			// Check if selection is entirely within ONE existing title-span
 			let ancestor = range.commonAncestorContainer;
 			if (ancestor.nodeType === 3) ancestor = ancestor.parentNode;
 			let existingSpan = null;
@@ -2660,26 +2669,31 @@ e.g.
 				nd = nd.parentNode;
 			}
 
-			const _applyToSpan = function(s) {
-				s.style.setProperty('--fs-d', desktop + 'rem');
-				s.style.setProperty('--fs-m', mobile + 'rem');
-				s.style.removeProperty('font-size'); // migrate old format
-				s.style.fontWeight  = isBold   ? 'bold'   : '';
-				s.style.fontStyle   = isItalic ? 'italic' : '';
-				s.style.lineHeight  = lh;
-			};
 			if (existingSpan) {
+				// Selection inside a single span — update in-place
 				_applyToSpan(existingSpan);
 			} else {
-				const span = document.createElement('span');
-				_applyToSpan(span);
-				span.appendChild(range.extractContents());
-				range.insertNode(span);
-				range.setStartAfter(span);
-				range.collapse(true);
-				sel.removeAllRanges();
-				sel.addRange(range);
+				// Selection may span multiple spans — update all that intersect the range
+				// (avoids creating a wrapping span that nests the existing ones)
+				const spansInRange = Array.from(editor.querySelectorAll('span'))
+					.filter(s => _isTitleSpan(s) && range.intersectsNode(s) && !s.querySelector('span'));
+				if (spansInRange.length > 0) {
+					spansInRange.forEach(_applyToSpan);
+				} else {
+					// No existing spans in selection — create a new one
+					const span = document.createElement('span');
+					_applyToSpan(span);
+					span.appendChild(range.extractContents());
+					range.insertNode(span);
+					range.setStartAfter(span);
+					range.collapse(true);
+					sel.removeAllRanges();
+					sel.addRange(range);
+				}
 			}
+
+			_normalizeTitleSpans(editor);
+
 			_savedTitleRange = null;
 			showNotification('Formatting applied', 'success');
 		}
@@ -2695,6 +2709,20 @@ e.g.
 			const parent = node.parentNode;
 			while (node.firstChild) parent.insertBefore(node.firstChild, node);
 			parent.removeChild(node);
+		}
+
+		function _normalizeTitleSpans(editor) {
+			// Unwrap any title-span that contains other spans (remove nesting)
+			let outer;
+			while ((outer = Array.from(editor.querySelectorAll('span')).find(
+				s => _isTitleSpan(s) && s.querySelector('span')
+			))) {
+				_unwrapNode(outer);
+			}
+			// Remove empty title-spans
+			Array.from(editor.querySelectorAll('span')).forEach(s => {
+				if (_isTitleSpan(s) && !s.textContent.trim()) s.remove();
+			});
 		}
 
 		function clearTitleSpan() {
@@ -2720,6 +2748,7 @@ e.g.
 		async function saveMainTitleContent(component) {
 			const editor = document.getElementById('titleRichEditor');
 			if (!editor) { showNotification('Editor not found', 'error'); return; }
+			_normalizeTitleSpans(editor);
 			// Normalize: &nbsp; between closing and opening spans is a line-break intent
 			let content = editor.innerHTML.trim()
 				.replace(/(<\/span>)\s*(?:&nbsp;|\u00a0)+\s*(<span)/gi, '$1<br>$2')
