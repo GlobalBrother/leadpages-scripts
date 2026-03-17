@@ -2670,11 +2670,53 @@ e.g.
 			}
 
 			if (existingSpan) {
-				// Selection inside a single span — update in-place
-				_applyToSpan(existingSpan);
+				// Check if selection covers the ENTIRE span content
+				const spanRange = document.createRange();
+				spanRange.selectNodeContents(existingSpan);
+				const coversAll =
+					range.compareBoundaryPoints(Range.START_TO_START, spanRange) <= 0 &&
+					range.compareBoundaryPoints(Range.END_TO_END, spanRange) >= 0;
+
+				if (coversAll) {
+					// Update entire span in-place
+					_applyToSpan(existingSpan);
+				} else {
+					// Partial selection — split span into before / selected / after
+					const oldStyle = existingSpan.getAttribute('style') || '';
+
+					const beforeRange = document.createRange();
+					beforeRange.setStart(existingSpan, 0);
+					beforeRange.setEnd(range.startContainer, range.startOffset);
+					const beforeFrag = beforeRange.cloneContents();
+
+					const afterRange = document.createRange();
+					afterRange.setStart(range.endContainer, range.endOffset);
+					afterRange.setEnd(existingSpan, existingSpan.childNodes.length);
+					const afterFrag = afterRange.cloneContents();
+
+					const selectedFrag = range.cloneContents();
+
+					const _hasContent = f => {
+						if (!f.childNodes.length) return false;
+						if (f.textContent.trim()) return true;
+						return Array.from(f.childNodes).some(n => n.nodeType === Node.ELEMENT_NODE);
+					};
+					const _buildSpan = (frag, applyNew) => {
+						const s = document.createElement('span');
+						if (applyNew) _applyToSpan(s); else s.setAttribute('style', oldStyle);
+						s.appendChild(frag);
+						return s;
+					};
+
+					const replacement = document.createDocumentFragment();
+					if (_hasContent(beforeFrag)) replacement.appendChild(_buildSpan(beforeFrag, false));
+					replacement.appendChild(_buildSpan(selectedFrag, true));
+					if (_hasContent(afterFrag)) replacement.appendChild(_buildSpan(afterFrag, false));
+
+					existingSpan.parentNode.replaceChild(replacement, existingSpan);
+				}
 			} else {
-				// Selection may span multiple spans — update all that intersect the range
-				// (avoids creating a wrapping span that nests the existing ones)
+				// Selection spans multiple spans — update all leaf title-spans that intersect
 				const spansInRange = Array.from(editor.querySelectorAll('span'))
 					.filter(s => _isTitleSpan(s) && range.intersectsNode(s) && !s.querySelector('span'));
 				if (spansInRange.length > 0) {
