@@ -178,6 +178,18 @@
 			// Detect slug now that we know all configured slugs (URL contains match)
 			const slug = getSlug(allSlugs);
 
+			// Pre-hide vsl-video component if we have a non-default slug to prevent flash
+			// This prevents showing default video before slug-specific video loads
+			if (slug !== 'default') {
+				const vslComponents = componentIds.filter(id => id.includes('vsl') || id.includes('video'));
+				vslComponents.forEach(function(id) {
+					const el = document.getElementById(id);
+					if (el) {
+						el.style.visibility = 'hidden';
+					}
+				});
+			}
+
 			// Prioritize system sections based on slug → system mapping
 			prioritizeSystemSections(slug, slugSystems);
 
@@ -296,16 +308,24 @@
 							nestedIframe.allowFullscreen = true;
 							element.appendChild(nestedIframe);
 						}
-					// Only update src if it's different to prevent flash on refresh
-					if (nestedIframe.src !== content) {
-						// Hide iframe briefly during src change to prevent flash
-						nestedIframe.style.opacity = '0';
+					// Normalize both URLs for comparison (remove trailing slash, query params differences)
+					const normalizeUrl = function(url) {
+						try {
+							const urlObj = new URL(url);
+							return urlObj.origin + urlObj.pathname.replace(/\/$/, '');
+						} catch (e) {
+							return url;
+						}
+					};
+
+					// Only update src if it's actually different
+					if (normalizeUrl(nestedIframe.src) !== normalizeUrl(content)) {
 						nestedIframe.src = content;
-						// Show iframe after new video loads
-						setTimeout(function() {
-							nestedIframe.style.transition = 'opacity 0.3s ease';
-							nestedIframe.style.opacity = '1';
-						}, 100);
+					}
+
+					// Re-show the component if it was hidden (for slug-specific video)
+					if (element.style.visibility === 'hidden') {
+						element.style.visibility = 'visible';
 					}
 					}
 				} else if (content.startsWith('<')) {
