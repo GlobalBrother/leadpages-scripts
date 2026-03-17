@@ -2712,14 +2712,25 @@ e.g.
 		}
 
 		function _normalizeTitleSpans(editor) {
-			// Unwrap any title-span that contains other spans (remove nesting)
+			// 1. Unwrap browser-generated spans (e.g. font-size:48px) that wrap title-spans
+			let browserWrap;
+			while ((browserWrap = Array.from(editor.querySelectorAll('span')).find(
+				s => !_isTitleSpan(s) && s.querySelector('span')
+			))) {
+				_unwrapNode(browserWrap);
+			}
+			// 2. Unwrap any title-span that still contains other spans (any remaining nesting)
 			let outer;
 			while ((outer = Array.from(editor.querySelectorAll('span')).find(
 				s => _isTitleSpan(s) && s.querySelector('span')
 			))) {
 				_unwrapNode(outer);
 			}
-			// Remove empty title-spans
+			// 3. Remove any remaining spans without --fs-d/--fs-m (stray browser spans)
+			Array.from(editor.querySelectorAll('span')).forEach(s => {
+				if (!_isTitleSpan(s)) _unwrapNode(s);
+			});
+			// 4. Remove empty title-spans
 			Array.from(editor.querySelectorAll('span')).forEach(s => {
 				if (_isTitleSpan(s) && !s.textContent.trim()) s.remove();
 			});
