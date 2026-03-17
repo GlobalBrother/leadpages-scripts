@@ -304,7 +304,13 @@
 						// Inject cleaned HTML
 						element.innerHTML = doc.body.innerHTML;
 
-						// Initialize toggle for customer-reviews component
+					// If this is our customer-reviews content, take over openModal so
+					// both old (openModal) and new (_icdOpenModal) onclick attrs work,
+					// and the native LeadPages modal handler is suppressed.
+					if (element.querySelector('.reviews-container')) {
+						window.openModal  = _icdOpenModal;
+						window.closeModal = _icdCloseModal;
+					}
 						var reviewsContainer = element.querySelector('.reviews-container[data-initial]');
 						if (reviewsContainer) {
 							var initialReviews = parseInt(reviewsContainer.getAttribute('data-initial')) || 5;
@@ -403,11 +409,11 @@
 	}
 
 	// Expose globally so onclick="_icdOpenModal(this)" works in our injected content
-	// openModal alias kept for content saved before the rename
+	// NOTE: window.openModal is intentionally NOT set here — it is set lazily only when
+	// we actually inject our customer-reviews HTML, so native LeadPages modals are
+	// never overridden on slugs where we haven't created a component.
 	window._icdOpenModal  = _icdOpenModal;
 	window._icdCloseModal = _icdCloseModal;
-	window.openModal      = _icdOpenModal;
-	window.closeModal     = _icdCloseModal;
 	// ─────────────────────────────────────────────────────────────────────────────
 
 	// ── System Section Prioritization ────────────────────────────────────────────
