@@ -24,7 +24,7 @@
 				font-size: 1.5rem;
 			}
 			/* override with mobile size for individually-styled spans */
-			[style*="--fs-m"] { font-size: var(--fs-m) !important; }
+			[style*="--fs-m"] { font-size: var(--fs-m); }
 			#main-title .main-title-wrapper {
 				padding: 8px;
 			}
