@@ -274,6 +274,13 @@
 						}
 					}
 				} else if (content.startsWith('<')) {
+					// Title component: content is rich HTML (spans with --fs-d/--fs-m) → inject into the h2
+					if (componentId === 'main-title') {
+						var titleH2 = element.querySelector('h2') || element;
+						titleH2.innerHTML = content;
+						return;
+					}
+
 					// Check if this is a bullets component (has .amish-container structure)
 					// If so, find the existing .amish-container in the element and replace only that,
 					// leaving the surrounding section (with <style> and <script>) intact.
@@ -357,7 +364,8 @@
 					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');
 					if (componentId === 'main-title') {
-						element.innerHTML = `<div class="main-title-wrapper"><h2>${contentWithBreaks}</h2></div>`;
+						var titleH2 = element.querySelector('h2') || element;
+						titleH2.innerHTML = contentWithBreaks;
 					} else {
 						element.innerHTML = contentWithBreaks;
 					}
