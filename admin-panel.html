@@ -2515,11 +2515,14 @@ e.g.
 					<label>↕</label>
 					<div class="stepper">
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleLH(-0.1)">−</button>
-						<span class="stepper-val" id="titleLineHeightVal">1.2</span>
+
 						<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="stepTitleLH(0.1)">+</button>
+						<span class="stepper-val" id="titleLineHeightVal">1.2</span>
 					</div>
-					<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="applyTitleSpan()">Apply to selection</button>
-					<button class="toolbar-btn toolbar-clear" onmousedown="event.preventDefault()" onclick="clearTitleSpan()">✕ Remove formatting</button>
+					<div>
+						<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="applyTitleSpan()">Apply to selection</button>
+						<button class="toolbar-btn toolbar-clear" onmousedown="event.preventDefault()" onclick="clearTitleSpan()">✕ Remove formatting</button>
+					</div>
 				</div>
 				<div id="titleRichEditor" class="title-rich-editable" contenteditable="true" spellcheck="false"></div>
 				<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Select text → adjust sizes with −/+ → click Apply.</div>
