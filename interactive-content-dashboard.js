@@ -15,7 +15,6 @@
 			line-height: 1.2;
 			margin: 0;
 			text-align: center;
-			padding: 15px;
 		}
 		@media (max-width: 767px) {
 			#main-title h2 {
