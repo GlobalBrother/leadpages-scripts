@@ -2701,7 +2701,6 @@ e.g.
 		function _isTitleSpan(node) {
 			if (!node || node.nodeType !== 1 || !node.style) return false;
 			if (node.style.getPropertyValue('--fs-d') && node.style.getPropertyValue('--fs-m')) return true;
-			if (node.style.fontSize && node.style.getPropertyValue('--fs-m')) return true;
 			return false;
 		}
 
@@ -2712,25 +2711,34 @@ e.g.
 		}
 
 		function _normalizeTitleSpans(editor) {
-			// 1. Unwrap browser-generated spans (e.g. font-size:48px) that wrap title-spans
-			let browserWrap;
-			while ((browserWrap = Array.from(editor.querySelectorAll('span')).find(
-				s => !_isTitleSpan(s) && s.querySelector('span')
-			))) {
-				_unwrapNode(browserWrap);
+			// 1. Unwrap all <div> elements the browser may have inserted
+			let div;
+			while ((div = editor.querySelector('div'))) {
+				// Replace div with a <br> + its children (mimic line-break)
+				const parent = div.parentNode;
+				const frag = document.createDocumentFragment();
+				// Only prepend <br> if div is not the very first child
+				if (div.previousSibling) frag.appendChild(document.createElement('br'));
+				while (div.firstChild) frag.appendChild(div.firstChild);
+				parent.replaceChild(frag, div);
 			}
-			// 2. Unwrap any title-span that still contains other spans (any remaining nesting)
+			// 2. Unwrap non-title spans (browser wrappers like font-size:48px)
+			let stray;
+			while ((stray = Array.from(editor.querySelectorAll('span')).find(s => !_isTitleSpan(s)))) {
+				_unwrapNode(stray);
+			}
+			// 3. Unwrap title-spans that still nest other spans
 			let outer;
 			while ((outer = Array.from(editor.querySelectorAll('span')).find(
 				s => _isTitleSpan(s) && s.querySelector('span')
 			))) {
 				_unwrapNode(outer);
 			}
-			// 3. Remove any remaining spans without --fs-d/--fs-m (stray browser spans)
+			// 4. Strip stray font-size from title-spans (browser adds it during editing)
 			Array.from(editor.querySelectorAll('span')).forEach(s => {
-				if (!_isTitleSpan(s)) _unwrapNode(s);
+				if (_isTitleSpan(s)) s.style.removeProperty('font-size');
 			});
-			// 4. Remove empty title-spans
+			// 5. Remove empty title-spans
 			Array.from(editor.querySelectorAll('span')).forEach(s => {
 				if (_isTitleSpan(s) && !s.textContent.trim()) s.remove();
 			});
