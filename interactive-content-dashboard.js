@@ -12,7 +12,7 @@
 		#main-title h2 {
 			font-family: "Noto Serif", sans-serif;
 			font-size: 3rem;
-			line-height: 1.2;
+			line-height: 1;
 			margin: 0;
 			text-align: center;
 		}
