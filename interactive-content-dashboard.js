@@ -296,7 +296,17 @@
 							nestedIframe.allowFullscreen = true;
 							element.appendChild(nestedIframe);
 						}
+					// Only update src if it's different to prevent flash on refresh
+					if (nestedIframe.src !== content) {
+						// Hide iframe briefly during src change to prevent flash
+						nestedIframe.style.opacity = '0';
 						nestedIframe.src = content;
+						// Show iframe after new video loads
+						setTimeout(function() {
+							nestedIframe.style.transition = 'opacity 0.3s ease';
+							nestedIframe.style.opacity = '1';
+						}, 100);
+					}
 					}
 				} else if (content.startsWith('<')) {
 					// Title component: content is rich HTML (spans with --fs-d/--fs-m) → inject into the h2
