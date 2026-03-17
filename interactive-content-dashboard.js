@@ -16,12 +16,19 @@
 			margin: 0;
 			text-align: center;
 		}
+		#main-title .main-title-wrapper {
+			padding: 17px;
+		}
+
 		@media (max-width: 767px) {
 			#main-title h2, h2, h2 span, h2 p {
 				font-size: 1.5rem;
 			}
 			/* override base mobile size for individually-styled spans */
 			[style*="--fs-m"] { font-size: var(--fs-m) !important; }
+			#main-title .main-title-wrapper {
+				padding: 8px;
+			}
 		}
 
 		/* customer-reviews component styles */
@@ -350,7 +357,7 @@
 					// It's plain text
 					const contentWithBreaks = content.replace(/\n/g, '<br>');
 					if (componentId === 'main-title') {
-						element.innerHTML = `<h2>${contentWithBreaks}</h2>`;
+						element.innerHTML = `<div class="main-title-wrapper"><h2>${contentWithBreaks}</h2></div>`;
 					} else {
 						element.innerHTML = contentWithBreaks;
 					}
