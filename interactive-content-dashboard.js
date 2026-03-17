@@ -20,6 +20,8 @@
 			#main-title h2, h2, h2 span, h2 p {
 				font-size: 1.5rem;
 			}
+			/* override base mobile size for individually-styled spans */
+			[style*="--fs-m"] { font-size: var(--fs-m) !important; }
 		}
 
 		/* customer-reviews component styles */

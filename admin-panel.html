@@ -734,6 +734,61 @@
 			white-space: nowrap;
 		}
 
+		.title-rich-editable {
+			min-height: 80px;
+			padding: 12px 14px;
+			border: 1.5px solid var(--border);
+			border-radius: 8px;
+			font-size: 13px;
+			font-family: 'Inter', sans-serif;
+			line-height: 1.6;
+			background: #fafafa;
+			color: var(--text-primary);
+			box-sizing: border-box;
+			outline: none;
+			cursor: text;
+			width: 100%;
+		}
+		.title-rich-editable:focus {
+			border-color: var(--primary);
+			background: #fff;
+		}
+		.title-toolbar {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			flex-wrap: wrap;
+			padding: 9px 12px;
+			background: #f9fafb;
+			border: 1.5px solid #e5e7eb;
+			border-radius: 8px;
+			margin-bottom: 10px;
+			font-size: 12px;
+			font-family: 'Inter', sans-serif;
+		}
+		.title-toolbar label { font-weight: 600; color: #6b7280; white-space: nowrap; }
+		.title-toolbar input[type="number"] {
+			width: 58px;
+			padding: 5px 8px;
+			border: 1.5px solid #e5e7eb;
+			border-radius: 6px;
+			font-size: 12px;
+			font-family: inherit;
+		}
+		.title-toolbar .toolbar-btn {
+			padding: 5px 12px;
+			border-radius: 6px;
+			font-size: 12px;
+			font-weight: 600;
+			cursor: pointer;
+			font-family: inherit;
+			border: 1.5px solid;
+		}
+		.title-toolbar .toolbar-apply { background: var(--primary); color: #fff; border-color: var(--primary); }
+		.title-toolbar .toolbar-apply:hover { opacity: 0.88; }
+		.title-toolbar .toolbar-clear { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+		.title-toolbar .toolbar-clear:hover { background: #fee2e2; }
+
 		.card-body {
 			padding: 16px 18px;
 			height: calc(100% - 117px);
@@ -1632,7 +1687,7 @@
 					<div class="modal-field">
 						<label>Component Name</label>
 						<input type="text" id="modalComponentName"
-							placeholder="e.g. title-interactive, vsl-video" />
+							placeholder="e.g. main-title, vsl-video" />
 					</div>
 				</div>
 				<div class="modal-footer">
@@ -2308,6 +2363,15 @@ e.g.
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
 					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
+			} else if (isTitleComponent(component)) {
+				const editorDiv = document.createElement('div');
+				body.appendChild(editorDiv);
+				renderMainTitleEditorInto(editorDiv, component, content);
+				footer.innerHTML = `
+					<button class="btn-save-card" onclick="saveMainTitleContent('${component}')">Save</button>
+					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
+					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
+					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 			} else {
 				body.innerHTML = `
 					<textarea id="content-${component}" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',monospace;resize:vertical;min-height:120px;color:var(--text-primary);background:#fafafa;transition:all 0.2s;line-height:1.6;box-sizing:border-box;">${escapeHtml(content)}</textarea>`;
@@ -2345,6 +2409,103 @@ e.g.
 		// Detect if a component name is a bullets-type component
 		function isBulletsComponent(name) {
 			return name.toLowerCase() === 'changing-bullets';
+		}
+
+		function isTitleComponent(name) {
+			const n = name.toLowerCase();
+			return n.includes('title') || n.includes('titlu');
+		}
+
+		function renderMainTitleEditorInto(targetEl, component, content) {
+			targetEl.innerHTML = `
+				<div class="title-toolbar">
+					<label>🖥 Desktop:</label>
+					<input type="number" id="titleFontDesktop" step="0.1" min="0.5" max="10" value="3"> rem
+					<label style="margin-left:6px;">📱 Mobile:</label>
+					<input type="number" id="titleFontMobile" step="0.1" min="0.5" max="10" value="1.5"> rem
+					<button class="toolbar-btn toolbar-apply" onclick="applyTitleSpan()">Apply to selection</button>
+					<button class="toolbar-btn toolbar-clear" onclick="clearTitleSpan()">✕ Remove formatting</button>
+				</div>
+				<div id="titleRichEditor" class="title-rich-editable" contenteditable="true" spellcheck="false"></div>
+				<div style="margin-top:8px;font-size:11px;color:#9ca3af;">Select text in the editor → set sizes → click Apply. Click ✕ to remove formatting from the span under the cursor (or all spans if nothing selected).</div>
+			`;
+			// Set innerHTML after render to avoid escaping issues
+			document.getElementById('titleRichEditor').innerHTML = content || '';
+		}
+
+		function applyTitleSpan() {
+			const desktop = parseFloat(document.getElementById('titleFontDesktop').value) || 3;
+			const mobile  = parseFloat(document.getElementById('titleFontMobile').value)  || 1.5;
+			const sel = window.getSelection();
+			if (!sel || !sel.rangeCount || sel.isCollapsed) {
+				showNotification('Select some text first', 'error'); return;
+			}
+			const range  = sel.getRangeAt(0);
+			const editor = document.getElementById('titleRichEditor');
+			if (!editor.contains(range.commonAncestorContainer)) {
+				showNotification('Select text inside the title editor', 'error'); return;
+			}
+			try {
+				const span = document.createElement('span');
+				span.style.setProperty('--fs-d', desktop + 'rem');
+				span.style.setProperty('--fs-m', mobile  + 'rem');
+				span.style.fontSize = 'var(--fs-d)';
+				span.appendChild(range.extractContents());
+				range.insertNode(span);
+			} catch(e) {
+				showNotification('Could not apply — try a simpler selection', 'error');
+			}
+			sel.removeAllRanges();
+		}
+
+		function clearTitleSpan() {
+			const editor = document.getElementById('titleRichEditor');
+			const sel    = window.getSelection();
+			if (sel && sel.rangeCount && !sel.isCollapsed) {
+				// Unwrap the styled span containing the selection start
+				let node = sel.getRangeAt(0).startContainer;
+				while (node && node !== editor) {
+					if (node.nodeType === 1 && node.style && node.style.getPropertyValue('--fs-d')) {
+						const parent = node.parentNode;
+						while (node.firstChild) parent.insertBefore(node.firstChild, node);
+						parent.removeChild(node);
+						break;
+					}
+					node = node.parentNode;
+				}
+			} else {
+				// Nothing selected — clear ALL styled spans
+				Array.from(editor.querySelectorAll('span')).forEach(span => {
+					if (span.style.getPropertyValue('--fs-d')) {
+						const parent = span.parentNode;
+						while (span.firstChild) parent.insertBefore(span.firstChild, span);
+						parent.removeChild(span);
+					}
+				});
+			}
+			sel && sel.removeAllRanges();
+		}
+
+		async function saveMainTitleContent(component) {
+			const editor = document.getElementById('titleRichEditor');
+			if (!editor) { showNotification('Editor not found', 'error'); return; }
+			const content = editor.innerHTML.trim();
+			try {
+				const response = await fetch(
+					`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+					{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
+				);
+				if (response.ok) {
+					showNotification('Saved successfully!', 'success');
+					if (!contentData[component]) contentData[component] = {};
+					contentData[component][currentSlug] = content;
+					_currentComponentsData[component] = content;
+					refreshPreviewCard(component);
+					closeComponentEditor();
+				} else throw new Error('Save failed');
+			} catch (error) {
+				showNotification('Error saving content', 'error');
+			}
 		}
 
 		// Parse existing HTML stored in Firebase → extract header + bullets array
