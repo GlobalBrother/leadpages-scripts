@@ -1742,6 +1742,10 @@
 							<span class="special-btn-icon">⭐</span>
 							Customer Reviews
 						</button>
+						<button class="modal-special-btn" onclick="modalSelectSpecial('2col-component')">
+							<span class="special-btn-icon">🖼</span>
+							2-Column
+						</button>
 					</div>
 					<div class="modal-field">
 						<label>Component Name</label>
@@ -1795,6 +1799,31 @@
 				<div class="modal-footer">
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSaveBullets()">Save</button>
+				</div>
+			</div>
+
+			<!-- STEP 2d: 2col image + text editor -->
+			<div id="modalStep2TwoCol" style="display:none;">
+				<div class="modal-header">
+					<h3>🖼 2Col Component</h3>
+					<button class="modal-close" onclick="closeAddComponentModal()">✕</button>
+				</div>
+				<div class="modal-body">
+					<div class="modal-field">
+						<label>Component: <span id="modalStep2TwoColCompName" style="color: var(--gold-dark);"></span></label>
+					</div>
+					<div class="modal-field">
+						<label>🖼 Image URL</label>
+						<input type="text" id="modal2ColImg" placeholder="https://..." />
+					</div>
+					<div class="modal-field">
+						<label>📝 Text (right column — HTML allowed: &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;br&gt;, &lt;span style&gt;)</label>
+						<textarea id="modal2ColText" rows="6" placeholder="&lt;p&gt;Your text here...&lt;/p&gt;" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
+					<button class="btn-save-card" onclick="modalSave2Col()">Save</button>
 				</div>
 			</div>
 
@@ -2347,6 +2376,18 @@ e.g.
 				previewHtml = `
 					<div class="card-preview-text">📝 ${escapeHtml(data.header || '—')}</div>
 					<div class="card-preview-chips">${chips}${more}</div>`;
+			} else if (is2ColComponent(component)) {
+				let imgSrc = '', textPreview = '';
+				try {
+					const d = JSON.parse(content);
+					imgSrc = d.image || '';
+					textPreview = stripHtml(d.text || '');
+				} catch(e) { textPreview = stripHtml(content); }
+				previewHtml = `
+					<div style="display:flex;gap:8px;align-items:flex-start;">
+						${imgSrc ? `<img src="${escapeHtml(imgSrc)}" style="width:60px;height:45px;object-fit:cover;border-radius:4px;flex-shrink:0;">` : '<div style="width:60px;height:45px;background:#eee;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;">🖼</div>'}
+						<div class="card-preview-text" style="flex:1;">${escapeHtml(textPreview.slice(0, 80) || '(empty)')}</div>
+					</div>`;
 			} else if (isTestimonialsComponent(component)) {
 				const parsed = parseTestimonialsHtml(content);
 				const reviews = parsed.reviews;
@@ -2417,6 +2458,15 @@ e.g.
 					<button class="btn-save-card" onclick="saveBulletsContent('${component}')">Save Bullets</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
 					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
+					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
+			} else if (is2ColComponent(component)) {
+				const editorDiv = document.createElement('div');
+				body.appendChild(editorDiv);
+				render2ColEditorInto(editorDiv, component, content);
+				footer.innerHTML = `
+					<button class="btn-save-card" onclick="save2ColContent('${component}')">Save</button>
+					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
+					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 			} else if (isTestimonialsComponent(component)) {
 				const editorDiv = document.createElement('div');
@@ -2932,6 +2982,146 @@ e.g.
 			return name.toLowerCase() === 'customer-reviews';
 		}
 
+		function is2ColComponent(name) {
+			return name.toLowerCase().includes('2col');
+		}
+
+		function render2ColEditorInto(targetEl, component, content) {
+			let imgVal = '', textVal = '';
+			try {
+				const d = JSON.parse(content);
+				imgVal = d.image || '';
+				textVal = d.text || '';
+			} catch(e) {}
+
+			targetEl.innerHTML = `
+				<div style="margin-bottom:14px;">
+					<label style="display:block;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">🖼 Image URL</label>
+					<input id="2col-img-${component}" type="text" placeholder="https://..." style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;color:var(--text-primary);background:#fafafa;box-sizing:border-box;">
+				</div>
+				<div>
+					<label style="display:block;font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">📝 Text (right column)</label>
+					<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;padding:8px 10px;background:#f3f4f6;border-radius:8px;">
+						<button class="toolbar-toggle-btn" id="2col-bold-btn" onmousedown="event.preventDefault()" onclick="_2colFormat('bold')"><b>B</b></button>
+						<button class="toolbar-toggle-btn" id="2col-italic-btn" onmousedown="event.preventDefault()" onclick="_2colFormat('italic')"><i>I</i></button>
+						<div style="display:flex;align-items:center;gap:4px;font-size:12px;">
+							<span style="color:#6b7280;">Size:</span>
+							<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="_2colStepFont(-1)">−</button>
+							<span id="2col-font-val" style="min-width:28px;text-align:center;font-weight:600;">16</span>px
+							<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="_2colStepFont(1)">+</button>
+						</div>
+						<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="_2colApplySpan()">Apply to selection</button>
+						<button class="toolbar-btn toolbar-clear" onmousedown="event.preventDefault()" onclick="_2colClearSpan()">✕ Remove</button>
+						<button class="toolbar-btn" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;" onmousedown="event.preventDefault()" onclick="_2colInsertParagraph()">+ Paragraph</button>
+					</div>
+					<div id="2col-text-${component}" class="title-rich-editable" contenteditable="true" spellcheck="false" style="min-height:140px;"></div>
+					<div style="margin-top:6px;font-size:11px;color:#9ca3af;">Select text → adjust options → Apply. Use "+ Paragraph" to add un paragraf nou.</div>
+				</div>
+			`;
+
+			document.getElementById('2col-img-' + component).value = imgVal;
+			const textEditor = document.getElementById('2col-text-' + component);
+			textEditor.innerHTML = textVal || '<p>Text here...</p>';
+
+			window._2colCurrentComponent = component;
+			window._2colSavedRange = null;
+			document.addEventListener('selectionchange', _2colTrackSelection);
+		}
+
+		function _2colTrackSelection() {
+			const sel = window.getSelection();
+			if (!sel || !sel.rangeCount) return;
+			const comp = window._2colCurrentComponent;
+			if (!comp) return;
+			const editor = document.getElementById('2col-text-' + comp);
+			if (!editor) return;
+			const r = sel.getRangeAt(0);
+			if (!editor.contains(r.commonAncestorContainer)) return;
+			if (!sel.isCollapsed) window._2colSavedRange = r.cloneRange();
+		}
+
+		function _2colStepFont(delta) {
+			const el = document.getElementById('2col-font-val');
+			if (!el) return;
+			let val = parseInt(el.textContent) || 16;
+			val = Math.max(8, Math.min(72, val + delta));
+			el.textContent = val;
+		}
+
+		function _2colFormat(cmd) {
+			const btn = document.getElementById('2col-' + cmd + '-btn');
+			if (btn) btn.classList.toggle('active');
+		}
+
+		function _2colApplySpan() {
+			const comp = window._2colCurrentComponent;
+			if (!comp) return;
+			const range = window._2colSavedRange;
+			if (!range || range.collapsed) { alert('Select some text first.'); return; }
+
+			const fontSize = document.getElementById('2col-font-val')?.textContent || '16';
+			const isBold = document.getElementById('2col-bold-btn')?.classList.contains('active');
+			const isItalic = document.getElementById('2col-italic-btn')?.classList.contains('active');
+
+			const span = document.createElement('span');
+			span.style.fontSize = fontSize + 'px';
+			if (isBold) span.style.fontWeight = 'bold';
+			if (isItalic) span.style.fontStyle = 'italic';
+
+			try {
+				range.surroundContents(span);
+			} catch(e) {
+				const frag = range.extractContents();
+				span.appendChild(frag);
+				range.insertNode(span);
+			}
+			window.getSelection().removeAllRanges();
+		}
+
+		function _2colClearSpan() {
+			const range = window._2colSavedRange;
+			if (!range || range.collapsed) { alert('Select some text first.'); return; }
+			const frag = range.extractContents();
+			const text = document.createTextNode(frag.textContent);
+			range.insertNode(text);
+		}
+
+		function _2colInsertParagraph() {
+			const comp = window._2colCurrentComponent;
+			if (!comp) return;
+			const editor = document.getElementById('2col-text-' + comp);
+			if (!editor) return;
+			const p = document.createElement('p');
+			p.innerHTML = 'New paragraph...';
+			editor.appendChild(p);
+		}
+
+		async function save2ColContent(component) {
+			const imgInput = document.getElementById('2col-img-' + component);
+			const textEditor = document.getElementById('2col-text-' + component);
+			if (!imgInput || !textEditor) return;
+
+			const content = JSON.stringify({
+				image: imgInput.value.trim(),
+				text: textEditor.innerHTML
+			});
+
+			const response = await fetch(
+				`${FIREBASE_URL}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+				{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
+			);
+			if (response.ok) {
+				if (!contentData[component]) contentData[component] = {};
+				contentData[component][currentSlug] = content;
+				_currentComponentsData[component] = content;
+				refreshPreviewCard(component);
+				closeComponentEditor();
+				document.removeEventListener('selectionchange', _2colTrackSelection);
+			} else {
+				alert('Save failed.');
+			}
+		}
+
 		function parseTestimonialsHtml(html) {
 			const tmp = document.createElement('div');
 			tmp.innerHTML = html;
@@ -3351,6 +3541,7 @@ e.g.
 
 			const isBullets = name === 'changing-bullets';
 			const isTestimonials = isTestimonialsComponent(name);
+			const is2Col = is2ColComponent(name);
 
 			document.getElementById('modalStep1').style.display = 'none';
 
@@ -3363,6 +3554,12 @@ e.g.
 				document.getElementById('modalReviewsInitialCount').value = 5;
 				modalAddReviewBlock();
 				document.getElementById('modalStep2Testimonials').style.display = 'block';
+			} else if (is2Col) {
+				document.getElementById('modalStep2TwoColCompName').textContent = name;
+				document.getElementById('modal2ColImg').value = '';
+				document.getElementById('modal2ColText').value = '';
+				document.getElementById('modalStep2TwoCol').style.display = 'block';
+				setTimeout(() => document.getElementById('modal2ColImg').focus(), 100);
 			} else {
 				document.getElementById('modalStep2CompName').textContent = name;
 				document.getElementById('modalStep2Simple').style.display = 'block';
@@ -3416,6 +3613,15 @@ e.g.
 			const name = document.getElementById('modalStep2CompName').textContent.trim();
 			const content = document.getElementById('modalSimpleContent').value;
 			if (!content) { showNotification('Please enter some content', 'error'); return; }
+			closeAddComponentModal();
+			await addNewComponent(name, content);
+		}
+
+		async function modalSave2Col() {
+			const name = document.getElementById('modalStep2TwoColCompName').textContent.trim();
+			const image = document.getElementById('modal2ColImg').value.trim();
+			const text = document.getElementById('modal2ColText').value.trim();
+			const content = JSON.stringify({ image, text });
 			closeAddComponentModal();
 			await addNewComponent(name, content);
 		}

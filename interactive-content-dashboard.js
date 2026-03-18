@@ -285,7 +285,25 @@
 				const content = componentData[slug];
 
 				// Detect content type and apply
-				if (content.startsWith('http://') || content.startsWith('https://')) {
+				if (typeof content === 'object' && content !== null) {
+					// Firebase returned already-parsed object
+					_inject2ColComponent(element, content);
+					return;
+				} else if (content.startsWith('{')) {
+					try {
+						const data = JSON.parse(content);
+						_inject2ColComponent(element, data);
+						return;
+					} catch(e) {
+						// Retry after sanitizing literal newlines (common when value typed directly in Firebase console)
+						try {
+							const sanitized = content.replace(/\r?\n/g, '\\n');
+							const data = JSON.parse(sanitized);
+							_inject2ColComponent(element, data);
+							return;
+						} catch(e2) { /* not valid JSON, fall through */ }
+					}
+				} else if (content.startsWith('http://') || content.startsWith('https://')) {
 					// It's a URL - probably for iframe/img/video
 					if (element.tagName === 'IFRAME' || element.tagName === 'VIDEO') {
 						element.src = content;
@@ -423,6 +441,47 @@
 				}
 			}
 		});
+	}
+
+	// Inject content into a 2-column component: replace image src (left) and text paragraphs (right)
+	// Data format in Firebase: {"image": "https://...", "text": "<p>...</p>"}
+	// Text supports: <br>, <strong>, <em>, inline style="font-size:..."
+	function _inject2ColComponent(element, data) {
+		if (data.image) {
+			const img = element.querySelector('.lp-image-react');
+			if (img) img.src = data.image;
+		}
+		if (data.text) {
+			const textContainer = element.querySelector('.lp-text-react');
+			if (textContainer) {
+				// Build new paragraph HTML from either HTML content or plain text
+				let newHtml;
+				if (data.text.trim().startsWith('<')) {
+					// Already HTML (saved from rich editor)
+					newHtml = data.text;
+				} else {
+					// Plain text: split on double newlines → <p> tags
+					newHtml = data.text
+						.split(/\n\n+/)
+						.map(function(p) { return '<p>' + p.replace(/\n/g, '<br>') + '</p>'; })
+						.join('');
+				}
+				// Replace only the <p> elements inside .lp-text-react, preserving wrapper structure
+				const existingPs = Array.from(textContainer.querySelectorAll('p'));
+				if (existingPs.length > 0) {
+					const tmp = document.createElement('div');
+					tmp.innerHTML = newHtml;
+					const insertTarget = existingPs[0];
+					const parent = insertTarget.parentNode;
+					Array.from(tmp.childNodes).forEach(function(node) {
+						parent.insertBefore(node.cloneNode(true), insertTarget);
+					});
+					existingPs.forEach(function(p) { p.parentNode.removeChild(p); });
+				} else {
+					textContainer.innerHTML = newHtml;
+				}
+			}
+		}
 	}
 
 	// Inject content into #main-title: write to the first h2, remove any extra h2 siblings
