@@ -448,29 +448,48 @@
 	// Text supports: <br>, <strong>, <em>, inline style="font-size:..."
 	function _inject2ColComponent(element, data) {
 		if (data.image) {
-			const img = element.querySelector('.lp-image-react');
-			if (img) {
-				// Set src immediately
-				img.src = data.image;
-				// Remove lazy-load attributes that could override our src after render
-				img.removeAttribute('data-src');
-				img.removeAttribute('data-lazy-src');
-				img.removeAttribute('srcset');
-				img.removeAttribute('data-srcset');
-				img.removeAttribute('loading');
-				// Also observe DOM for React re-hydration overwriting src
-				if (window.MutationObserver) {
-					const imgObs = new MutationObserver(function(mutations) {
-						mutations.forEach(function(m) {
-							if (m.attributeName === 'src' && img.src !== data.image) {
-								img.src = data.image;
+			var _applyImgSrc = function(imgEl) {
+				imgEl.src = data.image;
+				imgEl.removeAttribute('data-src');
+				imgEl.removeAttribute('data-lazy-src');
+				imgEl.removeAttribute('srcset');
+				imgEl.removeAttribute('data-srcset');
+				imgEl.removeAttribute('loading');
+			};
+
+			// Apply immediately if image already in DOM
+			var img = element.querySelector('.lp-image-react');
+			if (img) _applyImgSrc(img);
+
+			// Watch the whole component subtree:
+			// - childList: catches React replacing the img node entirely (or adding it late)
+			// - attributes on src: catches React overwriting the src attribute
+			if (window.MutationObserver) {
+				var imgObserver = new MutationObserver(function(mutations) {
+					mutations.forEach(function(m) {
+						if (m.type === 'childList') {
+							m.addedNodes.forEach(function(node) {
+								if (node.nodeType !== 1) return;
+								var found = (node.classList && node.classList.contains('lp-image-react'))
+									? node
+									: (node.querySelector ? node.querySelector('.lp-image-react') : null);
+								if (found) _applyImgSrc(found);
+							});
+						} else if (m.type === 'attributes') {
+							var t = m.target;
+							if (t.classList && t.classList.contains('lp-image-react') && t.getAttribute('src') !== data.image) {
+								t.src = data.image;
 							}
-						});
-						// Stop after 5 seconds (page fully loaded by then)
+						}
 					});
-					imgObs.observe(img, { attributes: true, attributeFilter: ['src'] });
-					setTimeout(function() { imgObs.disconnect(); }, 5000);
-				}
+				});
+				imgObserver.observe(element, {
+					subtree: true,
+					childList: true,
+					attributes: true,
+					attributeFilter: ['src']
+				});
+				setTimeout(function() { imgObserver.disconnect(); }, 5000);
 			}
 		}
 		if (data.text) {
