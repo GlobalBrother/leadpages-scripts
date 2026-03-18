@@ -453,13 +453,27 @@
 			element.setAttribute('data-icd-img', data.image);
 
 			var _applyImgSrc = function(imgEl) {
-				imgEl.src = data.image;
+				// ── Neutralize lazysizes BEFORE touching src ──────────────────────────
+				// lazysizes owns images with class="lazyload". If we just set src it will
+				// overwrite us when the image enters the viewport (IntersectionObserver).
+				// Removing "lazyload" and adding "lazyloaded" tells lazysizes:
+				//   "this image is already handled — skip it entirely".
+				imgEl.classList.remove('lazyload', 'lazyloading');
+				imgEl.classList.add('lazyloaded');
+
+				// Clear every lazy-src attribute lazysizes / LeadPages may consult
 				imgEl.removeAttribute('data-src');
 				imgEl.removeAttribute('data-lazy-src');
+				imgEl.removeAttribute('data-original');
 				imgEl.removeAttribute('srcset');
 				imgEl.removeAttribute('data-srcset');
-				imgEl.removeAttribute('loading');
-				// Mark the node itself so attribute-mutation handler can skip self-triggered changes
+				imgEl.removeAttribute('loading'); // remove native lazy loading too
+
+				// Set our src last, after all lazy machinery is disarmed
+				imgEl.src = data.image;
+
+				// Mark node so MutationObserver can distinguish our own setAttribute
+				// calls from external (React / lazysizes) mutations
 				imgEl.setAttribute('data-icd-set', '1');
 			};
 
@@ -511,17 +525,19 @@
 							});
 						} else if (m.type === 'attributes') {
 							var t = m.target;
-							// Only act when React (not us) changed the src away from our value
-							if (
-								t.classList && t.classList.contains('lp-image-react') &&
-								t.getAttribute('src') !== data.image &&
-								t.getAttribute('data-icd-set') !== '1'
-							) {
-								_applyImgSrc(t);
-							}
-							// After we set src, clear the guard flag so future React mutations are caught
+							if (!t.classList || !t.classList.contains('lp-image-react')) return;
+
+							// Skip mutations we triggered ourselves
 							if (t.getAttribute('data-icd-set') === '1') {
 								t.removeAttribute('data-icd-set');
+								return;
+							}
+
+							// lazysizes re-added "lazyload", or React reset src — re-apply
+							var srcWrong = t.getAttribute('src') !== data.image;
+							var lazyBack = t.classList.contains('lazyload');
+							if (srcWrong || lazyBack) {
+								_applyImgSrc(t);
 							}
 						}
 					});
@@ -561,7 +577,7 @@
 					subtree: true,
 					childList: true,
 					attributes: true,
-					attributeFilter: ['src', 'data-icd-set']
+					attributeFilter: ['src', 'class', 'data-icd-set']
 				});
 
 				// Hard-cap safety valve: never keep the observer alive longer than 30 s.
