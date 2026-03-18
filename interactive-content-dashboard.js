@@ -469,9 +469,7 @@
 				var old = container.querySelector('img[data-icd-overlay]');
 				if (old) old.parentNode.removeChild(old);
 
-				// Hide the LeadPages-owned img so it doesn't show through
 				var lpImg = container.querySelector('.lp-image-react');
-				if (lpImg) lpImg.style.visibility = 'hidden';
 
 				// Create our own img — plain, no lazyload class, no data-src
 				var ours = document.createElement('img');
@@ -479,29 +477,50 @@
 				ours.setAttribute('data-icd-overlay', '1');
 				ours.alt = lpImg ? (lpImg.alt || '') : '';
 
-				// Copy the width/border-radius style from the LP img so it looks identical
-				var lpStyle = lpImg ? window.getComputedStyle(lpImg) : null;
-				ours.style.cssText = [
-					'position:absolute',
-					'top:0', 'left:0',
-					'width:100%', 'height:100%',
-					'object-fit:' + (lpStyle ? lpStyle.objectFit || 'cover' : 'cover'),
-					'border-radius:' + (lpStyle ? lpStyle.borderRadius || '0' : '0'),
-					'display:block'
-				].join(';');
+				if (lpImg) {
+					// ── Sizing strategy ──────────────────────────────────────────────────
+					// LP sizes the image via inline style on the <img> itself (e.g.
+					// style="width:100%;max-width:1000px") and via a generated CSS class
+					// (e.g. .css-mdi99u { max-width:1500px; border-radius:12px }).
+					// The container <div> has NO explicit height, so position:absolute
+					// with height:100% would collapse to 0.
+					//
+					// Solution: copy the LP img's *computed* width + border-radius onto
+					// our node, insert it right after the LP img in the same flow, then
+					// hide the LP img with display:none (removes it from flow entirely so
+					// there's no gap / double-space). Our img naturally takes the same
+					// space because it inherits the same inline width style.
+					// ─────────────────────────────────────────────────────────────────────
+					var lpComputed = window.getComputedStyle(lpImg);
 
-				// The container must be position:relative so our absolute child works
-				var containerStyle = window.getComputedStyle(container);
-				if (containerStyle.position === 'static') {
-					container.style.position = 'relative';
+					// Replicate the inline style that LP set on its img (width, max-width)
+					ours.style.width      = lpImg.style.width      || '100%';
+					ours.style.maxWidth   = lpImg.style.maxWidth   || lpComputed.maxWidth || '';
+					ours.style.display    = 'block';
+					ours.style.borderRadius = lpComputed.borderRadius || '0';
+
+					// Hide LP img by removing it from flow (display:none), not just
+					// visibility:hidden — this prevents a blank gap above our overlay.
+					lpImg.style.setProperty('display', 'none', 'important');
+
+					// Insert our img directly after the LP img in the same parent
+					if (lpImg.nextSibling) {
+						container.insertBefore(ours, lpImg.nextSibling);
+					} else {
+						container.appendChild(ours);
+					}
+				} else {
+					// Fallback: no LP img found yet, just append
+					ours.style.width   = '100%';
+					ours.style.display = 'block';
+					container.appendChild(ours);
 				}
 
-				container.appendChild(ours);
 				return ours;
 			};
 
-			// Find the innermost container that holds the LP image widget
-			// (.css-1yltisf is the React wrapper div that sits around the <img>)
+			// imgContainer = the direct parent of .lp-image-react
+			// (the anonymous <div> that also holds the <style> emotion tag)
 			var lpImg = element.querySelector('.lp-image-react');
 			var imgContainer = lpImg
 				? (lpImg.parentElement || element)
@@ -516,14 +535,14 @@
 				var imgObserver = new MutationObserver(function(mutations) {
 					mutations.forEach(function(m) {
 						if (m.type !== 'childList') return;
-						// If React removed our overlay or replaced the LP img, rebuild
+						// If React removed our overlay, rebuild it
 						var overlayGone = !imgContainer.querySelector('img[data-icd-overlay]');
 						if (overlayGone) {
 							_buildOverlay(imgContainer);
 						} else {
-							// LP img may have been re-added — re-hide it
+							// LP img may have been re-inserted — re-hide it
 							var lp = imgContainer.querySelector('.lp-image-react');
-							if (lp) lp.style.visibility = 'hidden';
+							if (lp) lp.style.setProperty('display', 'none', 'important');
 						}
 					});
 				});
