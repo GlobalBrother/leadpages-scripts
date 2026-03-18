@@ -448,141 +448,95 @@
 	// Text supports: <br>, <strong>, <em>, inline style="font-size:..."
 	function _inject2ColComponent(element, data) {
 		if (data.image) {
-			// Stamp a sentinel on the element so we can always recover the intended src,
-			// even if the entire img node is replaced by React after the initial injection.
-			element.setAttribute('data-icd-img', data.image);
+			// ── Strategy: replace the LeadPages <img> with our own <img> overlay ────
+			// LeadPages/React owns the .lp-image-react node — it runs a responsive CDN
+			// resizer (src="null=w{N}") and lazysizes (.lazyload) that continuously
+			// overwrite src after every render and viewport event.
+			// Fighting those systems attribute-by-attribute is a losing battle on slow
+			// mobile connections where their cycles finish AFTER ours.
+			//
+			// Instead: hide the LeadPages img with CSS (visibility:hidden so layout is
+			// preserved), then INSERT a plain <img> of our own as an absolutely-
+			// positioned overlay that fills the same container. React never touches our
+			// node because it doesn't know it exists.
+			//
+			// A lightweight MutationObserver keeps watch only for the case where React
+			// replaces the entire container (childList), re-applying the overlay then.
+			// ─────────────────────────────────────────────────────────────────────────
 
-			var _applyImgSrc = function(imgEl) {
-				// ── Neutralize lazysizes BEFORE touching src ──────────────────────────
-				// lazysizes owns images with class="lazyload". If we just set src it will
-				// overwrite us when the image enters the viewport (IntersectionObserver).
-				// Removing "lazyload" and adding "lazyloaded" tells lazysizes:
-				//   "this image is already handled — skip it entirely".
-				imgEl.classList.remove('lazyload', 'lazyloading');
-				imgEl.classList.add('lazyloaded');
+			var _buildOverlay = function(container) {
+				// Remove any previous overlay we added
+				var old = container.querySelector('img[data-icd-overlay]');
+				if (old) old.parentNode.removeChild(old);
 
-				// Clear every lazy-src attribute lazysizes / LeadPages may consult
-				imgEl.removeAttribute('data-src');
-				imgEl.removeAttribute('data-lazy-src');
-				imgEl.removeAttribute('data-original');
-				imgEl.removeAttribute('srcset');
-				imgEl.removeAttribute('data-srcset');
-				imgEl.removeAttribute('loading'); // remove native lazy loading too
+				// Hide the LeadPages-owned img so it doesn't show through
+				var lpImg = container.querySelector('.lp-image-react');
+				if (lpImg) lpImg.style.visibility = 'hidden';
 
-				// Set our src last, after all lazy machinery is disarmed
-				imgEl.src = data.image;
+				// Create our own img — plain, no lazyload class, no data-src
+				var ours = document.createElement('img');
+				ours.src = data.image;
+				ours.setAttribute('data-icd-overlay', '1');
+				ours.alt = lpImg ? (lpImg.alt || '') : '';
 
-				// Mark node so MutationObserver can distinguish our own setAttribute
-				// calls from external (React / lazysizes) mutations
-				imgEl.setAttribute('data-icd-set', '1');
+				// Copy the width/border-radius style from the LP img so it looks identical
+				var lpStyle = lpImg ? window.getComputedStyle(lpImg) : null;
+				ours.style.cssText = [
+					'position:absolute',
+					'top:0', 'left:0',
+					'width:100%', 'height:100%',
+					'object-fit:' + (lpStyle ? lpStyle.objectFit || 'cover' : 'cover'),
+					'border-radius:' + (lpStyle ? lpStyle.borderRadius || '0' : '0'),
+					'display:block'
+				].join(';');
+
+				// The container must be position:relative so our absolute child works
+				var containerStyle = window.getComputedStyle(container);
+				if (containerStyle.position === 'static') {
+					container.style.position = 'relative';
+				}
+
+				container.appendChild(ours);
+				return ours;
 			};
 
-			// Apply immediately if image already in DOM
-			var img = element.querySelector('.lp-image-react');
-			if (img) _applyImgSrc(img);
+			// Find the innermost container that holds the LP image widget
+			// (.css-1yltisf is the React wrapper div that sits around the <img>)
+			var lpImg = element.querySelector('.lp-image-react');
+			var imgContainer = lpImg
+				? (lpImg.parentElement || element)
+				: element;
 
+			_buildOverlay(imgContainer);
+
+			// Watch only for React replacing the container's children (full re-render).
+			// We do NOT watch attribute mutations — we own a separate node so there's
+			// nothing for React to overwrite on ours.
 			if (window.MutationObserver) {
-				var _imgLoaded = false; // becomes true once our src has fired a load event
-				var _pageLoaded = document.readyState === 'complete';
-				var imgObserver;
-
-				// Track whether the page (and React hydration) is fully done.
-				// We only allow disconnect after BOTH conditions are true:
-				//   1. Our image src has loaded successfully (or errored — we tried)
-				//   2. The page 'load' event has already fired
-				var _maybeDisconnect = function() {
-					if (_imgLoaded && _pageLoaded) {
-						imgObserver.disconnect();
-					}
-				};
-
-				if (!_pageLoaded) {
-					window.addEventListener('load', function _onPageLoad() {
-						_pageLoaded = true;
-						window.removeEventListener('load', _onPageLoad);
-						// After page load, do a final check — React may have re-rendered during hydration
-						var finalImg = element.querySelector('.lp-image-react');
-						if (finalImg && finalImg.getAttribute('src') !== data.image) {
-							_applyImgSrc(finalImg);
-						}
-						_maybeDisconnect();
-					});
-				}
-
-				imgObserver = new MutationObserver(function(mutations) {
+				var imgObserver = new MutationObserver(function(mutations) {
 					mutations.forEach(function(m) {
-						if (m.type === 'childList') {
-							m.addedNodes.forEach(function(node) {
-								if (node.nodeType !== 1) return;
-								var found = (node.classList && node.classList.contains('lp-image-react'))
-									? node
-									: (node.querySelector ? node.querySelector('.lp-image-react') : null);
-								if (found) {
-									_applyImgSrc(found);
-									// Re-attach load/error listeners to the new node
-									_attachImgListeners(found);
-								}
-							});
-						} else if (m.type === 'attributes') {
-							var t = m.target;
-							if (!t.classList || !t.classList.contains('lp-image-react')) return;
-
-							// Skip mutations we triggered ourselves
-							if (t.getAttribute('data-icd-set') === '1') {
-								t.removeAttribute('data-icd-set');
-								return;
-							}
-
-							// lazysizes re-added "lazyload", or React reset src — re-apply
-							var srcWrong = t.getAttribute('src') !== data.image;
-							var lazyBack = t.classList.contains('lazyload');
-							if (srcWrong || lazyBack) {
-								_applyImgSrc(t);
-							}
+						if (m.type !== 'childList') return;
+						// If React removed our overlay or replaced the LP img, rebuild
+						var overlayGone = !imgContainer.querySelector('img[data-icd-overlay]');
+						if (overlayGone) {
+							_buildOverlay(imgContainer);
+						} else {
+							// LP img may have been re-added — re-hide it
+							var lp = imgContainer.querySelector('.lp-image-react');
+							if (lp) lp.style.visibility = 'hidden';
 						}
 					});
 				});
 
-				var _attachImgListeners = function(imgEl) {
-					var _onLoad = function() {
-						imgEl.removeEventListener('load', _onLoad);
-						imgEl.removeEventListener('error', _onError);
-						_imgLoaded = true;
-						_maybeDisconnect();
-					};
-					var _onError = function() {
-						imgEl.removeEventListener('load', _onLoad);
-						imgEl.removeEventListener('error', _onError);
-						_imgLoaded = true; // give up waiting — image failed, no point keeping observer
-						_maybeDisconnect();
-					};
-					imgEl.addEventListener('load', _onLoad);
-					imgEl.addEventListener('error', _onError);
-				};
+				imgObserver.observe(imgContainer, { childList: true, subtree: true });
 
-				// Attach load/error listeners to the initial img (if already present)
-				if (img) {
-					_attachImgListeners(img);
-					// If the src we just set is already cached the load event may never fire —
-					// detect this by checking .complete synchronously after a tick
-					setTimeout(function() {
-						if (img.complete && !_imgLoaded) {
-							_imgLoaded = true;
-							_maybeDisconnect();
-						}
-					}, 0);
+				// Disconnect 5 s after the page load event — React hydration is long done by then
+				var _disconnect = function() { imgObserver.disconnect(); };
+				if (document.readyState === 'complete') {
+					setTimeout(_disconnect, 5000);
+				} else {
+					window.addEventListener('load', function() { setTimeout(_disconnect, 5000); });
 				}
-
-				imgObserver.observe(element, {
-					subtree: true,
-					childList: true,
-					attributes: true,
-					attributeFilter: ['src', 'class', 'data-icd-set']
-				});
-
-				// Hard-cap safety valve: never keep the observer alive longer than 30 s.
-				// This handles edge cases where the load event never fires (e.g., hidden elements).
-				setTimeout(function() { imgObserver.disconnect(); }, 30000);
 			}
 		}
 		if (data.text) {
