@@ -448,6 +448,10 @@
 	// Text supports: <br>, <strong>, <em>, inline style="font-size:..."
 	function _inject2ColComponent(element, data) {
 		if (data.image) {
+			// Stamp a sentinel on the element so we can always recover the intended src,
+			// even if the entire img node is replaced by React after the initial injection.
+			element.setAttribute('data-icd-img', data.image);
+
 			var _applyImgSrc = function(imgEl) {
 				imgEl.src = data.image;
 				imgEl.removeAttribute('data-src');
@@ -455,17 +459,43 @@
 				imgEl.removeAttribute('srcset');
 				imgEl.removeAttribute('data-srcset');
 				imgEl.removeAttribute('loading');
+				// Mark the node itself so attribute-mutation handler can skip self-triggered changes
+				imgEl.setAttribute('data-icd-set', '1');
 			};
 
 			// Apply immediately if image already in DOM
 			var img = element.querySelector('.lp-image-react');
 			if (img) _applyImgSrc(img);
 
-			// Watch the whole component subtree:
-			// - childList: catches React replacing the img node entirely (or adding it late)
-			// - attributes on src: catches React overwriting the src attribute
 			if (window.MutationObserver) {
-				var imgObserver = new MutationObserver(function(mutations) {
+				var _imgLoaded = false; // becomes true once our src has fired a load event
+				var _pageLoaded = document.readyState === 'complete';
+				var imgObserver;
+
+				// Track whether the page (and React hydration) is fully done.
+				// We only allow disconnect after BOTH conditions are true:
+				//   1. Our image src has loaded successfully (or errored — we tried)
+				//   2. The page 'load' event has already fired
+				var _maybeDisconnect = function() {
+					if (_imgLoaded && _pageLoaded) {
+						imgObserver.disconnect();
+					}
+				};
+
+				if (!_pageLoaded) {
+					window.addEventListener('load', function _onPageLoad() {
+						_pageLoaded = true;
+						window.removeEventListener('load', _onPageLoad);
+						// After page load, do a final check — React may have re-rendered during hydration
+						var finalImg = element.querySelector('.lp-image-react');
+						if (finalImg && finalImg.getAttribute('src') !== data.image) {
+							_applyImgSrc(finalImg);
+						}
+						_maybeDisconnect();
+					});
+				}
+
+				imgObserver = new MutationObserver(function(mutations) {
 					mutations.forEach(function(m) {
 						if (m.type === 'childList') {
 							m.addedNodes.forEach(function(node) {
@@ -473,23 +503,70 @@
 								var found = (node.classList && node.classList.contains('lp-image-react'))
 									? node
 									: (node.querySelector ? node.querySelector('.lp-image-react') : null);
-								if (found) _applyImgSrc(found);
+								if (found) {
+									_applyImgSrc(found);
+									// Re-attach load/error listeners to the new node
+									_attachImgListeners(found);
+								}
 							});
 						} else if (m.type === 'attributes') {
 							var t = m.target;
-							if (t.classList && t.classList.contains('lp-image-react') && t.getAttribute('src') !== data.image) {
-								t.src = data.image;
+							// Only act when React (not us) changed the src away from our value
+							if (
+								t.classList && t.classList.contains('lp-image-react') &&
+								t.getAttribute('src') !== data.image &&
+								t.getAttribute('data-icd-set') !== '1'
+							) {
+								_applyImgSrc(t);
+							}
+							// After we set src, clear the guard flag so future React mutations are caught
+							if (t.getAttribute('data-icd-set') === '1') {
+								t.removeAttribute('data-icd-set');
 							}
 						}
 					});
 				});
+
+				var _attachImgListeners = function(imgEl) {
+					var _onLoad = function() {
+						imgEl.removeEventListener('load', _onLoad);
+						imgEl.removeEventListener('error', _onError);
+						_imgLoaded = true;
+						_maybeDisconnect();
+					};
+					var _onError = function() {
+						imgEl.removeEventListener('load', _onLoad);
+						imgEl.removeEventListener('error', _onError);
+						_imgLoaded = true; // give up waiting — image failed, no point keeping observer
+						_maybeDisconnect();
+					};
+					imgEl.addEventListener('load', _onLoad);
+					imgEl.addEventListener('error', _onError);
+				};
+
+				// Attach load/error listeners to the initial img (if already present)
+				if (img) {
+					_attachImgListeners(img);
+					// If the src we just set is already cached the load event may never fire —
+					// detect this by checking .complete synchronously after a tick
+					setTimeout(function() {
+						if (img.complete && !_imgLoaded) {
+							_imgLoaded = true;
+							_maybeDisconnect();
+						}
+					}, 0);
+				}
+
 				imgObserver.observe(element, {
 					subtree: true,
 					childList: true,
 					attributes: true,
-					attributeFilter: ['src']
+					attributeFilter: ['src', 'data-icd-set']
 				});
-				setTimeout(function() { imgObserver.disconnect(); }, 5000);
+
+				// Hard-cap safety valve: never keep the observer alive longer than 30 s.
+				// This handles edge cases where the load event never fires (e.g., hidden elements).
+				setTimeout(function() { imgObserver.disconnect(); }, 30000);
 			}
 		}
 		if (data.text) {
