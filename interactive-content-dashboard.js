@@ -562,6 +562,19 @@
 		activeSections.forEach(function(s) {
 			parent.insertBefore(s.section, anchor);
 		});
+
+		// Also move the matching tab button to first position in .apoth-rect-mosaic
+		const mosaics = document.querySelectorAll('[data-apoth-mosaic]');
+		mosaics.forEach(function(mosaic) {
+			const buttons = Array.from(mosaic.querySelectorAll('.apoth-item'));
+			const matchingBtn = buttons.find(function(btn) {
+				const text = (btn.dataset.targetText || btn.textContent).toLowerCase().trim();
+				return text.includes(systemKey.toLowerCase());
+			});
+			if (matchingBtn && mosaic.firstElementChild !== matchingBtn) {
+				mosaic.insertBefore(matchingBtn, mosaic.firstElementChild);
+			}
+		});
 	}
 	// ─────────────────────────────────────────────────────────────────────────────
 
