@@ -47,7 +47,6 @@
 
 		/* Video component styles - ensure proper sizing */
 		[id*="video"], [id*="vsl"] {
-			min-height: 315px;
 			width: 100%;
 			display: block !important;
 			position: relative;
