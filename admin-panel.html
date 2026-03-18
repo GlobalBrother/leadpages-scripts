@@ -750,6 +750,14 @@
 			width: 100%;
 		}
 
+		/* Ensure <p> tags in 2col rich editor have normal block spacing */
+		.title-rich-editable p {
+			margin: 0 0 0.5em 0;
+		}
+		.title-rich-editable p:last-child {
+			margin-bottom: 0;
+		}
+
 		.title-rich-editable:focus {
 			border-color: var(--primary);
 			background: #fff;
@@ -834,14 +842,61 @@
 			background: #fee2e2;
 		}
 		.title-toolbar-sep { width:1px; height:20px; background:#e5e7eb; margin:0 4px; flex-shrink:0; }
-		.title-toolbar .toolbar-toggle-btn {
+
+		/* Global toolbar styles (apply outside .title-toolbar too, e.g. 2col editor) */
+		.stepper-btn {
+			width: 24px;
+			height: 24px;
+			border-radius: 5px;
+			border: 1.5px solid #e5e7eb;
+			background: #fff;
+			font-size: 14px;
+			font-weight: 700;
+			line-height: 1;
+			cursor: pointer;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			color: var(--text-primary);
+			padding: 0;
+			font-family: inherit;
+		}
+		.stepper-btn:hover { background: #f3f4f6; }
+
+		.toolbar-btn {
+			padding: 4px 10px;
+			border-radius: 6px;
+			font-size: 12px;
+			font-weight: 600;
+			cursor: pointer;
+			font-family: inherit;
+			border: 1.5px solid;
+			height: 28px;
+		}
+		.toolbar-btn.toolbar-apply {
+			background: #d1fae5;
+			color: #065f46;
+			border-color: #6ee7b7;
+		}
+		.toolbar-btn.toolbar-apply:hover { background: #a7f3d0; }
+		.toolbar-btn.toolbar-clear {
+			background: #fef2f2;
+			color: #dc2626;
+			border-color: #fecaca;
+		}
+		.toolbar-btn.toolbar-clear:hover { background: #fee2e2; }
+
+		.title-toolbar .toolbar-toggle-btn,
+		.toolbar-toggle-btn {
 			width:28px; height:24px; border-radius:5px; border:1.5px solid #e5e7eb;
 			background:#fff; font-size:13px; cursor:pointer;
 			display:inline-flex; align-items:center; justify-content:center;
 			color:var(--text-primary); font-family:serif; font-weight:700; padding:0;
 		}
-		.title-toolbar .toolbar-toggle-btn:hover:not(.active) { background:#f3f4f6; }
-		.title-toolbar .toolbar-toggle-btn.active { background:#1a1d24; color:#fff; border-color:#1a1d24; }
+		.title-toolbar .toolbar-toggle-btn:hover:not(.active),
+		.toolbar-toggle-btn:hover:not(.active) { background:#f3f4f6; }
+		.title-toolbar .toolbar-toggle-btn.active,
+		.toolbar-toggle-btn.active { background:#1a1d24; color:#fff; border-color:#1a1d24; }
 
 		/* preview font sizes + bold/italic/lh in the title rich editor */
 		.title-rich-editable [style*="--fs-d"] {
@@ -3021,31 +3076,25 @@ e.g.
 
 			document.getElementById('2col-img-' + component).value = imgVal;
 			const textEditor = document.getElementById('2col-text-' + component);
-			textEditor.innerHTML = textVal || '<p>Text here...</p>';
+			// Normalize loaded content: ensure all text is inside <p> tags
+			const initTmp = document.createElement('div');
+			initTmp.innerHTML = textVal || '<p>Text here...</p>';
+			Array.from(initTmp.childNodes).forEach(function(node) {
+				if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+					const p = document.createElement('p');
+					initTmp.insertBefore(p, node);
+					p.appendChild(node);
+				}
+			});
+			textEditor.innerHTML = initTmp.innerHTML;
 
 			window._2colCurrentComponent = component;
 			window._2colSavedRange = null;
 			document.addEventListener('selectionchange', _2colTrackSelection);
 
-			// Force Enter key to insert <p> instead of <div>
-			textEditor.addEventListener('keydown', function(e) {
-				if (e.key !== 'Enter' || e.shiftKey) return;
-				e.preventDefault();
-				const sel = window.getSelection();
-				if (!sel || !sel.rangeCount) return;
-				const range = sel.getRangeAt(0);
-				range.deleteContents();
-
-				const p = document.createElement('p');
-				p.innerHTML = '<br>';
-				range.insertNode(p);
-
-				// Move caret inside new <p>
-				const newRange = document.createRange();
-				newRange.setStart(p, 0);
-				newRange.collapse(true);
-				sel.removeAllRanges();
-				sel.addRange(newRange);
+			// Force browser to use <p> as block separator (works reliably across Chrome/Firefox)
+			textEditor.addEventListener('focus', function() {
+				document.execCommand('defaultParagraphSeparator', false, 'p');
 			});
 		}
 
@@ -3123,9 +3172,30 @@ e.g.
 			const textEditor = document.getElementById('2col-text-' + component);
 			if (!imgInput || !textEditor) return;
 
+			// Normalize HTML with DOM: wrap loose text nodes in <p>, remove trailing empty <p>
+			const tmp = document.createElement('div');
+			tmp.innerHTML = textEditor.innerHTML;
+
+			// Wrap direct child text nodes (bare text not inside any block) into <p>
+			Array.from(tmp.childNodes).forEach(function(node) {
+				if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+					const p = document.createElement('p');
+					tmp.insertBefore(p, node);
+					p.appendChild(node);
+				}
+			});
+
+			// Remove trailing empty <p> tags (empty or containing only <br> variants)
+			const allPs = Array.from(tmp.querySelectorAll('p'));
+			for (let i = allPs.length - 1; i >= 0; i--) {
+				const inner = allPs[i].innerHTML.replace(/<br[^>]*>/gi, '').trim();
+				if (!inner) allPs[i].parentNode.removeChild(allPs[i]);
+				else break;
+			}
+
 			const content = JSON.stringify({
 				image: imgInput.value.trim(),
-				text: textEditor.innerHTML
+				text: tmp.innerHTML.trim()
 			});
 
 			const response = await fetch(

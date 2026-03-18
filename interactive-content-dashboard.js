@@ -449,7 +449,29 @@
 	function _inject2ColComponent(element, data) {
 		if (data.image) {
 			const img = element.querySelector('.lp-image-react');
-			if (img) img.src = data.image;
+			if (img) {
+				// Set src immediately
+				img.src = data.image;
+				// Remove lazy-load attributes that could override our src after render
+				img.removeAttribute('data-src');
+				img.removeAttribute('data-lazy-src');
+				img.removeAttribute('srcset');
+				img.removeAttribute('data-srcset');
+				img.removeAttribute('loading');
+				// Also observe DOM for React re-hydration overwriting src
+				if (window.MutationObserver) {
+					const imgObs = new MutationObserver(function(mutations) {
+						mutations.forEach(function(m) {
+							if (m.attributeName === 'src' && img.src !== data.image) {
+								img.src = data.image;
+							}
+						});
+						// Stop after 5 seconds (page fully loaded by then)
+					});
+					imgObs.observe(img, { attributes: true, attributeFilter: ['src'] });
+					setTimeout(function() { imgObs.disconnect(); }, 5000);
+				}
+			}
 		}
 		if (data.text) {
 			const textContainer = element.querySelector('.lp-text-react');
