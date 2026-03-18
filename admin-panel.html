@@ -3026,6 +3026,27 @@ e.g.
 			window._2colCurrentComponent = component;
 			window._2colSavedRange = null;
 			document.addEventListener('selectionchange', _2colTrackSelection);
+
+			// Force Enter key to insert <p> instead of <div>
+			textEditor.addEventListener('keydown', function(e) {
+				if (e.key !== 'Enter' || e.shiftKey) return;
+				e.preventDefault();
+				const sel = window.getSelection();
+				if (!sel || !sel.rangeCount) return;
+				const range = sel.getRangeAt(0);
+				range.deleteContents();
+
+				const p = document.createElement('p');
+				p.innerHTML = '<br>';
+				range.insertNode(p);
+
+				// Move caret inside new <p>
+				const newRange = document.createRange();
+				newRange.setStart(p, 0);
+				newRange.collapse(true);
+				sel.removeAllRanges();
+				sel.addRange(newRange);
+			});
 		}
 
 		function _2colTrackSelection() {
@@ -3043,9 +3064,10 @@ e.g.
 		function _2colStepFont(delta) {
 			const el = document.getElementById('2col-font-val');
 			if (!el) return;
-			let val = parseInt(el.textContent) || 16;
-			val = Math.max(8, Math.min(72, val + delta));
-			el.textContent = val;
+			let val = parseFloat(el.textContent) || 1.0;
+			val = Math.round((val + delta) * 10) / 10;
+			val = Math.max(0.5, Math.min(6.0, val));
+			el.textContent = val.toFixed(1);
 		}
 
 		function _2colFormat(cmd) {
@@ -3059,12 +3081,12 @@ e.g.
 			const range = window._2colSavedRange;
 			if (!range || range.collapsed) { alert('Select some text first.'); return; }
 
-			const fontSize = document.getElementById('2col-font-val')?.textContent || '16';
+			const fontSize = document.getElementById('2col-font-val')?.textContent || '1.0';
 			const isBold = document.getElementById('2col-bold-btn')?.classList.contains('active');
 			const isItalic = document.getElementById('2col-italic-btn')?.classList.contains('active');
 
 			const span = document.createElement('span');
-			span.style.fontSize = fontSize + 'px';
+			span.style.fontSize = fontSize + 'rem';
 			if (isBold) span.style.fontWeight = 'bold';
 			if (isItalic) span.style.fontStyle = 'italic';
 
