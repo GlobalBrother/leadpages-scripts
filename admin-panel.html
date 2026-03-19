@@ -1760,6 +1760,198 @@
 			border-color: #9ca3af;
 			color: var(--text-primary);
 		}
+
+		/* ============================================
+		   MOBILE SIDEBAR OVERLAY
+		   ============================================ */
+		.sidebar-mobile-overlay {
+			display: none;
+			position: fixed;
+			inset: 0;
+			background: rgba(0, 0, 0, 0.45);
+			z-index: 55;
+		}
+
+		.sidebar-mobile-overlay.show {
+			display: block;
+		}
+
+		/* HAMBURGER BUTTON (topbar, hidden on desktop) */
+		.topbar-hamburger {
+			display: none;
+			width: 36px;
+			height: 36px;
+			flex-shrink: 0;
+			border: 1px solid var(--border);
+			background: #f9fafb;
+			border-radius: 8px;
+			font-size: 17px;
+			cursor: pointer;
+			align-items: center;
+			justify-content: center;
+			color: var(--text-primary);
+			padding: 0;
+		}
+
+		.topbar-hamburger:hover {
+			background: #f3f4f6;
+		}
+
+		/* ============================================
+		   RESPONSIVE BREAKPOINTS
+		   ============================================ */
+
+		/* Tablet + mobile: hide static sidebar toggle, slide sidebar out */
+		@media (max-width: 900px) {
+			.sidebar {
+				transform: translateX(-100%);
+				transition: transform 0.25s ease, width 0.25s ease;
+				z-index: 60;
+			}
+
+			.sidebar.mobile-open {
+				transform: translateX(0);
+				box-shadow: 6px 0 40px rgba(0, 0, 0, 0.3);
+			}
+
+			/* On mobile, the "collapsed" icon-only mode doesn't make sense — keep full width */
+			.sidebar.collapsed {
+				width: 300px;
+			}
+
+			.sidebar.collapsed .brand-text,
+			.sidebar.collapsed .sidebar-section,
+			.sidebar.collapsed .sidebar-nav-label,
+			.sidebar.collapsed .sidebar-text-label {
+				display: revert;
+			}
+
+			.sidebar.collapsed .sidebar-brand { padding: 22px 18px 18px; display: block; justify-content: unset; }
+			.sidebar.collapsed .brand-logo { justify-content: flex-start; }
+			.sidebar.collapsed .brand-icon { width: 80px; height: 80px; }
+			.sidebar.collapsed .sidebar-actions { padding: 0 10px; align-items: stretch; }
+			.sidebar.collapsed .sidebar-btn { justify-content: flex-start; padding: 9px 10px; gap: 10px; }
+			.sidebar.collapsed .sidebar-footer { padding: 14px 10px; }
+			.sidebar.collapsed .sidebar-refresh-btn { gap: 8px; }
+
+			/* Sidebar toggle button (‹/›) is irrelevant on mobile */
+			.sidebar-toggle-btn { display: none !important; }
+
+			/* Show hamburger */
+			.topbar-hamburger { display: flex; }
+
+			/* Main content always takes full width */
+			.main-content,
+			.app-layout.sidebar-collapsed .main-content {
+				margin-left: 0 !important;
+				width: 100% !important;
+			}
+		}
+
+		@media (max-width: 768px) {
+			/* Topbar */
+			.topbar {
+				padding: 10px 14px;
+				gap: 8px;
+			}
+
+			/* Page body */
+			.page-body {
+				padding: 14px 12px;
+			}
+
+			/* Auth card */
+			.auth-card {
+				padding: 32px 20px;
+				border-radius: 14px;
+			}
+
+			/* Slug meta bar */
+			.slug-meta-bar {
+				flex-wrap: wrap;
+				padding: 10px 13px;
+				font-size: 13px;
+				gap: 6px;
+			}
+
+			.meta-count {
+				margin-left: 0;
+			}
+
+			/* Content grid: single column */
+			.content-grid,
+			.archived-grid {
+				grid-template-columns: 1fr;
+				gap: 10px;
+			}
+
+			/* Breadcrumb + status */
+			.topbar-breadcrumb { font-size: 12px; }
+			.topbar-status { font-size: 11px; padding: 4px 10px; }
+			.breadcrumb-item.active { font-size: 12px; }
+
+			/* Modals: bottom sheet */
+			.modal-overlay {
+				padding: 0;
+				align-items: flex-end;
+			}
+
+			.modal-box {
+				border-radius: 18px 18px 0 0;
+				max-height: 92vh;
+				max-width: 100%;
+			}
+
+			.modal-header { padding: 14px 16px 12px; }
+			.modal-body { padding: 14px 16px; }
+			.modal-footer { padding: 12px 16px; gap: 8px; }
+
+			/* Component editor modal: full-height bottom sheet */
+			#componentEditorModal {
+				padding: 0;
+				align-items: flex-end;
+			}
+
+			.comp-editor-box {
+				border-radius: 18px 18px 0 0;
+				max-height: 95vh;
+				max-width: 100%;
+			}
+
+			.comp-editor-header { padding: 14px 16px 12px; }
+			.comp-editor-body { padding: 14px 16px; }
+			.comp-editor-footer { padding: 12px 16px; }
+
+			/* Review two-col → single column */
+			.review-field-row.two-col {
+				grid-template-columns: 1fr;
+				gap: 8px;
+			}
+
+			/* Component name label size */
+			.component-label { font-size: 16px; }
+
+			/* Special components buttons: wrap nicely */
+			.modal-special-components {
+				flex-wrap: wrap;
+			}
+
+			.modal-special-btn {
+				min-width: 0;
+				flex: 1 1 calc(50% - 4px);
+			}
+
+			/* 2col toolbar: allow wrap at smaller sizes */
+			.title-toolbar {
+				gap: 6px;
+			}
+		}
+
+		@media (max-width: 400px) {
+			.topbar-breadcrumb { font-size: 11px; }
+			.topbar-status { display: none; }
+			.auth-card { padding: 28px 16px; }
+		}
 	</style>
 </head>
 
@@ -2075,6 +2267,9 @@ e.g.
 		</div>
 	</div>
 
+	<!-- MOBILE SIDEBAR BACKDROP -->
+	<div id="sidebarMobileOverlay" class="sidebar-mobile-overlay" onclick="closeMobileSidebar()"></div>
+
 	<!-- APP LAYOUT -->
 	<div id="appLayout" class="app-layout" style="display:none;">
 
@@ -2146,6 +2341,7 @@ e.g.
 		<!-- MAIN CONTENT -->
 		<main class="main-content">
 			<div class="topbar">
+				<button class="topbar-hamburger" id="topbarHamburger" onclick="toggleMobileSidebar()" aria-label="Toggle menu">☰</button>
 				<div class="topbar-breadcrumb">
 					<span class="breadcrumb-item" id="breadcrumbSite">All sites</span>
 					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>
@@ -2301,6 +2497,7 @@ e.g.
 		}
 
 		async function loadSiteContent() {
+			if (window.innerWidth <= 900) closeMobileSidebar();
 			const site = document.getElementById('siteSelect').value;
 			if (!site) return;
 			currentSite = site;
@@ -2347,6 +2544,7 @@ e.g.
 		}
 
 		function loadSlugContent() {
+			if (window.innerWidth <= 900) closeMobileSidebar();
 			const slug = document.getElementById('slugSelect').value;
 			if (!slug) return;
 			currentSlug = slug;
@@ -4129,6 +4327,8 @@ e.g.
 		}
 
 		function toggleSidebar() {
+			// On mobile, use drawer behaviour
+			if (window.innerWidth <= 900) { toggleMobileSidebar(); return; }
 			const sidebar = document.querySelector('.sidebar');
 			const layout = document.getElementById('appLayout');
 			const btn = document.getElementById('sidebarToggleBtn');
@@ -4137,6 +4337,20 @@ e.g.
 			layout.classList.toggle('sidebar-collapsed', !isCollapsed);
 			if (btn) btn.textContent = isCollapsed ? '‹' : '›';
 			localStorage.setItem('sidebar_collapsed', isCollapsed ? '0' : '1');
+		}
+
+		function toggleMobileSidebar() {
+			const sidebar = document.querySelector('.sidebar');
+			const overlay = document.getElementById('sidebarMobileOverlay');
+			const isOpen = sidebar.classList.contains('mobile-open');
+			sidebar.classList.toggle('mobile-open', !isOpen);
+			if (overlay) overlay.classList.toggle('show', !isOpen);
+		}
+
+		function closeMobileSidebar() {
+			document.querySelector('.sidebar').classList.remove('mobile-open');
+			const overlay = document.getElementById('sidebarMobileOverlay');
+			if (overlay) overlay.classList.remove('show');
 		}
 
 		function initSidebarState() {
