@@ -351,6 +351,11 @@
 			margin-left: 80px;
 			width: calc(100% - 80px);
 		}
+		@media(max-width: 600px) {
+			.app-layout.sidebar-collapsed .main-content {
+			width: calc(100% - 50px);
+		}
+		}
 
 		.sidebar.collapsed .brand-text,
 		.sidebar.collapsed .sidebar-section,
@@ -417,6 +422,8 @@
 			position: sticky;
 			top: 0;
 			z-index: 40;
+			flex-wrap: wrap;
+			gap: 7px;
 		}
 
 		.topbar-breadcrumb {
@@ -424,6 +431,7 @@
 			align-items: center;
 			gap: 8px;
 			font-size: 13px;
+			flex-wrap: wrap;
 		}
 
 		.breadcrumb-item {
@@ -1707,7 +1715,9 @@
 			border-color: var(--gold);
 			box-shadow: 0 0 0 3px rgba(201, 162, 39, 0.1);
 		}
-
+		#slugMetaBar {
+			flex-wrap: wrap;
+		}
 		.code-hint {
 			display: flex;
 			align-items: flex-start;
