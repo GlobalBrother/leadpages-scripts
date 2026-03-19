@@ -83,6 +83,7 @@
 					</div>
 				</div>
 				<div class="modal-footer">
+					<button class="btn-cancel btn-back" onclick="modalBackToStep1()">← Back</button>
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSaveSimple()">Save</button>
 				</div>
@@ -109,6 +110,7 @@
 					</div>
 				</div>
 				<div class="modal-footer">
+					<button class="btn-cancel btn-back" onclick="modalBackToStep1()">← Back</button>
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSaveBullets()">Save</button>
 				</div>
@@ -129,11 +131,14 @@
 						<input type="text" id="modal2ColImg" placeholder="https://..." />
 					</div>
 					<div class="modal-field">
-						<label>📝 Text (right column — HTML allowed: &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;br&gt;, &lt;span style&gt;)</label>
-						<textarea id="modal2ColText" rows="6" placeholder="&lt;p&gt;Your text here...&lt;/p&gt;" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
+						<label>📝 Text (right column — HTML allowed: &lt;p&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;br&gt;, &lt;span
+							style&gt;)</label>
+						<textarea id="modal2ColText" rows="6" placeholder="&lt;p&gt;Your text here...&lt;/p&gt;"
+							style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box;"></textarea>
 					</div>
 				</div>
 				<div class="modal-footer">
+					<button class="btn-cancel btn-back" onclick="modalBackToStep1()">← Back</button>
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSave2Col()">Save</button>
 				</div>
@@ -161,6 +166,7 @@
 					</button>
 				</div>
 				<div class="modal-footer">
+					<button class="btn-cancel btn-back" onclick="modalBackToStep1()">← Back</button>
 					<button class="btn-cancel" onclick="closeAddComponentModal()">Cancel</button>
 					<button class="btn-save-card" onclick="modalSaveTestimonials()">Save Reviews</button>
 				</div>
@@ -396,7 +402,8 @@ e.g.
 		<!-- MAIN CONTENT -->
 		<main class="main-content">
 			<div class="topbar">
-				<button class="topbar-hamburger" id="topbarHamburger" onclick="toggleMobileSidebar()" aria-label="Toggle menu">☰</button>
+				<button class="topbar-hamburger" id="topbarHamburger" onclick="toggleMobileSidebar()"
+					aria-label="Toggle menu">☰</button>
 				<div class="topbar-breadcrumb">
 					<span class="breadcrumb-item" id="breadcrumbSite">All sites</span>
 					<span class="breadcrumb-sep" id="breadcrumbSep" style="display:none;"> › </span>

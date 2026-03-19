@@ -534,14 +534,6 @@ function toggleTitleFormat(which) {
 	if (btn) btn.classList.toggle('active');
 }
 
-function _restoreTitleRange() {
-	if (!_savedTitleRange) return null;
-	const sel = window.getSelection();
-	sel.removeAllRanges();
-	sel.addRange(_savedTitleRange);
-	return _savedTitleRange;
-}
-
 function applyTitleSpan() {
 	const desktop = parseFloat(document.getElementById('titleFontDesktopVal').textContent) || 3;
 	const mobile = parseFloat(document.getElementById('titleFontMobileVal').textContent) || 1.5;
@@ -874,7 +866,7 @@ function render2ColEditorInto(targetEl, component, content) {
 						<div style="display:flex;align-items:center;gap:4px;font-size:12px;">
 							<span style="color:#6b7280;">Size:</span>
 							<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="_2colStepFont(-1)">−</button>
-							<span id="2col-font-val" style="min-width:28px;text-align:center;font-weight:600;">16</span>px
+							<span id="2col-font-val" style="min-width:28px;text-align:center;font-weight:600;">16</span>rem
 							<button class="stepper-btn" onmousedown="event.preventDefault()" onclick="_2colStepFont(1)">+</button>
 						</div>
 						<button class="toolbar-btn toolbar-apply" onmousedown="event.preventDefault()" onclick="_2colApplySpan()">Apply to selection</button>
@@ -1011,7 +1003,7 @@ async function save2ColContent(component) {
 	});
 
 	const response = await fetch(
-		`${FIREBASE_URL}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
+		`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${currentSlug}.json`,
 		{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(content) }
 	);
 	if (response.ok) {
@@ -1407,6 +1399,7 @@ function showAddComponentModal() {
 	document.getElementById('modalStep2Simple').style.display = 'none';
 	document.getElementById('modalStep2Bullets').style.display = 'none';
 	document.getElementById('modalStep2Testimonials').style.display = 'none';
+	document.getElementById('modalStep2TwoCol').style.display = 'none';
 	document.getElementById('reviews-list-__modal__').innerHTML = '';
 	document.getElementById('modalReviewsInitialCount').value = '5';
 	document.getElementById('modalComponentName').value = '';
@@ -1421,6 +1414,14 @@ function showAddComponentModal() {
 
 function closeAddComponentModal() {
 	document.getElementById('addComponentModal').style.display = 'none';
+}
+
+function modalBackToStep1() {
+	document.getElementById('modalStep1').style.display = 'block';
+	document.getElementById('modalStep2Simple').style.display = 'none';
+	document.getElementById('modalStep2Bullets').style.display = 'none';
+	document.getElementById('modalStep2Testimonials').style.display = 'none';
+	document.getElementById('modalStep2TwoCol').style.display = 'none';
 }
 
 function modalSelectSpecial(name) {

@@ -1674,6 +1674,10 @@
 			background: #f3f4f6;
 		}
 
+		.modal-footer .btn-back {
+			margin-right: auto;
+		}
+
 		.modal-step.hidden {
 			display: none;
 		}
@@ -1888,7 +1892,7 @@
 
 			.modal-box {
 				border-radius: 18px 18px 0 0;
-				max-height: 92vh;
+				max-height: 95vh;
 				max-width: 100%;
 			}
 
