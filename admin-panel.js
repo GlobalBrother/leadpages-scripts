@@ -433,7 +433,7 @@ function previewComponentContent(component) {
 		padding:20px; box-sizing:border-box;
 	`;
 	modal.innerHTML = `
-		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45);">
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
 			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
 				<div style="display:flex; align-items:center; gap:10px;">
 					<span style="font-size:16px;">👁</span>
@@ -2168,9 +2168,9 @@ function closeAiAnalyzerModal() {
 function toggleAiApiKeySection(btn) {
 	const section = document.getElementById('aiApiKeySection');
 	const icon = document.getElementById('aiApiKeyToggleIcon');
-	const isHidden = section.style.display === 'none' || section.style.display === '';
-	section.style.display = isHidden ? 'block' : 'none';
-	icon.textContent = isHidden ? '▼' : '▶';
+	const isOpen = section.classList.contains('is-open');
+	section.classList.toggle('is-open', !isOpen);
+	icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
 }
 
 // ── Custom component ideas (pre-analyze) ─────────────────────────────────────
@@ -2178,11 +2178,11 @@ function toggleAiApiKeySection(btn) {
 function toggleAiCustomIdeasSection() {
 	const section = document.getElementById('aiCustomIdeasSection');
 	const icon    = document.getElementById('aiCustomIdeasToggleIcon');
-	const isHidden = section.style.display === 'none' || section.style.display === '';
-	section.style.display = isHidden ? 'block' : 'none';
-	icon.textContent = isHidden ? '▼' : '▶';
+	const isOpen = section.classList.contains('is-open');
+	section.classList.toggle('is-open', !isOpen);
+	icon.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
 	// Auto-add first row if empty
-	if (isHidden && document.getElementById('aiCustomIdeasList').children.length === 0) {
+	if (!isOpen && document.getElementById('aiCustomIdeasList').children.length === 0) {
 		aiAddCustomIdea();
 	}
 }
@@ -2412,22 +2412,25 @@ function _aiSyncProviderUI() {
 	const claudeSec = document.getElementById('aiClaudeKeySection');
 	if (!gptBtn) return;
 
+	// Summary line shown on the collapsed button
+	const summary = document.getElementById('aiProviderSummary');
+
 	if (_aiProvider === 'gpt') {
 		gptBtn.setAttribute('data-active', 'true');
 		claudeBtn.setAttribute('data-active', 'false');
-		// Active pill: GPT
 		gptBtn.style.cssText    = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid #7c3aed; background:rgba(124,58,237,0.12); color:#6d28d9;';
 		claudeBtn.style.cssText = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid var(--border); background:transparent; color:var(--text-muted);';
 		if (gptSec)    gptSec.style.display    = 'block';
 		if (claudeSec) claudeSec.style.display = 'none';
+		if (summary) summary.textContent = 'Active: 🤖 GPT-4o';
 	} else {
 		gptBtn.setAttribute('data-active', 'false');
 		claudeBtn.setAttribute('data-active', 'true');
-		// Active pill: Claude
 		gptBtn.style.cssText    = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid var(--border); background:transparent; color:var(--text-muted);';
 		claudeBtn.style.cssText = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid #d97706; background:rgba(217,119,6,0.1); color:#b45309;';
 		if (gptSec)    gptSec.style.display    = 'none';
 		if (claudeSec) claudeSec.style.display = 'block';
+		if (summary) summary.textContent = 'Active: ✴️ Claude Opus';
 	}
 }
 
