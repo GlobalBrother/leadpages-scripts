@@ -521,23 +521,58 @@ e.g.
 				<div>
 					<button onclick="toggleAiApiKeySection(this)"
 						style="font-size:11px; color:var(--text-muted); background:none; border:none; cursor:pointer; font-family:inherit; padding:0; display:flex; align-items:center; gap:4px;">
-						<span id="aiApiKeyToggleIcon">▶</span> OpenAI API Key settings
+						<span id="aiApiKeyToggleIcon">▶</span> AI Provider &amp; API Key settings
 					</button>
-					<div id="aiApiKeySection" style="display:none; margin-top:8px;">
-						<label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">OpenAI API Key <span style="font-weight:400; text-transform:none;">(saved in Firebase — shared with all colleagues)</span></label>
-						<div style="display:flex; gap:8px;">
-							<input type="password" id="aiApiKeyInput" placeholder="sk-..."
-								style="flex:1; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary);" />
-							<button onclick="saveAiApiKey()"
-								style="padding:9px 14px; background:rgba(124,58,237,0.1); border:1.5px solid rgba(124,58,237,0.3); border-radius:8px; font-size:12px; font-weight:700; color:#6d28d9; cursor:pointer; font-family:inherit; white-space:nowrap;">
-								💾 Save Key
-							</button>
-							<button onclick="listAvailableGptModels()"
-								style="padding:9px 14px; background:rgba(15,150,100,0.1); border:1.5px solid rgba(15,150,100,0.3); border-radius:8px; font-size:12px; font-weight:700; color:#0a7c52; cursor:pointer; font-family:inherit; white-space:nowrap;">
-								🔍 List Models
-							</button>
+					<div id="aiApiKeySection" style="display:none; margin-top:10px;">
+
+						<!-- Provider selector pills -->
+						<div style="margin-bottom:12px;">
+							<label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">AI Provider</label>
+							<div style="display:flex; gap:6px;">
+								<button id="aiProviderGpt" data-active="true" onclick="_aiSetProvider('gpt')"
+									style="flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid #7c3aed; background:rgba(124,58,237,0.12); color:#6d28d9;"
+									onmouseover="if(this.dataset.active!=='true')this.style.background='rgba(124,58,237,0.06)'" onmouseout="if(this.dataset.active!=='true')this.style.background='transparent'">
+									🤖 GPT-4o
+								</button>
+								<button id="aiProviderClaude" data-active="false" onclick="_aiSetProvider('claude')"
+									style="flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid var(--border); background:transparent; color:var(--text-muted);"
+									onmouseover="if(this.dataset.active!=='true')this.style.background='rgba(217,119,6,0.06)'" onmouseout="if(this.dataset.active!=='true')this.style.background='transparent'">
+									✴️ Claude Opus
+								</button>
+							</div>
 						</div>
-						<p style="font-size:11px; color:var(--text-muted); margin:5px 0 0; line-height:1.5;">Save once here — all colleagues will automatically use it. The key is stored in Firebase, not in the source code.</p>
+
+						<!-- GPT key section -->
+						<div id="aiGptKeySection">
+							<label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">OpenAI API Key <span style="font-weight:400; text-transform:none;">(saved in Firebase — shared with all colleagues)</span></label>
+							<div style="display:flex; gap:8px;">
+								<input type="password" id="aiApiKeyInput" placeholder="sk-..."
+									style="flex:1; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary);" />
+								<button onclick="saveAiApiKey()"
+									style="padding:9px 14px; background:rgba(124,58,237,0.1); border:1.5px solid rgba(124,58,237,0.3); border-radius:8px; font-size:12px; font-weight:700; color:#6d28d9; cursor:pointer; font-family:inherit; white-space:nowrap;">
+									💾 Save
+								</button>
+								<button onclick="listAvailableGptModels()"
+									style="padding:9px 14px; background:rgba(15,150,100,0.1); border:1.5px solid rgba(15,150,100,0.3); border-radius:8px; font-size:12px; font-weight:700; color:#0a7c52; cursor:pointer; font-family:inherit; white-space:nowrap;">
+									🔍 Models
+								</button>
+							</div>
+						</div>
+
+						<!-- Claude key section -->
+						<div id="aiClaudeKeySection" style="display:none;">
+							<label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:5px;">Anthropic API Key <span style="font-weight:400; text-transform:none;">(saved in Firebase — shared with all colleagues)</span></label>
+							<div style="display:flex; gap:8px;">
+								<input type="password" id="aiClaudeKeyInput" placeholder="sk-ant-..."
+									style="flex:1; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:13px; font-family:inherit; color:var(--text-primary);" />
+								<button onclick="saveAiClaudeKey()"
+									style="padding:9px 14px; background:rgba(217,119,6,0.1); border:1.5px solid rgba(217,119,6,0.35); border-radius:8px; font-size:12px; font-weight:700; color:#b45309; cursor:pointer; font-family:inherit; white-space:nowrap;">
+									💾 Save
+								</button>
+							</div>
+						</div>
+
+						<p style="font-size:11px; color:var(--text-muted); margin:7px 0 0; line-height:1.5;">Keys are stored in Firebase — save once and all colleagues can use them automatically.</p>
 					</div>
 				</div>
 			</div>

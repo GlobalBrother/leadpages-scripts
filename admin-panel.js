@@ -64,7 +64,9 @@ function logout() {
 	currentSite = '';
 	currentSlug = '';
 	contentData = {};
-	_aiApiKey = '';
+	_aiApiKey    = '';
+	_aiClaudeKey = '';
+	_aiProvider  = 'gpt';
 	document.getElementById('appLayout').style.display = 'none';
 	document.getElementById('connectionStatus').style.display = 'none';
 	document.getElementById('adminPassword').value = '';
@@ -2120,25 +2122,35 @@ async function saveManageSystems() {
 // ─── AI PAGE ANALYZER ─────────────────────────────────────────────────────
 
 // In-memory cache — loaded from Firebase after login, never stored in source
-let _aiApiKey = '';
+let _aiApiKey    = '';   // OpenAI key  (sk-...)
+let _aiClaudeKey = '';   // Anthropic key (sk-ant-...)
+let _aiProvider  = 'gpt'; // 'gpt' | 'claude'
 
 async function _loadAiApiKeyFromFirebase() {
 	try {
-		const res = await fetch(`${FIREBASE_URL}/config/openai_key.json`);
-		if (!res.ok) return;
-		const val = await res.json();
-		if (val && typeof val === 'string' && val.startsWith('sk-')) {
-			_aiApiKey = val;
+		const [resGpt, resClaude] = await Promise.all([
+			fetch(`${FIREBASE_URL}/config/openai_key.json`),
+			fetch(`${FIREBASE_URL}/config/anthropic_key.json`)
+		]);
+		if (resGpt.ok) {
+			const val = await resGpt.json();
+			if (val && typeof val === 'string' && val.startsWith('sk-')) _aiApiKey = val;
+		}
+		if (resClaude.ok) {
+			const val = await resClaude.json();
+			if (val && typeof val === 'string' && val.startsWith('sk-ant-')) _aiClaudeKey = val;
 		}
 	} catch (e) {
-		// silently ignore — key just won't be pre-loaded
+		// silently ignore — keys just won't be pre-loaded
 	}
 }
 
 function showAiAnalyzerModal() {
-	// Pre-fill API key input if we have it in memory
-	const keyInput = document.getElementById('aiApiKeyInput');
-	if (_aiApiKey) keyInput.value = _aiApiKey;
+	// Pre-fill API key inputs if we have them in memory
+	if (_aiApiKey)    document.getElementById('aiApiKeyInput').value    = _aiApiKey;
+	if (_aiClaudeKey) document.getElementById('aiClaudeKeyInput').value = _aiClaudeKey;
+	// Sync provider selector
+	_aiSyncProviderUI();
 	// Pre-fill URL from current site if available
 	if (currentSite) {
 		const hostname = firebaseKeyToHostname(currentSite);
@@ -2256,10 +2268,9 @@ async function runAiGenerateCustomOnly() {
 		return;
 	}
 
-	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
-	if (!apiKey || !apiKey.startsWith('sk-')) {
-		showNotification('No OpenAI API key — expand ▶ API Key settings to add one', 'error');
-		return;
+	let activeKey;
+	try { activeKey = _aiGetActiveKey(); } catch(e) {
+		showNotification(e.message, 'error'); return;
 	}
 
 	// Disable both buttons while running
@@ -2304,7 +2315,7 @@ async function runAiGenerateCustomOnly() {
 			if (emptyEl)   emptyEl.style.display   = 'none';
 			if (outputEl)  outputEl.style.display  = 'none';
 			try {
-				const code = await _aiGenerateOneComponentCode(customIdeas[idx], '', apiKey, '', null);
+				const code = await _aiGenerateOneComponentCode(customIdeas[idx], '', activeKey.key, '', null, activeKey.provider);
 				window._aiGeneratedCodes[idx] = code;
 				if (loadingEl) loadingEl.style.display = 'none';
 				if (outputEl)  outputEl.style.display  = 'block';
@@ -2329,7 +2340,7 @@ async function runAiGenerateCustomOnly() {
 async function listAvailableGptModels() {
 	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
 	if (!apiKey || !apiKey.startsWith('sk-')) {
-		showNotification('Add your API key first', 'error');
+		showNotification('Add your OpenAI API key first', 'error');
 		return;
 	}
 	showNotification('Fetching models...', 'success');
@@ -2363,10 +2374,73 @@ async function saveAiApiKey() {
 		});
 		if (!res.ok) throw new Error('Firebase write failed');
 		_aiApiKey = key;
-		showNotification('API key saved to Firebase — shared with all colleagues! ✅', 'success');
+		showNotification('OpenAI key saved to Firebase ✅', 'success');
 	} catch (e) {
 		showNotification('Failed to save key: ' + e.message, 'error');
 	}
+}
+
+async function saveAiClaudeKey() {
+	const key = document.getElementById('aiClaudeKeyInput').value.trim();
+	if (!key.startsWith('sk-ant-')) {
+		showNotification('Invalid Anthropic key — must start with sk-ant-', 'error');
+		return;
+	}
+	try {
+		const res = await fetch(`${FIREBASE_URL}/config/anthropic_key.json`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(key)
+		});
+		if (!res.ok) throw new Error('Firebase write failed');
+		_aiClaudeKey = key;
+		showNotification('Claude (Anthropic) key saved to Firebase ✅', 'success');
+	} catch (e) {
+		showNotification('Failed to save key: ' + e.message, 'error');
+	}
+}
+
+function _aiSetProvider(provider) {
+	_aiProvider = provider;
+	_aiSyncProviderUI();
+}
+
+function _aiSyncProviderUI() {
+	const gptBtn    = document.getElementById('aiProviderGpt');
+	const claudeBtn = document.getElementById('aiProviderClaude');
+	const gptSec    = document.getElementById('aiGptKeySection');
+	const claudeSec = document.getElementById('aiClaudeKeySection');
+	if (!gptBtn) return;
+
+	if (_aiProvider === 'gpt') {
+		gptBtn.setAttribute('data-active', 'true');
+		claudeBtn.setAttribute('data-active', 'false');
+		// Active pill: GPT
+		gptBtn.style.cssText    = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid #7c3aed; background:rgba(124,58,237,0.12); color:#6d28d9;';
+		claudeBtn.style.cssText = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid var(--border); background:transparent; color:var(--text-muted);';
+		if (gptSec)    gptSec.style.display    = 'block';
+		if (claudeSec) claudeSec.style.display = 'none';
+	} else {
+		gptBtn.setAttribute('data-active', 'false');
+		claudeBtn.setAttribute('data-active', 'true');
+		// Active pill: Claude
+		gptBtn.style.cssText    = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid var(--border); background:transparent; color:var(--text-muted);';
+		claudeBtn.style.cssText = 'flex:1; padding:8px 12px; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; transition:all .15s; border:2px solid #d97706; background:rgba(217,119,6,0.1); color:#b45309;';
+		if (gptSec)    gptSec.style.display    = 'none';
+		if (claudeSec) claudeSec.style.display = 'block';
+	}
+}
+
+// Returns { key, provider } for the currently selected provider, or throws if missing
+function _aiGetActiveKey() {
+	if (_aiProvider === 'claude') {
+		const key = _aiClaudeKey || document.getElementById('aiClaudeKeyInput')?.value.trim() || '';
+		if (!key.startsWith('sk-ant-')) throw new Error('No Claude API key — expand ▶ API Key settings and add your Anthropic key');
+		return { key, provider: 'claude' };
+	}
+	const key = _aiApiKey || document.getElementById('aiApiKeyInput')?.value.trim() || '';
+	if (!key.startsWith('sk-')) throw new Error('No OpenAI API key — expand ▶ API Key settings to add one');
+	return { key, provider: 'gpt' };
 }
 
 async function runAiAnalysis() {
@@ -2379,10 +2453,9 @@ async function runAiAnalysis() {
 		return;
 	}
 
-	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
-	if (!apiKey || !apiKey.startsWith('sk-')) {
-		showNotification('No OpenAI API key found — expand ▶ API Key settings to add one', 'error');
-		return;
+	let activeKey;
+	try { activeKey = _aiGetActiveKey(); } catch(e) {
+		showNotification(e.message, 'error'); return;
 	}
 
 	// UI → loading state
@@ -2430,9 +2503,12 @@ async function runAiAnalysis() {
 		setStep('Capturing page screenshot...');
 		const screenshotUrl = await _aiGetScreenshotUrl(url, setStep);
 
-		// ── Step 3: Send to GPT with text + screenshot ────────────────────────
-		setStep(screenshotUrl ? 'Analyzing with GPT Vision...' : 'Analyzing with GPT (text only — screenshot unavailable)...');
-		const analysis = await _aiCallGpt(pageContent, url, apiKey, screenshotUrl, existingInfo, nicheContext);
+		// ── Step 3: Analyze with selected AI provider ─────────────────────────
+		const providerLabel = activeKey.provider === 'claude' ? 'Claude' : 'GPT';
+		setStep(screenshotUrl ? `Analyzing with ${providerLabel} Vision...` : `Analyzing with ${providerLabel} (text only — screenshot unavailable)...`);
+		const analysis = activeKey.provider === 'claude'
+			? await _aiCallClaude(pageContent, url, activeKey.key, screenshotUrl, existingInfo, nicheContext)
+			: await _aiCallGpt(pageContent, url, activeKey.key, screenshotUrl, existingInfo, nicheContext);
 
 		// ── Step 4: Merge AI suggestions (max 4) with user's custom ideas ─────
 		const aiComponents       = (analysis.component_ideas || []).slice(0, 4);
@@ -2456,7 +2532,7 @@ async function runAiAnalysis() {
 				if (outputEl)  outputEl.style.display  = 'none';
 
 				try {
-					const code = await _aiGenerateOneComponentCode(components[idx], url, apiKey, pageContent, nicheContext);
+					const code = await _aiGenerateOneComponentCode(components[idx], url, activeKey.key, pageContent, nicheContext, activeKey.provider);
 					generatedCodes[idx] = code;
 					window._aiGeneratedCodes = window._aiGeneratedCodes || {};
 					window._aiGeneratedCodes[idx] = code;
@@ -2901,16 +2977,156 @@ INTERACTIVE & DYNAMIC COMPONENT TYPES — pick the most relevant for the page:
 	}
 }
 
+// ── Claude (Anthropic) equivalent of _aiCallGpt ───────────────────────────
+async function _aiCallClaude(pageContent, pageUrl, apiKey, screenshotUrl, existingInfo = null, nicheContext = null) {
+	// Reuse the same prompt-building logic as GPT
+	const nicheSection = nicheContext
+		? `\nPAGE TOPIC / NICHE SIGNALS (extracted from title, headings and CTAs):\n"${nicheContext}"\nUse these signals to infer the exact product/service niche, target problem, and customer language. All suggestions, copy angles, and component ideas must be hyper-specific to this page's topic — not generic. Speak the language of this particular customer.`
+		: '';
+	const existingComponentsContext = existingInfo
+		? `\nEXISTING COMPONENTS ALREADY ON THIS PAGE (from Firebase CMS):\n${existingInfo.componentNames.join(', ')}\n\nCRITICAL: Do NOT suggest adding any component that duplicates one already listed above — they are already present on this page. Infer from the names what each component contains, and focus exclusively on what is MISSING.`
+		: '';
+
+	// System + user prompts are identical to _aiCallGpt — pulled from the same source of truth
+	// (We call _aiCallGpt's prompt-building inline here to keep them in sync.)
+	const systemPrompt = `You are a world-class conversion rate optimization (CRO) expert and UX analyst specializing in landing pages and direct-response marketing. You have deep expertise in copywriting, visual hierarchy, social proof, trust signals, and funnel optimization.
+
+AUDIENCE CONTEXT — critical for all suggestions:
+The page audience is adults aged 30–70. This means:
+- They are skeptical and have been disappointed by products before — trust signals and proof are essential
+- They respond to curiosity gaps, "hidden secret" framing, and "what doctors/experts don't tell you" angles
+- They are motivated by fear of loss (health, money, independence) AND by hope (feeling younger, more energetic, saving money)
+- They prefer plain, conversational language — no jargon, no hype that feels fake
+- They trust specificity: real numbers, real names, real before/after stories
+- They need reassurance before buying: guarantees, easy returns, security badges
+- Social proof from PEERS (same age group) is far more persuasive than celebrity endorsements
+- Urgency works when it feels real and reason-based — not fake countdown timers
+${nicheSection}
+${screenshotUrl ? 'You will receive both the extracted text content AND a screenshot of the page. Use the screenshot to assess the visual design, layout, color scheme, CTA visibility, whitespace, image quality, and overall aesthetics — things invisible from text alone.' : 'You will receive the extracted text content of the page.'}
+When suggesting component ideas, look at what is MISSING from the page visually and contextually. Do NOT suggest components that are already clearly present.${existingComponentsContext}`;
+
+	const userPrompt = `Analyze this landing page and provide a focused CRO + UX audit.
+
+PAGE URL: ${pageUrl}
+
+EXTRACTED PAGE CONTENT:
+${pageContent}
+
+${screenshotUrl ? 'A screenshot of the page is provided as an image URL below — study it carefully for visual hierarchy, design quality, section flow, and what components are already present vs. missing.\nSCREENSHOT URL: ' + screenshotUrl : '(No screenshot available — analyze from text only.)'}
+
+---
+
+Respond with raw JSON only (no markdown code blocks), using this EXACT structure:
+
+{
+  "page_summary": "2-3 sentence summary of what this page is about, its goal, and overall visual impression",
+  "overall_score": <number 1-10>,
+  "score_rationale": "1 sentence explaining the score",
+  "improvements": [
+    {
+      "category": "Copy|CTA|Visual Design|Social Proof|Trust|Urgency|Layout|Mobile|Offer|UX",
+      "priority": "HIGH|MEDIUM|LOW",
+      "title": "Short improvement title",
+      "observation": "What you see now — be specific",
+      "recommendation": "Specific, actionable fix with rationale"
+    }
+  ],
+  "component_ideas": [
+    {
+      "component_name": "slug-friendly-name",
+      "type": "social-proof|urgency|trust|content|faq|guarantee|comparison|testimonial|bonus|cta-section|objection-handler|curiosity|before-after|quiz-hook|authority|risk-reversal|scarcity|story|mechanism|stats-bar|peer-proof|scroll-trigger|sticky-cta|live-feed|flip-card|counter|progress-bar",
+      "interactivity": "STATIC|INTERACTIVE|ANIMATED|SCROLL-TRIGGERED",
+      "scroll_timing": "TOP (0-20%)|MIDDLE (20-60%)|BOTTOM (60-90%)|PERSISTENT",
+      "description": "What this component adds and why it helps for a 30-70 year old audience",
+      "placement": "Specific placement on the page",
+      "copy_suggestion": "Ready-to-use copy example written specifically for a 30-70 year old reader"
+    }
+  ]
+}
+
+Give exactly 4 component_ideas, each targeting a DIFFERENT psychological trigger. Be creative, specific, and pick components that are VISUALLY MISSING from the page.`;
+
+	// Build messages array — Claude doesn't support image_url content blocks from URLs natively
+	// but claude-3-opus supports vision via base64; for URL-based screenshots we pass as text hint
+	const messages = screenshotUrl
+		? [{ role: 'user', content: [
+				{ type: 'text', text: userPrompt },
+				{ type: 'image', source: { type: 'url', url: screenshotUrl } }
+			]}]
+		: [{ role: 'user', content: userPrompt }];
+
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), 120000); // 2 min for vision
+
+	let response;
+	try {
+		response = await fetch('https://api.anthropic.com/v1/messages', {
+			method: 'POST',
+			signal: controller.signal,
+			headers: {
+				'Content-Type': 'application/json',
+				'x-api-key': apiKey,
+				'anthropic-version': '2023-06-01',
+				'anthropic-dangerous-direct-browser-access': 'true'
+			},
+			body: JSON.stringify({
+				model: 'claude-opus-4-5',
+				system: systemPrompt,
+				messages,
+				max_tokens: 4000
+			})
+		});
+	} catch (e) {
+		if (e.name === 'AbortError') throw new Error('Claude request timed out — try again');
+		throw new Error('Could not reach Claude API: ' + (e.message || 'network error'));
+	} finally {
+		clearTimeout(timer);
+	}
+
+	if (!response.ok) {
+		const err = await response.json().catch(() => ({}));
+		const msg = err?.error?.message || `Claude API error (${response.status})`;
+		throw new Error(response.status === 429 ? `[429] ${msg}` : msg);
+	}
+
+	const data = await response.json();
+	const raw = data.content?.[0]?.text || '';
+	const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+	try {
+		return JSON.parse(cleaned);
+	} catch (e) {
+		throw new Error('Claude returned malformed JSON. Try again. Raw: ' + cleaned.substring(0, 200));
+	}
+}
+
 // ── Component Ideas → Generate Code ──────────────────────────────────────
 
 // Shared code-gen function used both at analysis time and for "Regenerate"
-async function _aiGenerateOneComponentCode(comp, pageUrl, apiKey, pageContent = '', nicheContext = null) {
+async function _aiGenerateOneComponentCode(comp, pageUrl, apiKey, pageContent = '', nicheContext = null, provider = 'gpt') {
 	// ── Niche context injected as raw copy signals — no predefined categories ─
 	const nicheDirective = nicheContext
 		? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nInfer the exact product/niche from these signals and make every headline, benefit line, and CTA hyper-specific to this topic. No generic copy — write as if you know this product/market deeply.`
 		: '';
 
 	const systemPrompt = `You are a senior direct-response copywriter AND expert front-end developer specializing in high-converting landing page components. You write clean, self-contained HTML/CSS/JS snippets injected as innerHTML into a Leadpages landing page container div.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL RENDERING RULES — READ FIRST, VIOLATING THESE = BROKEN OUTPUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ALWAYS wrap your entire output in a root div with an explicit background-color AND color set. Example: <div style="background:#0f172a; color:#f1f5f9; font-family:system-ui,sans-serif; ...">. NEVER rely on inherited styles from the parent page — they will be unknown and wrong.
+2. EVERY text element must have an explicit color property. NEVER use color:inherit or omit color on text that sits over a non-white background. If background is dark → text must be light (#f1f5f9, #e2e8f0, #ffffff). If background is light → text must be dark (#1e293b, #0f172a, #111827). Contrast ratio must be at least 4.5:1.
+3. SCROLL-TRIGGERED animations: Elements must be FULLY VISIBLE by default (opacity:1, transform:none). Only apply the "hidden" starting state (opacity:0, translateY) inside a JS class that IntersectionObserver adds AFTER the observer is set up. Use this exact pattern:
+   • Add class "lp-PREFIX-hidden" to elements in HTML: opacity:1 (default, visible)
+   • In <script>, FIRST define the CSS transition, THEN attach IntersectionObserver, THEN inside the observer callback: add "lp-PREFIX-visible" class
+   • This guarantees content is visible even if JS fails or the observer never fires.
+   • NEVER set opacity:0 directly in HTML attributes or inline styles on animated elements.
+4. ALL interactive JS must be wrapped in a DOMContentLoaded listener OR placed after the HTML it references. Use document.querySelector inside the script only AFTER the element exists in the DOM.
+5. CSS class names for the component wrapper MUST start with "lp-" prefix. The outermost div must have width:100% and box-sizing:border-box set explicitly.
+6. For countdown timers: calculate the target date as (new Date()).getTime() + (days * 86400000) so it always shows a future date, never expired.
+7. For carousels/tickers: always initialize with the first item visible. setInterval must store its ID and the dismiss/close button must clearInterval to avoid memory leaks.
+8. BUTTONS must always have explicit background-color, color, border, padding, border-radius, cursor:pointer, and font-family:inherit set — never rely on browser defaults.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 COPY RULES — critical:
 - Study the EXISTING PAGE COPY provided below and match its exact tone, vocabulary, sentence rhythm, and angle. If the page uses casual conversational language, match that. If it's formal, match that. Mirror the way it addresses the reader.
@@ -2929,24 +3145,23 @@ DESIGN RULES — be creative and varied:
 - The result must feel premium and custom — not like a generic template.
 
 INTERACTIVITY & PSYCHOLOGY RULES — this is what separates converting components from decorative ones:
-- SCROLL-TRIGGERED components: Use IntersectionObserver to fire animations/reveals when the element enters the viewport. Never auto-play heavy animations on page load — it kills performance and annoys users. Trigger them when the user EARNS it by scrolling.
+- SCROLL-TRIGGERED components: Use IntersectionObserver. Elements start VISIBLE (see Critical Rule #3 above). Observer adds a class that transitions them to their "animated-in" state.
 - INTERACTIVE components (quizzes, accordions, flip cards, tabs, sliders): Each interaction is a micro-commitment — the user who clicks is 3x more likely to convert. Make the interaction feel satisfying (smooth CSS transitions, clear state changes).
 - ANIMATED counters: Count up from 0 to the final number when scrolled into view. Use easing. This makes stats feel real and earned, not static.
-- COUNTDOWN timers: Must look urgent but not fake. Use a real end date/time. Show hours:minutes:seconds. Add a reason ("Offer expires when this batch sells out").
-- STICKY elements: Use position:fixed, z-index 9999, and a smooth slide-in animation. Include a close/dismiss button — forcing sticky elements creates hostility.
-- SOCIAL PROOF TICKERS: Auto-scroll horizontally or vertically with CSS animation. Pause on hover. Each item: name + location + result. Keep it moving — motion signals activity and popularity.
-- BEFORE/AFTER SLIDERS: Use a draggable divider. Touch-friendly. Label both sides clearly. The visual delta must be dramatic enough to create desire.
+- COUNTDOWN timers: Must look urgent but not fake. Use Date.now() + offset for the target. Show hours:minutes:seconds. Add a reason ("Offer expires when this batch sells out").
+- STICKY elements: Use position:fixed, z-index 9999, and a smooth slide-in animation. Include a close/dismiss button.
+- SOCIAL PROOF TICKERS: Auto-scroll horizontally with CSS animation. Pause on hover. Each item: name + location + result.
+- BEFORE/AFTER SLIDERS: Use a draggable divider. Touch-friendly. Label both sides clearly.
 - FLIP CARDS: CSS 3D transform. Front = the myth/problem. Back = the truth/solution. Satisfying flip on click/tap.
 - PROGRESS BARS: Animate width from 0% to target on scroll. Creates a sense of momentum and FOMO.
-- EXIT-INTENT style components: Use setTimeout (12-15 seconds) to trigger a subtle floating nudge. Not a popup — a slide-in toast from the corner.
 
 TECHNICAL RULES:
-- Standalone snippet — no external dependencies unless from a CDN (e.g. no jQuery needed).
+- Standalone snippet — no external dependencies unless from a CDN.
 - Inline <style> and <script> tags inside the snippet.
-- All IDs/class names must be uniquely prefixed (e.g. lp-sticky-, lp-quiz-, lp-flip-) to avoid conflicts with existing page elements.
-- Mobile-responsive — test mentally: does it work on a 375px screen?
-- For IntersectionObserver: always add { threshold: 0.2 } so the animation fires when 20% of the element is visible.
-- For event listeners: use { once: true } for one-shot animations so they don't re-trigger on scroll-back.`;
+- All IDs/class names must be uniquely prefixed to avoid conflicts with existing page elements.
+- Mobile-responsive — test for 375px viewport mentally.
+- For IntersectionObserver: always use { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }.
+- For event listeners on scroll animations: use { once: true }.`;
 
 	const creativeSeeds = [
 		'Use a bold dark (#0f172a) background with a single vivid accent color. Layout: icon + stat in large type on the left, copy on the right. If animated: count up stats with IntersectionObserver.',
@@ -2985,10 +3200,10 @@ DESIGN DIRECTION (follow closely):
 ${seed}
 
 INTERACTIVITY IMPLEMENTATION — implement based on the interactivity level above:
-- SCROLL-TRIGGERED: Use IntersectionObserver with threshold:0.2. Add { once: true } to the observer callback so animation only fires on first entry. Elements start hidden/offset and transition to final state.
-- INTERACTIVE: Implement the full interaction in vanilla JS — no libraries. Quizzes track state. Accordions toggle open/close. Sliders track drag position. Flip cards use CSS 3D transform. All interactions have smooth CSS transitions (0.3s ease).
-- ANIMATED: Auto-playing animations (counters, carousels, tickers). Counters use IntersectionObserver to start from 0. Carousels use setInterval for auto-advance. Tickers use CSS animation keyframes. ALL use requestAnimationFrame for smoothness.
-- PERSISTENT (sticky): Use position:fixed with a smooth slide-in CSS transition. Triggers after a scroll threshold (document.addEventListener('scroll')). Includes a dismiss button. Z-index 9998.
+- SCROLL-TRIGGERED: IMPORTANT — elements must be FULLY VISIBLE by default in HTML/CSS. Use IntersectionObserver only to add a CSS class that triggers a "polish" animation (e.g. slight fade-up from opacity:0.4 to 1, or scale 0.95→1). NEVER start elements at opacity:0 — if the observer fails to fire, content must still be readable.
+- INTERACTIVE: Implement the full interaction in vanilla JS — no libraries. Quizzes track state. Accordions toggle open/close. All interactions have smooth CSS transitions (0.3s ease). First state must always be visible and usable without JS.
+- ANIMATED: Auto-playing animations (counters, carousels, tickers). For counters: show the final number immediately in HTML, then count up from 0 when IntersectionObserver fires. Carousels: first slide must be visible immediately. Tickers: first item visible while animation loads.
+- PERSISTENT (sticky): Use position:fixed with a smooth slide-in CSS transition. Triggers after scroll. Includes a dismiss button. Z-index 9998.
 
 COPY REQUIREMENTS:
 - Mirror the tone and vocabulary from the existing page copy sample above.
@@ -3001,32 +3216,56 @@ COPY REQUIREMENTS:
 - For SCROLL_TIMING = BOTTOM: Copy closes the deal — urgency, risk reversal, the cost of inaction. Reader is warm; remove final objections.
 - For PERSISTENT: Copy is ultra-short and urgent — 1 headline + 1 CTA button, nothing more.
 
-OUTPUT RULES:
+OUTPUT RULES — CRITICAL, follow exactly:
 - Output ONLY the raw HTML (with inline <style> and <script> if needed)
 - No markdown, no code fences, no explanations — just the code
+- The FIRST element in your output MUST be a div with explicit background-color AND color AND font-family set
 - All CSS class names and JS variable names must be prefixed with "lp-${(comp.component_name || 'comp').replace(/[^a-z0-9]/g, '-').substring(0, 12)}-" to avoid conflicts
-- Self-contained, works when injected as innerHTML into a div
-- Fully functional JS — every interactive/animated feature must actually work
-- Mobile-responsive (test for 375px viewport mentally)`;
+- Every text element (h1,h2,h3,p,span,li,button,a) must have an explicit color set — NEVER omit color on text
+- Self-contained, works when injected as innerHTML into a div on any page
+- Fully functional JS — wrap all querySelector calls in DOMContentLoaded or place <script> after the HTML
+- Mobile-responsive (375px viewport)
+- BEFORE FINISHING: mentally check — is every text element readable? Is any element invisible because opacity:0 was set without a trigger? Fix it.`;
 
 	const controller = new AbortController();
 	const timer = setTimeout(() => controller.abort(), 60000);
 
+	const messages = [
+		{ role: 'system', content: systemPrompt },
+		{ role: 'user', content: userPrompt }
+	];
+
 	let response;
 	try {
-		response = await fetch('https://api.openai.com/v1/chat/completions', {
-			method: 'POST',
-			signal: controller.signal,
-			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-			body: JSON.stringify({
-				model: 'gpt-4o',
-				messages: [
-					{ role: 'system', content: systemPrompt },
-					{ role: 'user', content: userPrompt }
-				],
-				max_completion_tokens: 3500
-			})
-		});
+		if (provider === 'claude') {
+			response = await fetch('https://api.anthropic.com/v1/messages', {
+				method: 'POST',
+				signal: controller.signal,
+				headers: {
+					'Content-Type': 'application/json',
+					'x-api-key': apiKey,
+					'anthropic-version': '2023-06-01',
+					'anthropic-dangerous-direct-browser-access': 'true'
+				},
+				body: JSON.stringify({
+					model: 'claude-opus-4-5',
+					system: systemPrompt,
+					messages: [{ role: 'user', content: userPrompt }],
+					max_tokens: 4000
+				})
+			});
+		} else {
+			response = await fetch('https://api.openai.com/v1/chat/completions', {
+				method: 'POST',
+				signal: controller.signal,
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+				body: JSON.stringify({
+					model: 'gpt-4o',
+					messages,
+					max_completion_tokens: 3500
+				})
+			});
+		}
 	} catch (fetchErr) {
 		clearTimeout(timer);
 		const msg = fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error');
@@ -3036,20 +3275,68 @@ OUTPUT RULES:
 	clearTimeout(timer);
 
 	if (!response.ok) {
-		let errMsg = `OpenAI error (${response.status})`;
+		let errMsg = `${provider === 'claude' ? 'Claude' : 'OpenAI'} error (${response.status})`;
 		try {
 			const errBody = await response.json();
-			errMsg = errBody?.error?.message || errMsg;
+			errMsg = errBody?.error?.message || errBody?.error?.error?.message || errMsg;
 		} catch (_) {}
 		console.error('[AI codegen] API error:', response.status, errMsg);
 		throw new Error(`[${response.status}] ${errMsg}`);
 	}
 
 	const data = await response.json();
-	let code = data.choices?.[0]?.message?.content?.trim() || '';
+	let code = provider === 'claude'
+		? (data.content?.[0]?.text?.trim() || '')
+		: (data.choices?.[0]?.message?.content?.trim() || '');
 	console.log('[AI codegen] raw response length:', code.length, '| first 120:', code.substring(0, 120));
-	// Strip markdown fences if GPT added them
+	// Strip markdown fences if the model added them
 	code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+	// Post-process: fix common rendering failures
+	code = _aiFixComponentCode(code);
+	return code;
+}
+
+// ── Post-processing: fix common AI-generated component rendering issues ───
+function _aiFixComponentCode(code) {
+	if (!code) return code;
+
+	// 1. If the root element has no explicit background-color set,
+	//    and it has no background at all, add a safe white background so
+	//    text with explicit colors renders correctly.
+	//    We only patch the FIRST opening div/section tag.
+	const firstTagMatch = code.match(/^(<(?:div|section|article|aside|header|footer|main)[^>]*>)/i);
+	if (firstTagMatch) {
+		const firstTag = firstTagMatch[1];
+		const hasBackground = /background(?:-color)?[\s]*:/i.test(firstTag);
+		if (!hasBackground) {
+			// Inject a safe neutral background that won't clash with text colors
+			const patched = firstTag.replace(/style="([^"]*)"/, (m, existing) => {
+				return `style="background:#ffffff; color:#1e293b; font-family:system-ui,-apple-system,sans-serif; ${existing}"`;
+			});
+			// If no style attr at all, add one
+			if (patched === firstTag) {
+				code = code.replace(
+					firstTagMatch[0],
+					firstTag.replace(/^(<\w+)/, '$1 style="background:#ffffff; color:#1e293b; font-family:system-ui,-apple-system,sans-serif;"')
+				);
+			} else {
+				code = code.replace(firstTagMatch[0], patched);
+			}
+		}
+	}
+
+	// 2. Detect orphan opacity:0 in inline styles (element invisible with no JS trigger).
+	//    Replace opacity:0 that appears in the HTML (not in <style> blocks) with opacity:1
+	//    to prevent invisible content if IntersectionObserver never fires.
+	//    We leave opacity:0 inside <style> tags alone (those are handled by JS class toggles).
+	const styleBlocks = [];
+	const codeWithoutStyles = code.replace(/<style[\s\S]*?<\/style>/gi, (m) => {
+		styleBlocks.push(m);
+		return `__STYLE_BLOCK_${styleBlocks.length - 1}__`;
+	});
+	const fixedHtml = codeWithoutStyles.replace(/\bopacity\s*:\s*0\b/gi, 'opacity:1');
+	code = fixedHtml.replace(/__STYLE_BLOCK_(\d+)__/g, (_, i) => styleBlocks[parseInt(i)]);
+
 	return code;
 }
 
@@ -3057,10 +3344,9 @@ window._aiGenerateComponentCode = async function(idx) {
 	const comp = window._aiLastComponents?.[idx];
 	if (!comp) return;
 
-	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
-	if (!apiKey || !apiKey.startsWith('sk-')) {
-		showNotification('No OpenAI API key — expand ▶ API Key settings', 'error');
-		return;
+	let activeKey;
+	try { activeKey = _aiGetActiveKey(); } catch(e) {
+		showNotification(e.message, 'error'); return;
 	}
 
 	const btn       = document.getElementById(`ai-gen-btn-${idx}`);
@@ -3077,7 +3363,7 @@ window._aiGenerateComponentCode = async function(idx) {
 	loadingEl.style.display = 'block';
 
 	try {
-		const code = await _aiGenerateOneComponentCode(comp, window._aiLastPageUrl || '', apiKey, window._aiLastPageContent || '', window._aiLastNicheContext || null);
+		const code = await _aiGenerateOneComponentCode(comp, window._aiLastPageUrl || '', activeKey.key, window._aiLastPageContent || '', window._aiLastNicheContext || null, activeKey.provider);
 
 		if (!window._aiGeneratedCodes) window._aiGeneratedCodes = {};
 		window._aiGeneratedCodes[idx] = code;
@@ -3141,10 +3427,9 @@ window._aiRefineComponentCode = async function(idx) {
 		return;
 	}
 
-	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
-	if (!apiKey || !apiKey.startsWith('sk-')) {
-		showNotification('No OpenAI API key — expand ▶ API Key settings', 'error');
-		return;
+	let activeKey;
+	try { activeKey = _aiGetActiveKey(); } catch(e) {
+		showNotification(e.message, 'error'); return;
 	}
 
 	const btn       = document.getElementById(`ai-gen-btn-${idx}`);
@@ -3159,33 +3444,52 @@ window._aiRefineComponentCode = async function(idx) {
 	loadingEl.style.display = 'block';
 
 	try {
-		// Build the same system prompt that was used to generate the code
 		const nicheContext = window._aiLastNicheContext || null;
 		const nicheDirective = nicheContext
 			? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nInfer the exact product/niche from these signals and make every headline, benefit line, and CTA hyper-specific to this topic.`
 			: '';
 		const systemPrompt = `You are a senior direct-response copywriter AND expert front-end developer. You refine existing landing page HTML/CSS/JS snippets based on specific instructions.\n\nRULES:\n- Apply ONLY the changes requested. Keep everything else exactly as-is.\n- Do not restructure, rename, or restyle parts the user did not mention.\n- Output ONLY the complete updated HTML snippet — no markdown fences, no explanations.\n- The output must be fully self-contained and functional.\n${nicheDirective}`;
 
+		const refineMessages = [
+			{ role: 'user', content: `Here is the current HTML component code:\n\n${existingCode}` },
+			{ role: 'assistant', content: 'I have reviewed the current component code.' },
+			{ role: 'user', content: `Please apply these changes to the component:\n\n${refinementPrompt}\n\nOutput ONLY the complete updated HTML — no explanations, no markdown fences.` }
+		];
+
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 60000);
 
 		let response;
 		try {
-			response = await fetch('https://api.openai.com/v1/chat/completions', {
-				method: 'POST',
-				signal: controller.signal,
-				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-				body: JSON.stringify({
-					model: 'gpt-4o',
-					messages: [
-						{ role: 'system', content: systemPrompt },
-						{ role: 'user', content: `Here is the current HTML component code:\n\n${existingCode}` },
-						{ role: 'assistant', content: 'I have reviewed the current component code.' },
-						{ role: 'user', content: `Please apply these changes to the component:\n\n${refinementPrompt}\n\nOutput ONLY the complete updated HTML — no explanations, no markdown fences.` }
-					],
-					max_completion_tokens: 3500
-				})
-			});
+			if (activeKey.provider === 'claude') {
+				response = await fetch('https://api.anthropic.com/v1/messages', {
+					method: 'POST',
+					signal: controller.signal,
+					headers: {
+						'Content-Type': 'application/json',
+						'x-api-key': activeKey.key,
+						'anthropic-version': '2023-06-01',
+						'anthropic-dangerous-direct-browser-access': 'true'
+					},
+					body: JSON.stringify({
+						model: 'claude-opus-4-5',
+						system: systemPrompt,
+						messages: refineMessages,
+						max_tokens: 4000
+					})
+				});
+			} else {
+				response = await fetch('https://api.openai.com/v1/chat/completions', {
+					method: 'POST',
+					signal: controller.signal,
+					headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeKey.key}` },
+					body: JSON.stringify({
+						model: 'gpt-4o',
+						messages: [{ role: 'system', content: systemPrompt }, ...refineMessages],
+						max_completion_tokens: 3500
+					})
+				});
+			}
 		} catch (fetchErr) {
 			clearTimeout(timer);
 			throw new Error(fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error'));
@@ -3193,14 +3497,17 @@ window._aiRefineComponentCode = async function(idx) {
 		clearTimeout(timer);
 
 		if (!response.ok) {
-			let errMsg = `OpenAI error (${response.status})`;
-			try { const b = await response.json(); errMsg = b?.error?.message || errMsg; } catch (_) {}
+			let errMsg = `${activeKey.provider === 'claude' ? 'Claude' : 'OpenAI'} error (${response.status})`;
+			try { const b = await response.json(); errMsg = b?.error?.message || b?.error?.error?.message || errMsg; } catch (_) {}
 			throw new Error(errMsg);
 		}
 
 		const data = await response.json();
-		let code = data.choices?.[0]?.message?.content?.trim() || '';
+		let code = activeKey.provider === 'claude'
+			? (data.content?.[0]?.text?.trim() || '')
+			: (data.choices?.[0]?.message?.content?.trim() || '');
 		code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+		code = _aiFixComponentCode(code);
 
 		window._aiGeneratedCodes[idx] = code;
 		const ta = document.getElementById(`ai-comp-textarea-${idx}`);
@@ -3209,16 +3516,15 @@ window._aiRefineComponentCode = async function(idx) {
 		loadingEl.style.display = 'none';
 		outputEl.style.display = 'block';
 
-		// Reset refine row
 		const refineInput = document.getElementById(`ai-refine-input-${idx}`);
 		if (refineInput) refineInput.value = '';
-		window._aiToggleRefineRow(idx); // collapse the row
+		window._aiToggleRefineRow(idx);
 
 		showNotification('Component refined ✅', 'success');
 
 	} catch (e) {
 		loadingEl.style.display = 'none';
-		outputEl.style.display = 'block'; // keep showing old code
+		outputEl.style.display = 'block';
 		showNotification('Refinement failed: ' + e.message, 'error');
 	} finally {
 		if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '⚡ Apply'; }
@@ -3331,7 +3637,13 @@ window._aiPreviewComponent = function(idx) {
 
 	// Write code into iframe via srcdoc
 	const frame = document.getElementById('aiPreviewFrame');
-	const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;}</style></head><body>${code}</body></html>`;
+	const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+		*, *::before, *::after { box-sizing: border-box; }
+		html, body { margin: 0; padding: 0; background: #ffffff; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.5; color: #1e293b; }
+		img { max-width: 100%; height: auto; display: block; }
+		a { color: inherit; }
+		button { font-family: inherit; }
+	</style></head><body>${code}</body></html>`;
 	frame.srcdoc = doc;
 };
 
@@ -3491,7 +3803,7 @@ function _aiRenderResults(a, pageUrl, generatedCodes = {}, showSpinners = false)
 							<!-- loading spinner (shown while generating) -->
 							<div id="ai-comp-loading-${idx}" style="display:${showSpinners && !code ? 'block' : 'none'}; padding:22px; text-align:center; background:#1e1e2e;">
 								<div style="display:inline-block; width:22px; height:22px; border:2px solid rgba(124,58,237,0.3); border-top-color:#a78bfa; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px;"></div>
-								<div style="font-size:12px; color:#a78bfa;">Generating with GPT...</div>
+								<div style="font-size:12px; color:#a78bfa;">Generating...</div>
 							</div>
 							<!-- empty state — generate prompt -->
 							<div id="ai-comp-empty-${idx}" style="display:${!showSpinners && !code ? 'flex' : 'none'}; flex-direction:column; align-items:center; gap:10px; padding:22px 20px; background:#13111e;">
@@ -3536,7 +3848,9 @@ function _aiRenderResults(a, pageUrl, generatedCodes = {}, showSpinners = false)
 	content.innerHTML = html;
 	content.style.display = 'block';
 	document.getElementById('aiCopyBtn').style.display = 'inline-flex';
-	document.getElementById('aiResultsMeta').textContent = `Analyzed: ${pageUrl} · ${new Date().toLocaleTimeString()}`;
+	const providerLabel = _aiProvider === 'claude' ? '✴️ Claude Opus' : '🤖 GPT-4o';
+	const metaBase = pageUrl ? `Analyzed: ${pageUrl} · ` : '';
+	document.getElementById('aiResultsMeta').textContent = `${metaBase}${providerLabel} · ${new Date().toLocaleTimeString()}`;
 }
 
 function _aiReportToText(a, url) {
