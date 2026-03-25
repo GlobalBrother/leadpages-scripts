@@ -24,6 +24,7 @@ function initAuthUI() {
 		document.getElementById('appLayout').style.display = 'flex';
 		document.getElementById('connectionStatus').style.display = 'flex';
 		loadSites();
+		_loadAiApiKeyFromFirebase();
 		return;
 	}
 	// Sesiune expirată sau inexistentă
@@ -54,6 +55,7 @@ function loginWithPassword() {
 	document.getElementById('appLayout').style.display = 'flex';
 	document.getElementById('connectionStatus').style.display = 'flex';
 	loadSites();
+	_loadAiApiKeyFromFirebase();
 }
 
 function logout() {
@@ -62,6 +64,7 @@ function logout() {
 	currentSite = '';
 	currentSlug = '';
 	contentData = {};
+	_aiApiKey = '';
 	document.getElementById('appLayout').style.display = 'none';
 	document.getElementById('connectionStatus').style.display = 'none';
 	document.getElementById('adminPassword').value = '';
@@ -205,6 +208,30 @@ function getComponentIcon(name) {
 	return '📄';
 }
 
+function isKnownComponent(name) {
+	return (
+		isBulletsComponent(name) ||
+		isTestimonialsComponent(name) ||
+		is2ColComponent(name) ||
+		isTitleComponent(name) ||
+		name.includes('video') || name.includes('vsl') ||
+		name.includes('image') || name.includes('img') ||
+		name.includes('button') || name.includes('btn')
+	);
+}
+
+function getComponentTypeTag(name) {
+	const n = name.toLowerCase();
+	if (isBulletsComponent(name))      return { label: 'changing-bullets', type: 'known' };
+	if (isTestimonialsComponent(name)) return { label: 'customer-reviews',  type: 'known' };
+	if (is2ColComponent(name))         return { label: '2-col',             type: 'known' };
+	if (isTitleComponent(name))        return { label: 'title',             type: 'known' };
+	if (n.includes('video') || n.includes('vsl'))   return { label: 'video',  type: 'known' };
+	if (n.includes('image') || n.includes('img'))   return { label: 'image',  type: 'known' };
+	if (n.includes('button') || n.includes('btn'))  return { label: 'button', type: 'known' };
+	return { label: 'custom component', type: 'custom' };
+}
+
 function renderContentGrid(componentsData) {
 	_currentComponentsData = componentsData;
 	const grid = document.getElementById('contentGrid');
@@ -272,14 +299,16 @@ function buildPreviewCard(component, content) {
 		previewHtml = `<div class="card-preview-text">${escapeHtml(plain || '(empty)')}</div>`;
 	}
 
+	const typeTag = getComponentTypeTag(component);
 	card.innerHTML = `
 				<div class="card-header">
 					<span class="component-slug-badge">${escapeHtml(currentSlug)}</span>
 					<div class="card-component-name">
 						<div class="component-icon">${icon}</div>
 						<span class="component-label">${escapeHtml(component)}</span>
+						
 					</div>
-
+					<div class="component-type-tag component-type-tag--${typeTag.type}">${escapeHtml(typeTag.label)}</div>
 				</div>
 				<div class="card-preview-body">${previewHtml}</div>
 				<div class="card-preview-edit-hint">✏️ Click to edit</div>
@@ -359,6 +388,7 @@ function openComponentEditor(component) {
 					<textarea id="content-${component}" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',monospace;resize:vertical;min-height:120px;color:var(--text-primary);background:#fafafa;transition:all 0.2s;line-height:1.6;box-sizing:border-box;">${escapeHtml(content)}</textarea>`;
 		footer.innerHTML = `
 					<button class="btn-save-card" onclick="saveContent('${component}')">Save</button>
+					<button class="btn-preview-card" onclick="previewComponentContent('${component}')" title="Preview component HTML in a live iframe">👁 Preview</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
 					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
@@ -380,6 +410,64 @@ function closeComponentEditor() {
 		_titleSelectionHandler = null;
 	}
 	_savedTitleRange = null;
+}
+
+function previewComponentContent(component) {
+	const code = document.getElementById(`content-${component}`)?.value || _currentComponentsData[component] || '';
+	if (!code || !code.trim()) {
+		showNotification('No content to preview', 'error');
+		return;
+	}
+
+	const existing = document.getElementById('aiPreviewModal');
+	if (existing) existing.remove();
+
+	const modal = document.createElement('div');
+	modal.id = 'aiPreviewModal';
+	modal.style.cssText = `
+		position:fixed; inset:0; z-index:99999;
+		display:flex; align-items:center; justify-content:center;
+		background:rgba(0,0,0,0.72); backdrop-filter:blur(4px);
+		padding:20px; box-sizing:border-box;
+	`;
+	modal.innerHTML = `
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45);">
+			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
+				<div style="display:flex; align-items:center; gap:10px;">
+					<span style="font-size:16px;">👁</span>
+					<span style="font-size:13px; font-weight:700; color:#e2e8f0;">Preview — ${escapeHtml(component)}</span>
+				</div>
+				<div style="display:flex; gap:8px; align-items:center;">
+					<div style="display:flex; gap:4px; padding:3px 4px; background:#1e1e2e; border-radius:8px;">
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='100%'; document.getElementById('aiPreviewFrame').style.margin='0';"
+							title="Desktop" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">🖥 Desktop</button>
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='768px'; document.getElementById('aiPreviewFrame').style.margin='0 auto';"
+							title="Tablet" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">📱 Tablet</button>
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='390px'; document.getElementById('aiPreviewFrame').style.margin='0 auto';"
+							title="Mobile" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">📲 Mobile</button>
+					</div>
+					<button onclick="document.getElementById('aiPreviewModal').remove()"
+						style="width:30px; height:30px; display:grid; place-items:center; background:#1e1e2e; color:#94a3b8; border:1px solid #313244; border-radius:8px; font-size:16px; cursor:pointer;">✕</button>
+				</div>
+			</div>
+			<div style="flex:1; overflow:auto; background:#e5e7eb; padding:16px; display:flex; justify-content:center;">
+				<iframe id="aiPreviewFrame"
+					style="width:100%; height:100%; min-height:500px; border:none; border-radius:10px; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,0.15); transition:width .25s ease; display:block;"
+					sandbox="allow-scripts allow-same-origin"></iframe>
+			</div>
+		</div>
+	`;
+	document.body.appendChild(modal);
+
+	modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+	const onKey = e => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', onKey); } };
+	document.addEventListener('keydown', onKey);
+
+	const frame = document.getElementById('aiPreviewFrame');
+	frame.srcdoc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;}</style></head><body>${code}</body></html>`;
 }
 
 function refreshPreviewCard(component) {
@@ -2027,6 +2115,1474 @@ async function saveManageSystems() {
 		showNotification('Error saving systems', 'error');
 	}
 }
+// ─────────────────────────────────────────────────────────────────────────
+
+// ─── AI PAGE ANALYZER ─────────────────────────────────────────────────────
+
+// In-memory cache — loaded from Firebase after login, never stored in source
+let _aiApiKey = '';
+
+async function _loadAiApiKeyFromFirebase() {
+	try {
+		const res = await fetch(`${FIREBASE_URL}/config/openai_key.json`);
+		if (!res.ok) return;
+		const val = await res.json();
+		if (val && typeof val === 'string' && val.startsWith('sk-')) {
+			_aiApiKey = val;
+		}
+	} catch (e) {
+		// silently ignore — key just won't be pre-loaded
+	}
+}
+
+function showAiAnalyzerModal() {
+	// Pre-fill API key input if we have it in memory
+	const keyInput = document.getElementById('aiApiKeyInput');
+	if (_aiApiKey) keyInput.value = _aiApiKey;
+	// Pre-fill URL from current site if available
+	if (currentSite) {
+		const hostname = firebaseKeyToHostname(currentSite);
+		const urlInput = document.getElementById('aiPageUrl');
+		if (!urlInput.value) urlInput.value = 'https://' + hostname;
+	}
+	document.getElementById('aiAnalyzerModal').style.display = 'flex';
+	setTimeout(() => document.getElementById('aiPageUrl').focus(), 100);
+}
+
+function closeAiAnalyzerModal() {
+	document.getElementById('aiAnalyzerModal').style.display = 'none';
+}
+
+function toggleAiApiKeySection(btn) {
+	const section = document.getElementById('aiApiKeySection');
+	const icon = document.getElementById('aiApiKeyToggleIcon');
+	const isHidden = section.style.display === 'none' || section.style.display === '';
+	section.style.display = isHidden ? 'block' : 'none';
+	icon.textContent = isHidden ? '▼' : '▶';
+}
+
+// ── Custom component ideas (pre-analyze) ─────────────────────────────────────
+
+function toggleAiCustomIdeasSection() {
+	const section = document.getElementById('aiCustomIdeasSection');
+	const icon    = document.getElementById('aiCustomIdeasToggleIcon');
+	const isHidden = section.style.display === 'none' || section.style.display === '';
+	section.style.display = isHidden ? 'block' : 'none';
+	icon.textContent = isHidden ? '▼' : '▶';
+	// Auto-add first row if empty
+	if (isHidden && document.getElementById('aiCustomIdeasList').children.length === 0) {
+		aiAddCustomIdea();
+	}
+}
+
+let _aiCustomIdeaCounter = 0;
+
+function aiAddCustomIdea() {
+	const list = document.getElementById('aiCustomIdeasList');
+	const id = _aiCustomIdeaCounter++;
+	const row = document.createElement('div');
+	row.id = `ai-custom-idea-${id}`;
+	row.style.cssText = 'background:#0d1f17; border:1px solid rgba(52,211,153,0.2); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:7px; animation:slideInRow .15s ease;';
+	row.innerHTML = `
+		<div style="display:flex; gap:8px; align-items:center;">
+			<input type="text" placeholder="Component name (e.g. testimonial-video-strip)"
+				id="ai-custom-idea-name-${id}"
+				style="flex:1; padding:7px 10px; background:#0f2a1c; color:#d1fae5; border:1px solid rgba(52,211,153,0.25); border-radius:6px; font-size:12px; font-family:inherit; box-sizing:border-box; outline:none;"
+				onfocus="this.style.borderColor='#34d399'" onblur="this.style.borderColor='rgba(52,211,153,0.25)'"
+			/>
+			<button onclick="aiRemoveCustomIdea(${id})"
+				style="width:26px; height:26px; flex-shrink:0; background:#1a0a0a; color:#f87171; border:1px solid rgba(248,113,113,0.3); border-radius:6px; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; line-height:1;">✕</button>
+		</div>
+		<textarea id="ai-custom-idea-desc-${id}" rows="2"
+			placeholder="Describe what you want… e.g. 'A sticky bottom bar with a countdown timer and a single CTA button that slides in after 5 seconds'"
+			style="width:100%; padding:7px 10px; background:#0f2a1c; color:#d1fae5; border:1px solid rgba(52,211,153,0.25); border-radius:6px; font-size:12px; font-family:inherit; resize:vertical; line-height:1.5; box-sizing:border-box; outline:none;"
+			onfocus="this.style.borderColor='#34d399'" onblur="this.style.borderColor='rgba(52,211,153,0.25)'"
+		></textarea>
+	`;
+	list.appendChild(row);
+	_aiUpdateCustomIdeasBadge();
+	// Focus the name input
+	setTimeout(() => row.querySelector('input')?.focus(), 50);
+}
+
+function aiRemoveCustomIdea(id) {
+	const row = document.getElementById(`ai-custom-idea-${id}`);
+	if (row) row.remove();
+	_aiUpdateCustomIdeasBadge();
+}
+
+function _aiUpdateCustomIdeasBadge() {
+	const count = document.getElementById('aiCustomIdeasList')?.children.length || 0;
+	const badge  = document.getElementById('aiCustomIdeasCountBadge');
+	const genBtn = document.getElementById('aiGenerateMyIdeasBtn');
+	if (badge) {
+		badge.style.display = count > 0 ? 'inline-block' : 'none';
+		badge.textContent   = count;
+	}
+	if (genBtn) {
+		genBtn.style.display = count > 0 ? 'block' : 'none';
+	}
+}
+
+function _aiGetCustomIdeas() {
+	const list = document.getElementById('aiCustomIdeasList');
+	if (!list) return [];
+	const ideas = [];
+	for (const row of list.children) {
+		const idMatch = row.id.match(/ai-custom-idea-(\d+)/);
+		if (!idMatch) continue;
+		const id = idMatch[1];
+		const name = (document.getElementById(`ai-custom-idea-name-${id}`)?.value || '').trim();
+		const desc = (document.getElementById(`ai-custom-idea-desc-${id}`)?.value || '').trim();
+		if (name || desc) {
+			ideas.push({
+				component_name: name || `custom-idea-${id}`,
+				description: desc || name,
+				type: 'custom',
+				interactivity: 'ANIMATED',
+				scroll_timing: 'MIDDLE',
+				placement: 'As specified in description',
+				copy_suggestion: ''
+			});
+		}
+	}
+	return ideas;
+}
+
+async function runAiGenerateCustomOnly() {
+	const customIdeas = _aiGetCustomIdeas();
+	if (customIdeas.length === 0) {
+		showNotification('Add at least one component idea first', 'error');
+		return;
+	}
+
+	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
+	if (!apiKey || !apiKey.startsWith('sk-')) {
+		showNotification('No OpenAI API key — expand ▶ API Key settings to add one', 'error');
+		return;
+	}
+
+	// Disable both buttons while running
+	const analyzeBtn  = document.getElementById('aiAnalyzeBtn');
+	const generateBtn = document.getElementById('aiGenerateMyIdeasBtn');
+	analyzeBtn.disabled  = true;  analyzeBtn.style.opacity  = '0.6';
+	generateBtn.disabled = true;  generateBtn.style.opacity = '0.6';
+	generateBtn.textContent = '⏳ Generating...';
+
+	document.getElementById('aiResultsEmpty').style.display   = 'none';
+	document.getElementById('aiResultsContent').style.display = 'none';
+	document.getElementById('aiResultsLoading').style.display = 'flex';
+	document.getElementById('aiCopyBtn').style.display        = 'none';
+	document.getElementById('aiResultsMeta').textContent      = '';
+
+	const setStep = msg => { document.getElementById('aiLoadingStep').textContent = msg; };
+
+	try {
+		window._aiLastPageContent  = '';
+		window._aiLastNicheContext = null;
+		window._aiLastExistingInfo = null;
+		window._aiLastPageUrl      = '';
+
+		const stubAnalysis = {
+			overall_score:   null,
+			score_rationale: '',
+			page_summary:    '',
+			improvements:    [],
+			component_ideas: customIdeas
+		};
+		window._aiLastComponents = customIdeas;
+		window._aiGeneratedCodes = {};
+
+		_aiRenderResults(stubAnalysis, '', {}, true);
+
+		for (let idx = 0; idx < customIdeas.length; idx++) {
+			setStep(`Generating component ${idx + 1} / ${customIdeas.length}…`);
+			const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
+			const emptyEl   = document.getElementById(`ai-comp-empty-${idx}`);
+			const outputEl  = document.getElementById(`ai-comp-output-${idx}`);
+			if (loadingEl) loadingEl.style.display = 'block';
+			if (emptyEl)   emptyEl.style.display   = 'none';
+			if (outputEl)  outputEl.style.display  = 'none';
+			try {
+				const code = await _aiGenerateOneComponentCode(customIdeas[idx], '', apiKey, '', null);
+				window._aiGeneratedCodes[idx] = code;
+				if (loadingEl) loadingEl.style.display = 'none';
+				if (outputEl)  outputEl.style.display  = 'block';
+				const ta  = document.getElementById(`ai-comp-textarea-${idx}`);
+				if (ta) ta.value = code;
+				const btn = document.getElementById(`ai-gen-btn-${idx}`);
+				if (btn) { btn.innerHTML = '🔄 Regenerate'; btn.disabled = false; btn.style.opacity = '1'; }
+			} catch (e) {
+				if (loadingEl) loadingEl.style.display = 'none';
+				if (emptyEl)   emptyEl.style.display   = 'flex';
+				const btn = document.getElementById(`ai-gen-btn-${idx}`);
+				if (btn) { btn.innerHTML = '⚡ Generate Code'; btn.disabled = false; btn.style.opacity = '1'; }
+			}
+		}
+	} finally {
+		analyzeBtn.disabled  = false;  analyzeBtn.style.opacity  = '1';
+		generateBtn.disabled = false;  generateBtn.style.opacity = '1';
+		generateBtn.textContent = '⚡ Generate my ideas';
+	}
+}
+
+async function listAvailableGptModels() {
+	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
+	if (!apiKey || !apiKey.startsWith('sk-')) {
+		showNotification('Add your API key first', 'error');
+		return;
+	}
+	showNotification('Fetching models...', 'success');
+	try {
+		const res = await fetch('https://api.openai.com/v1/models', {
+			headers: { 'Authorization': `Bearer ${apiKey}` }
+		});
+		const data = await res.json();
+		if (!res.ok) throw new Error(data?.error?.message || `Error ${res.status}`);
+		const gptModels = data.data
+			.map(m => m.id)
+			.filter(id => id.startsWith('gpt'))
+			.sort();
+		alert('GPT models on your account:\n\n' + gptModels.join('\n'));
+	} catch (e) {
+		showNotification('Failed: ' + e.message, 'error');
+	}
+}
+
+async function saveAiApiKey() {
+	const key = document.getElementById('aiApiKeyInput').value.trim();
+	if (!key.startsWith('sk-')) {
+		showNotification('Invalid API key — must start with sk-', 'error');
+		return;
+	}
+	try {
+		const res = await fetch(`${FIREBASE_URL}/config/openai_key.json`, {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(key)
+		});
+		if (!res.ok) throw new Error('Firebase write failed');
+		_aiApiKey = key;
+		showNotification('API key saved to Firebase — shared with all colleagues! ✅', 'success');
+	} catch (e) {
+		showNotification('Failed to save key: ' + e.message, 'error');
+	}
+}
+
+async function runAiAnalysis() {
+	const url         = document.getElementById('aiPageUrl').value.trim();
+	const customIdeas = _aiGetCustomIdeas();
+	const hasUrl      = url && url.startsWith('http');
+
+	if (!hasUrl) {
+		showNotification('Enter a valid page URL to analyze (starting with https://)', 'error');
+		return;
+	}
+
+	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
+	if (!apiKey || !apiKey.startsWith('sk-')) {
+		showNotification('No OpenAI API key found — expand ▶ API Key settings to add one', 'error');
+		return;
+	}
+
+	// UI → loading state
+	document.getElementById('aiResultsEmpty').style.display   = 'none';
+	document.getElementById('aiResultsContent').style.display = 'none';
+	document.getElementById('aiResultsLoading').style.display = 'flex';
+	document.getElementById('aiAnalyzeBtn').disabled          = true;
+	document.getElementById('aiAnalyzeBtn').style.opacity     = '0.6';
+	const generateBtn = document.getElementById('aiGenerateMyIdeasBtn');
+	if (generateBtn) { generateBtn.disabled = true; generateBtn.style.opacity = '0.5'; }
+	document.getElementById('aiCopyBtn').style.display        = 'none';
+	document.getElementById('aiResultsMeta').textContent      = '';
+
+	const setStep = (msg) => {
+		document.getElementById('aiLoadingStep').textContent = msg;
+	};
+
+	try {
+		// ── Step 1: Fetch page HTML ───────────────────────────────────────────
+		const rawHtml = await _aiProxyFetch(url, setStep);
+		if (!rawHtml) throw new Error('Page returned empty content');
+
+		// ── Step 2: Extract meaningful content from HTML ──────────────────────
+		setStep('Extracting page content...');
+		const pageContent = _aiExtractPageContent(rawHtml, url);
+		window._aiLastPageContent = pageContent; // cache for Regenerate
+
+		// ── Step 2.5: Scrape existing Firebase components + extract niche context ─
+		setStep('Reading existing site components from Firebase...');
+		const [existingInfo, nicheContext] = await Promise.all([
+			_aiGetExistingComponents(currentSite, currentSlug),
+			Promise.resolve(_aiExtractNicheContext(pageContent))
+		]);
+		// Cache for Regenerate button
+		window._aiLastExistingInfo = existingInfo;
+		window._aiLastNicheContext = nicheContext;
+		if (existingInfo) {
+			console.log('[AI] Existing components found:', existingInfo.componentNames);
+		}
+		if (nicheContext) {
+			console.log('[AI] Niche context extracted:', nicheContext);
+		}
+
+		// ── Step 2.6: Capture screenshot for visual analysis ──────────────────
+		setStep('Capturing page screenshot...');
+		const screenshotUrl = await _aiGetScreenshotUrl(url, setStep);
+
+		// ── Step 3: Send to GPT with text + screenshot ────────────────────────
+		setStep(screenshotUrl ? 'Analyzing with GPT Vision...' : 'Analyzing with GPT (text only — screenshot unavailable)...');
+		const analysis = await _aiCallGpt(pageContent, url, apiKey, screenshotUrl, existingInfo, nicheContext);
+
+		// ── Step 4: Merge AI suggestions (max 4) with user's custom ideas ─────
+		const aiComponents       = (analysis.component_ideas || []).slice(0, 4);
+		const components         = [...aiComponents, ...customIdeas];
+		analysis.component_ideas = components;
+		const generatedCodes     = {};
+
+		if (components.length > 0) {
+			// Render results first so the user can see the cards with loading spinners
+			setStep('Generating component code (1/' + components.length + ')...');
+			_aiRenderResults(analysis, url, {}, true); // true = show spinners
+
+			for (let idx = 0; idx < components.length; idx++) {
+				setStep(`Generating component code (${idx + 1}/${components.length})...`);
+				// Show spinner on card
+				const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
+				const emptyEl   = document.getElementById(`ai-comp-empty-${idx}`);
+				const outputEl  = document.getElementById(`ai-comp-output-${idx}`);
+				if (loadingEl) loadingEl.style.display = 'block';
+				if (emptyEl)   emptyEl.style.display   = 'none';
+				if (outputEl)  outputEl.style.display  = 'none';
+
+				try {
+					const code = await _aiGenerateOneComponentCode(components[idx], url, apiKey, pageContent, nicheContext);
+					generatedCodes[idx] = code;
+					window._aiGeneratedCodes = window._aiGeneratedCodes || {};
+					window._aiGeneratedCodes[idx] = code;
+					// Populate card
+					if (loadingEl) loadingEl.style.display = 'none';
+					if (outputEl)  outputEl.style.display  = 'block';
+					const ta = document.getElementById(`ai-comp-textarea-${idx}`);
+					if (ta) ta.value = code;
+					const btn = document.getElementById(`ai-gen-btn-${idx}`);
+					if (btn) { btn.innerHTML = '🔄 Regenerate'; btn.disabled = false; btn.style.opacity = '1'; }
+				} catch (e) {
+					console.error(`[AI codegen] component ${idx} failed:`, e);
+					generatedCodes[idx] = '';
+					if (loadingEl) loadingEl.style.display = 'none';
+					if (emptyEl)   emptyEl.style.display   = 'flex';
+					const btn = document.getElementById(`ai-gen-btn-${idx}`);
+					if (btn) { btn.innerHTML = '⚡ Generate Code'; btn.disabled = false; btn.style.opacity = '1'; }
+				}
+			}
+		} else {
+			// ── Step 5: Render results ──────────────────────────────────────────
+			setStep('Rendering results...');
+			_aiRenderResults(analysis, url, {}, false);
+		}
+
+	} catch (err) {
+		document.getElementById('aiResultsLoading').style.display = 'none';
+		document.getElementById('aiResultsEmpty').style.display = 'flex';
+
+		const msg = err.message || '';
+		const isQuota = msg.toLowerCase().includes('quota') || msg.includes('429') || msg.toLowerCase().includes('billing') || msg.toLowerCase().includes('exceeded');
+		const isAuth  = msg.includes('401') || msg.toLowerCase().includes('incorrect api key') || msg.toLowerCase().includes('invalid api key');
+
+		let extraHtml = '';
+		if (isQuota) {
+			extraHtml = `
+				<div style="margin-top:10px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+					<p style="margin:0; font-size:12px; color:#92400e; background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:8px 14px; text-align:center; max-width:400px; line-height:1.6;">
+						💳 Your OpenAI account has run out of credits or the billing limit was reached.<br>
+						Add credits to continue using the AI analyzer.
+					</p>
+					<a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank"
+						style="padding:8px 16px; background:#7c3aed; color:#fff; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; display:inline-block; margin-top:2px;">
+						💳 Open OpenAI Billing →
+					</a>
+				</div>`;
+		} else if (isAuth) {
+			extraHtml = `
+				<p style="margin:6px 0 0; font-size:12px; color:#92400e; background:#fef3c7; border:1px solid #fcd34d; border-radius:8px; padding:8px 14px; text-align:center; max-width:380px; line-height:1.6;">
+					🔑 The API key saved in Firebase may be wrong or expired.<br>
+					Expand <strong>▶ API Key settings</strong> and save the correct key.
+				</p>`;
+		}
+
+		document.getElementById('aiResultsEmpty').innerHTML = `
+			<span style="font-size:36px;">${isQuota ? '💳' : '⚠️'}</span>
+			<p style="margin:0; font-size:14px; font-weight:600; color:#dc2626;">Analysis failed</p>
+			<p style="margin:0; font-size:12px; color:var(--text-muted); text-align:center; max-width:420px; line-height:1.6;">${escapeHtml(msg)}</p>
+			${extraHtml}
+		`;
+	} finally {
+		document.getElementById('aiAnalyzeBtn').disabled = false;
+		document.getElementById('aiAnalyzeBtn').style.opacity = '1';
+	}
+}
+
+// ── Fetch existing Firebase component names for the current site/slug ──
+async function _aiGetExistingComponents(site, slug) {
+	if (!site || !firebaseUrl) return null;
+
+	try {
+		const res = await fetch(`${firebaseUrl}/dynamic_content/${site}.json`);
+		if (!res.ok) return null;
+		const siteData = await res.json();
+		if (!siteData) return null;
+
+		// Collect component names present for this slug (and for 'default' as a fallback)
+		const slugsToCheck = slug ? [slug, 'default'] : ['default'];
+		const foundComponents = new Set();
+
+		Object.keys(siteData).forEach(componentName => {
+			const componentData = siteData[componentName];
+			if (!componentData || typeof componentData !== 'object') return;
+			for (const s of slugsToCheck) {
+				if (componentData[s] !== undefined) {
+					foundComponents.add(componentName);
+					break;
+				}
+			}
+		});
+
+		if (foundComponents.size === 0) return null;
+
+		return { componentNames: [...foundComponents].sort() };
+	} catch (e) {
+		console.warn('[AI] Could not load existing components from Firebase:', e.message);
+		return null;
+	}
+}
+
+// ── Extract free-form niche context directly from page content ───────────
+// No predefined categories — pulls the most signal-rich lines from the
+// extracted page text (title, H1, headings, CTAs) and returns them as a
+// plain descriptive string that GPT can interpret freely.
+function _aiExtractNicheContext(pageContent) {
+	if (!pageContent) return null;
+
+	const lines = pageContent.split('\n');
+	const picked = [];
+
+	// Priority order: TITLE > H1 > H2/H3 > CTA > P
+	const slots = [
+		{ prefix: '[TITLE]',    max: 1 },
+		{ prefix: '[H1]',       max: 1 },
+		{ prefix: '[H2]',       max: 3 },
+		{ prefix: '[H3]',       max: 2 },
+		{ prefix: '[CTA]',      max: 2 },
+		{ prefix: '[P]',        max: 2 },
+	];
+
+	for (const slot of slots) {
+		let count = 0;
+		for (const line of lines) {
+			if (line.startsWith(slot.prefix)) {
+				const text = line.replace(slot.prefix, '').trim();
+				if (text) {
+					picked.push(text);
+					count++;
+				}
+			}
+			if (count >= slot.max) break;
+		}
+	}
+
+	if (picked.length === 0) return null;
+
+	// Return as a compact summary string — no label/type, just raw copy signals
+	return picked.join(' | ');
+}
+
+// Extract readable content from raw HTML (strip scripts/styles, keep text structure)
+function _aiExtractPageContent(html, pageUrl) {
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(html, 'text/html');
+
+	// Remove noise elements
+	['script', 'style', 'noscript', 'svg', 'iframe', 'link', 'meta', 'head'].forEach(tag => {
+		doc.querySelectorAll(tag).forEach(el => el.remove());
+	});
+
+	// Collect headings, paragraphs, buttons, links, images (as alt/src)
+	const lines = [];
+
+	// Page title
+	const title = doc.querySelector('title');
+	if (title) lines.push(`[TITLE] ${title.textContent.trim()}`);
+
+	// Meta description
+	const metaDesc = doc.querySelector('meta[name="description"]');
+	if (metaDesc) lines.push(`[META DESC] ${metaDesc.getAttribute('content') || ''}`);
+
+	// All headings
+	doc.querySelectorAll('h1,h2,h3,h4').forEach(h => {
+		const t = h.textContent.trim().replace(/\s+/g, ' ');
+		if (t) lines.push(`[${h.tagName}] ${t}`);
+	});
+
+	// Paragraphs (limit to 200 chars each to keep prompt size sane)
+	doc.querySelectorAll('p').forEach(p => {
+		const t = p.textContent.trim().replace(/\s+/g, ' ');
+		if (t.length > 20) lines.push(`[P] ${t.substring(0, 220)}${t.length > 220 ? '...' : ''}`);
+	});
+
+	// Buttons and CTAs
+	doc.querySelectorAll('button, [class*="btn"], [class*="cta"], a[href*="buy"], a[href*="order"], a[href*="checkout"]').forEach(btn => {
+		const t = btn.textContent.trim().replace(/\s+/g, ' ');
+		if (t && t.length < 120) lines.push(`[CTA] ${t}`);
+	});
+
+	// Images (alt text gives context)
+	doc.querySelectorAll('img[alt]').forEach(img => {
+		const alt = img.getAttribute('alt').trim();
+		if (alt) lines.push(`[IMG ALT] ${alt}`);
+	});
+
+	// List items (bullets, testimonials etc.)
+	doc.querySelectorAll('li').forEach(li => {
+		const t = li.textContent.trim().replace(/\s+/g, ' ');
+		if (t.length > 10 && t.length < 300) lines.push(`[LI] ${t.substring(0, 220)}`);
+	});
+
+	// Limit total size (~12k chars) to stay well within GPT token budget
+	let combined = lines.join('\n');
+	if (combined.length > 12000) combined = combined.substring(0, 12000) + '\n[...content truncated...]';
+
+	return combined;
+}
+
+// ── Screenshot URL builder — tries multiple free services in order ────────
+async function _aiGetScreenshotUrl(pageUrl, setStep) {
+	// Each service returns a direct image URL GPT Vision can fetch.
+	// We probe each with a HEAD request (5s timeout) to confirm it's reachable
+	// before passing to GPT. Returns null if all fail.
+	const encoded = encodeURIComponent(pageUrl);
+	const candidates = [
+		// 1. Microlink — reliable, CORS-open image CDN
+		`https://api.microlink.io/?url=${encoded}&screenshot=true&meta=false&embed=screenshot.url`,
+		// 2. screenshotmachine — no-auth free tier
+		`https://api.screenshotmachine.com/?key=demo&url=${encoded}&dimension=1280x900&format=jpg&cacheLimit=0`,
+		// 3. thum.io fallback
+		`https://image.thum.io/get/width/1280/crop/900/noanimate/${encoded}`,
+		// 4. s-shot.ru — lightweight free service
+		`https://mini.s-shot.ru/1280x900/JPEG/1280/Z100/?${pageUrl}`,
+	];
+
+	for (const url of candidates) {
+		try {
+			const ctrl = new AbortController();
+			const t = setTimeout(() => ctrl.abort(), 5000);
+			const res = await fetch(url, { method: 'HEAD', signal: ctrl.signal });
+			clearTimeout(t);
+			if (res.ok && res.headers.get('content-type')?.startsWith('image')) {
+				return url;
+			}
+		} catch (e) { /* try next */ }
+	}
+
+	// If HEAD checks fail, just return the most reliable URL and let GPT try anyway
+	return candidates[0];
+}
+
+async function _aiProxyFetch(url, setStep) {
+	const TIMEOUT_MS = 12000;
+
+	// Each entry: { label, buildUrl, extractHtml }
+	const proxies = [
+		{
+			label: 'proxy 1/3',
+			buildUrl: (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => {
+				const d = await res.json();
+				return d.contents || '';
+			}
+		},
+		{
+			label: 'proxy 2/3',
+			buildUrl: (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => res.text()
+		},
+		{
+			label: 'proxy 3/3',
+			buildUrl: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => res.text()
+		}
+	];
+
+	let lastError = 'All proxies failed — the page may be blocking automated access';
+
+	for (const proxy of proxies) {
+		setStep(`Fetching page HTML (${proxy.label})...`);
+		try {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+			let res;
+			try {
+				res = await fetch(proxy.buildUrl(url), { signal: controller.signal });
+			} finally {
+				clearTimeout(timer);
+			}
+			if (!res.ok) {
+				lastError = `Proxy returned HTTP ${res.status}`;
+				continue;
+			}
+			const html = await proxy.extractHtml(res);
+			if (html && html.trim().length > 200) return html;
+			lastError = 'Proxy returned empty content';
+		} catch (e) {
+			lastError = e.name === 'AbortError'
+				? `Proxy timed out after ${TIMEOUT_MS / 1000}s`
+				: (e.message || 'Network error');
+		}
+	}
+
+	throw new Error(`Could not fetch page: ${lastError}. Make sure the URL is publicly accessible.`);
+}
+
+async function _aiCallGpt(pageContent, pageUrl, apiKey, screenshotUrl, existingInfo = null, nicheContext = null) {
+	// ── Build dynamic context sections ───────────────────────────────────
+	// nicheContext is a plain string of key copy signals extracted from the page
+	// (title, H1, headings, CTAs) — no predefined categories, GPT interprets it freely.
+	const nicheSection = nicheContext
+		? `\nPAGE TOPIC / NICHE SIGNALS (extracted from title, headings and CTAs):\n"${nicheContext}"\nUse these signals to infer the exact product/service niche, target problem, and customer language. All suggestions, copy angles, and component ideas must be hyper-specific to this page's topic — not generic. Speak the language of this particular customer.`
+		: '';
+
+	const existingComponentsContext = existingInfo
+		? `\nEXISTING COMPONENTS ALREADY ON THIS PAGE (from Firebase CMS):\n${existingInfo.componentNames.join(', ')}\n\nCRITICAL: Do NOT suggest adding any component that duplicates one already listed above — they are already present on this page. Infer from the names what each component contains, and focus exclusively on what is MISSING.`
+		: '';
+
+	const systemPrompt = `You are a world-class conversion rate optimization (CRO) expert and UX analyst specializing in landing pages and direct-response marketing. You have deep expertise in copywriting, visual hierarchy, social proof, trust signals, and funnel optimization.
+
+AUDIENCE CONTEXT — critical for all suggestions:
+The page audience is adults aged 30–70. This means:
+- They are skeptical and have been disappointed by products before — trust signals and proof are essential
+- They respond to curiosity gaps, "hidden secret" framing, and "what doctors/experts don't tell you" angles
+- They are motivated by fear of loss (health, money, independence) AND by hope (feeling younger, more energetic, saving money)
+- They prefer plain, conversational language — no jargon, no hype that feels fake
+- They trust specificity: real numbers, real names, real before/after stories
+- They need reassurance before buying: guarantees, easy returns, security badges
+- Social proof from PEERS (same age group) is far more persuasive than celebrity endorsements
+- Urgency works when it feels real and reason-based — not fake countdown timers
+${nicheSection}
+You will receive both the extracted text content AND a screenshot of the page. Use the screenshot to assess the visual design, layout, color scheme, CTA visibility, whitespace, image quality, and overall aesthetics — things invisible from text alone.
+When suggesting component ideas, look at what is MISSING from the page visually and contextually. Do NOT suggest components that are already clearly present in the screenshot.${existingComponentsContext}`;
+
+	const userPrompt = `Analyze this landing page and provide a focused CRO + UX audit.
+
+PAGE URL: ${pageUrl}
+
+EXTRACTED PAGE CONTENT:
+${pageContent}
+
+The screenshot of this page is attached as the image. Study it carefully — assess the visual hierarchy, design quality, section flow, and what components are already present vs. missing.
+
+---
+
+Respond with raw JSON only (no markdown code blocks), using this EXACT structure:
+
+{
+  "page_summary": "2-3 sentence summary of what this page is about, its goal, and overall visual impression from the screenshot",
+  "overall_score": <number 1-10>,
+  "score_rationale": "1 sentence explaining the score, referencing both copy and visual design",
+  "improvements": [
+    {
+      "category": "Copy|CTA|Visual Design|Social Proof|Trust|Urgency|Layout|Mobile|Offer|UX",
+      "priority": "HIGH|MEDIUM|LOW",
+      "title": "Short improvement title",
+      "observation": "What you see now (from screenshot or text) — be specific",
+      "recommendation": "Specific, actionable fix with rationale"
+    }
+  ],
+  "component_ideas": [
+    {
+      "component_name": "Component name (slug-friendly, e.g. curiosity-hook-strip)",
+      "type": "social-proof|urgency|trust|content|faq|guarantee|comparison|testimonial|bonus|cta-section|objection-handler|curiosity|before-after|quiz-hook|authority|risk-reversal|scarcity|story|mechanism|stats-bar|peer-proof|scroll-trigger|sticky-cta|live-feed|flip-card|counter|progress-bar",
+      "interactivity": "STATIC|INTERACTIVE|ANIMATED|SCROLL-TRIGGERED",
+      "scroll_timing": "TOP (0-20%)|MIDDLE (20-60%)|BOTTOM (60-90%)|PERSISTENT",
+      "description": "What this component adds and why it helps for a 30-70 year old audience — what psychological trigger it activates (curiosity, fear of loss, hope, trust, social proof from peers) AND why this interactivity type works at this scroll position",
+      "placement": "Specific placement (e.g. directly below hero section, before the order button, bottom of page)",
+      "copy_suggestion": "Ready-to-use copy example written specifically for a 30-70 year old reader — conversational, specific, no hype"
+    }
+  ]
+}
+
+COMPONENT IDEAS RULES — read carefully:
+- Give exactly 4 component ideas, each targeting a DIFFERENT psychological trigger from this list: curiosity gap, fear of loss, peer social proof, trust/authority, urgency/scarcity, risk reversal, hope/transformation
+- Pick components that are VISUALLY MISSING from the screenshot — don't suggest what's already there
+- Be creative and specific — avoid generic static components. Think about what would make a 50-year-old skeptic stop scrolling and keep reading or click buy.
+- THINK BEYOND STATIC: the most powerful components combine psychology + interactivity + scroll timing. A component that reacts to the user's behavior (scroll depth, hesitation, time on page) converts far better than one that just sits there.
+
+SCROLL PSYCHOLOGY & TIMING — embed these principles in your suggestions:
+- TOP of page (0–20% scroll): Curiosity gap, bold promise, "pattern interrupt" — the user just arrived and is deciding whether to stay. Hook them hard.
+- MIDDLE of page (20–60% scroll): This is the "consideration zone" — the user is interested but skeptical. Deploy proof, mechanism, authority, before/after.
+- BOTTOM of page (60–90% scroll): The user who scrolled this far is HIGHLY INTERESTED but needs the final push. Stack: urgency + risk reversal + peer proof + strong CTA.
+- EXIT INTENT / HESITATION: A component that activates after the user pauses >8s or moves toward browser chrome can rescue abandoning visitors.
+
+INTERACTIVE & DYNAMIC COMPONENT TYPES — pick the most relevant for the page:
+  * Scroll-triggered reveal strip — text or stat that animates into view only when the user scrolls to it (creates dopamine micro-reward)
+  * Self-qualification quiz (2–3 questions) — "Is this for you?" that ends with a personalized CTA; dramatically increases relevance
+  * Animated before/after slider — drag handle between two states; visceral, tangible proof of transformation
+  * Countdown urgency block with REAL reason — visible timer that counts down to an offer deadline; real reason given (e.g. "batch ends Friday")
+  * Animated counter strip — numbers count up when scrolled into view ("14,237 customers", "93% satisfaction")
+  * Interactive objection accordion — "Still not sure? Tap your concern:" with expandable answers targeting each objection
+  * Sticky bottom CTA bar — appears after 40% scroll, stays visible, disappears only when main CTA is in view
+  * Social proof ticker / live feed — auto-scrolling strip of recent buyer names/results ("Maria from Ohio just ordered 10 min ago")
+  * Tabbed comparison panel — user can switch between tabs: "This vs. [Alternative 1]", "This vs. [Alternative 2]"
+  * Risk-reversal visual guarantee card — large, bold, with a seal/badge, specific refund terms, reason-based language
+  * "What X people aged 50+ discovered" curiosity-gap strip with bold stat and CTA
+  * Loss-framing calculator — "Every day you wait, you're missing out on X" with a number that increments
+  * Peer testimonial carousel — auto-advances, shows age + specific result, full name, photo placeholder
+  * Authority badge strip — logos/credentials, animated on scroll, with tooltip hover detail
+  * Step-by-step "How it works" with micro-animations (3 steps max — this audience distrusts complexity)
+  * Floating urgency nudge — small toast-style popup at the bottom-right after 15s: "Only X left at this price"
+  * "Myth vs. Truth" flip cards — user taps/clicks to flip from a common myth to the truth; high engagement
+  * Progress bar CTA strip — shows "You're 80% of the way to claiming your discount" to motivate scroll completion
+
+- For each component idea, specify in "interactivity" field whether it is STATIC, INTERACTIVE (user-triggered), ANIMATED (auto-plays), or SCROLL-TRIGGERED.
+- For each component idea, specify in "scroll_timing" field the ideal page position: TOP (0-20%), MIDDLE (20-60%), BOTTOM (60-90%), or PERSISTENT (sticky/floating).
+- Be specific and direct. No generic advice.`;
+
+	const messages = [
+		{ role: 'system', content: systemPrompt },
+		{
+			role: 'user',
+			content: screenshotUrl
+				? [
+					{ type: 'text', text: userPrompt },
+					{ type: 'image_url', image_url: { url: screenshotUrl, detail: 'high' } }
+				]
+				: userPrompt  // text-only fallback if screenshot unavailable
+		}
+	];
+
+	const openAiController = new AbortController();
+	const openAiTimer = setTimeout(() => openAiController.abort(), 90000); // 90s — vision calls take longer
+
+	let response;
+	try {
+		response = await fetch('https://api.openai.com/v1/chat/completions', {
+			method: 'POST',
+			signal: openAiController.signal,
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${apiKey}`
+			},
+			body: JSON.stringify({
+				model: 'gpt-5.4',
+				messages,
+				max_completion_tokens: 4000
+			})
+		});
+	} catch (e) {
+		if (e.name === 'AbortError') throw new Error('OpenAI request timed out — try again');
+		throw new Error('Could not reach OpenAI: ' + (e.message || 'network error'));
+	} finally {
+		clearTimeout(openAiTimer);
+	}
+
+	if (!response.ok) {
+		const err = await response.json().catch(() => ({}));
+		const msg = err?.error?.message || `OpenAI API error (${response.status})`;
+		throw new Error(response.status === 429 ? `[429] ${msg}` : msg);
+	}
+
+	const data = await response.json();
+	const raw = data.choices?.[0]?.message?.content || '';
+	const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+	try {
+		return JSON.parse(cleaned);
+	} catch (e) {
+		throw new Error('GPT returned malformed JSON. Try again. Raw: ' + cleaned.substring(0, 200));
+	}
+}
+
+// ── Component Ideas → Generate Code ──────────────────────────────────────
+
+// Shared code-gen function used both at analysis time and for "Regenerate"
+async function _aiGenerateOneComponentCode(comp, pageUrl, apiKey, pageContent = '', nicheContext = null) {
+	// ── Niche context injected as raw copy signals — no predefined categories ─
+	const nicheDirective = nicheContext
+		? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nInfer the exact product/niche from these signals and make every headline, benefit line, and CTA hyper-specific to this topic. No generic copy — write as if you know this product/market deeply.`
+		: '';
+
+	const systemPrompt = `You are a senior direct-response copywriter AND expert front-end developer specializing in high-converting landing page components. You write clean, self-contained HTML/CSS/JS snippets injected as innerHTML into a Leadpages landing page container div.
+
+COPY RULES — critical:
+- Study the EXISTING PAGE COPY provided below and match its exact tone, vocabulary, sentence rhythm, and angle. If the page uses casual conversational language, match that. If it's formal, match that. Mirror the way it addresses the reader.
+- Write benefit-driven, outcome-focused headlines. Lead with the transformation, not the feature.
+- Use specific numbers and concrete details — never vague claims.
+- CTAs must be action-oriented, first-person, and match the energy of the page's existing CTAs.
+- Social proof must feel authentic — specific names, specific results, not generic praise.
+- Every word must earn its place. No filler. No corporate speak. No generic marketing language.
+${nicheDirective}
+DESIGN RULES — be creative and varied:
+- Do NOT default to a generic white card with a border. Each component needs its own distinct visual personality.
+- Use creative layouts: asymmetric grids, bold color blocks, diagonal dividers, icon rows, quote callouts, timeline strips.
+- Use color boldly — dark backgrounds, gradient accents, vibrant CTA buttons.
+- Typography: mix weights, sizes, and uppercase labels to create strong hierarchy.
+- Micro-interactions are EXPECTED: hover states, animated counters, pulse effects, smooth transitions.
+- The result must feel premium and custom — not like a generic template.
+
+INTERACTIVITY & PSYCHOLOGY RULES — this is what separates converting components from decorative ones:
+- SCROLL-TRIGGERED components: Use IntersectionObserver to fire animations/reveals when the element enters the viewport. Never auto-play heavy animations on page load — it kills performance and annoys users. Trigger them when the user EARNS it by scrolling.
+- INTERACTIVE components (quizzes, accordions, flip cards, tabs, sliders): Each interaction is a micro-commitment — the user who clicks is 3x more likely to convert. Make the interaction feel satisfying (smooth CSS transitions, clear state changes).
+- ANIMATED counters: Count up from 0 to the final number when scrolled into view. Use easing. This makes stats feel real and earned, not static.
+- COUNTDOWN timers: Must look urgent but not fake. Use a real end date/time. Show hours:minutes:seconds. Add a reason ("Offer expires when this batch sells out").
+- STICKY elements: Use position:fixed, z-index 9999, and a smooth slide-in animation. Include a close/dismiss button — forcing sticky elements creates hostility.
+- SOCIAL PROOF TICKERS: Auto-scroll horizontally or vertically with CSS animation. Pause on hover. Each item: name + location + result. Keep it moving — motion signals activity and popularity.
+- BEFORE/AFTER SLIDERS: Use a draggable divider. Touch-friendly. Label both sides clearly. The visual delta must be dramatic enough to create desire.
+- FLIP CARDS: CSS 3D transform. Front = the myth/problem. Back = the truth/solution. Satisfying flip on click/tap.
+- PROGRESS BARS: Animate width from 0% to target on scroll. Creates a sense of momentum and FOMO.
+- EXIT-INTENT style components: Use setTimeout (12-15 seconds) to trigger a subtle floating nudge. Not a popup — a slide-in toast from the corner.
+
+TECHNICAL RULES:
+- Standalone snippet — no external dependencies unless from a CDN (e.g. no jQuery needed).
+- Inline <style> and <script> tags inside the snippet.
+- All IDs/class names must be uniquely prefixed (e.g. lp-sticky-, lp-quiz-, lp-flip-) to avoid conflicts with existing page elements.
+- Mobile-responsive — test mentally: does it work on a 375px screen?
+- For IntersectionObserver: always add { threshold: 0.2 } so the animation fires when 20% of the element is visible.
+- For event listeners: use { once: true } for one-shot animations so they don't re-trigger on scroll-back.`;
+
+	const creativeSeeds = [
+		'Use a bold dark (#0f172a) background with a single vivid accent color. Layout: icon + stat in large type on the left, copy on the right. If animated: count up stats with IntersectionObserver.',
+		'Use a warm cream/off-white background with a thick colored left border. Layout: stacked, centered, with a large decorative quote mark. If interactive: expandable accordion items.',
+		'Use a vibrant full-width gradient background (two complementary colors). Layout: horizontal split — headline left, visual/stats right. If scroll-triggered: slide in from opposite sides.',
+		'Use glass-morphism effect (backdrop-filter blur, semi-transparent background over a gradient). Layout: grid of mini-cards inside. If interactive: flip cards with 3D CSS transform.',
+		'Use a dark purple/indigo background with gold accent text. Layout: step-by-step numbered badge strip with connecting lines. If animated: steps reveal one by one via IntersectionObserver.',
+		'Use a clean white background with a bold accent border-top. Make the CTA button full-width, very large, with a pulse/glow animation. If sticky: slides in from bottom after 40% scroll.',
+		'Use alternating light/dark rows for a comparison table. Layout: this product vs. alternatives with checkmarks/X marks. If interactive: tab switcher between comparison options.',
+		'Use an earthy green or deep teal palette. Layout: icon grid — 6 icons in 2 rows with bold short labels. If scroll-triggered: icons pop in with a staggered scale animation.',
+		'Use a bold red/orange urgency color scheme. Layout: countdown timer centered with large digits + reason text below. Timer counts down to a real deadline.',
+		'Use a light gray background with card shadows. Layout: horizontal scrolling testimonial carousel with auto-advance every 4s and manual dot navigation.',
+	];
+	const seed = creativeSeeds[Math.floor(Math.random() * creativeSeeds.length)];
+
+	// Pull a sample of the page's actual copy to guide tone-matching
+	const pageCopySample = pageContent
+		? pageContent.split('\n').filter(l => l.startsWith('[H') || l.startsWith('[P') || l.startsWith('[CTA')).slice(0, 20).join('\n')
+		: '';
+
+	const userPrompt = `Generate a complete, ready-to-use HTML/CSS/JS snippet for this landing page component.
+
+Component name: ${comp.component_name}
+Type: ${comp.type}
+Interactivity level: ${comp.interactivity || 'ANIMATED'}
+Scroll timing / page position: ${comp.scroll_timing || 'MIDDLE (20-60%)'}
+Description: ${comp.description}
+Placement: ${comp.placement || 'anywhere on the page'}
+Suggested copy angle: ${comp.copy_suggestion || 'write high-converting copy that fits the page tone'}
+Page URL: ${pageUrl || ''}
+
+EXISTING PAGE COPY SAMPLE (match this tone, vocabulary and angle exactly):
+${pageCopySample || '(not available — write in a direct, conversational, benefit-focused tone)'}
+
+DESIGN DIRECTION (follow closely):
+${seed}
+
+INTERACTIVITY IMPLEMENTATION — implement based on the interactivity level above:
+- SCROLL-TRIGGERED: Use IntersectionObserver with threshold:0.2. Add { once: true } to the observer callback so animation only fires on first entry. Elements start hidden/offset and transition to final state.
+- INTERACTIVE: Implement the full interaction in vanilla JS — no libraries. Quizzes track state. Accordions toggle open/close. Sliders track drag position. Flip cards use CSS 3D transform. All interactions have smooth CSS transitions (0.3s ease).
+- ANIMATED: Auto-playing animations (counters, carousels, tickers). Counters use IntersectionObserver to start from 0. Carousels use setInterval for auto-advance. Tickers use CSS animation keyframes. ALL use requestAnimationFrame for smoothness.
+- PERSISTENT (sticky): Use position:fixed with a smooth slide-in CSS transition. Triggers after a scroll threshold (document.addEventListener('scroll')). Includes a dismiss button. Z-index 9998.
+
+COPY REQUIREMENTS:
+- Mirror the tone and vocabulary from the existing page copy sample above.
+- Headline: outcome-focused, specific, benefit-driven — sounds like it belongs on this page.
+- Body copy: identify a pain point the page already targets → reinforce with the solution angle → add a concrete benefit.
+- CTA: first-person, action verb, matches the page's urgency level.
+- Social proof (if applicable): specific name, age/location, concrete measurable result.
+- For SCROLL_TIMING = TOP: Copy must be a pattern interrupt — make them stop and read. Bold promise, curiosity gap, "did you know" hook.
+- For SCROLL_TIMING = MIDDLE: Copy builds on what they've already read — reference the promise made above, add proof/mechanism/authority.
+- For SCROLL_TIMING = BOTTOM: Copy closes the deal — urgency, risk reversal, the cost of inaction. Reader is warm; remove final objections.
+- For PERSISTENT: Copy is ultra-short and urgent — 1 headline + 1 CTA button, nothing more.
+
+OUTPUT RULES:
+- Output ONLY the raw HTML (with inline <style> and <script> if needed)
+- No markdown, no code fences, no explanations — just the code
+- All CSS class names and JS variable names must be prefixed with "lp-${(comp.component_name || 'comp').replace(/[^a-z0-9]/g, '-').substring(0, 12)}-" to avoid conflicts
+- Self-contained, works when injected as innerHTML into a div
+- Fully functional JS — every interactive/animated feature must actually work
+- Mobile-responsive (test for 375px viewport mentally)`;
+
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), 60000);
+
+	let response;
+	try {
+		response = await fetch('https://api.openai.com/v1/chat/completions', {
+			method: 'POST',
+			signal: controller.signal,
+			headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+			body: JSON.stringify({
+				model: 'gpt-4o',
+				messages: [
+					{ role: 'system', content: systemPrompt },
+					{ role: 'user', content: userPrompt }
+				],
+				max_completion_tokens: 3500
+			})
+		});
+	} catch (fetchErr) {
+		clearTimeout(timer);
+		const msg = fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error');
+		console.error('[AI codegen] fetch failed:', fetchErr);
+		throw new Error(msg);
+	}
+	clearTimeout(timer);
+
+	if (!response.ok) {
+		let errMsg = `OpenAI error (${response.status})`;
+		try {
+			const errBody = await response.json();
+			errMsg = errBody?.error?.message || errMsg;
+		} catch (_) {}
+		console.error('[AI codegen] API error:', response.status, errMsg);
+		throw new Error(`[${response.status}] ${errMsg}`);
+	}
+
+	const data = await response.json();
+	let code = data.choices?.[0]?.message?.content?.trim() || '';
+	console.log('[AI codegen] raw response length:', code.length, '| first 120:', code.substring(0, 120));
+	// Strip markdown fences if GPT added them
+	code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+	return code;
+}
+
+window._aiGenerateComponentCode = async function(idx) {
+	const comp = window._aiLastComponents?.[idx];
+	if (!comp) return;
+
+	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
+	if (!apiKey || !apiKey.startsWith('sk-')) {
+		showNotification('No OpenAI API key — expand ▶ API Key settings', 'error');
+		return;
+	}
+
+	const btn       = document.getElementById(`ai-gen-btn-${idx}`);
+	const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
+	const emptyEl   = document.getElementById(`ai-comp-empty-${idx}`);
+	const outputEl  = document.getElementById(`ai-comp-output-${idx}`);
+
+	// UI → loading
+	btn.disabled = true;
+	btn.style.opacity = '0.5';
+	btn.textContent = '⏳ Generating...';
+	if (emptyEl)  emptyEl.style.display  = 'none';
+	outputEl.style.display = 'none';
+	loadingEl.style.display = 'block';
+
+	try {
+		const code = await _aiGenerateOneComponentCode(comp, window._aiLastPageUrl || '', apiKey, window._aiLastPageContent || '', window._aiLastNicheContext || null);
+
+		if (!window._aiGeneratedCodes) window._aiGeneratedCodes = {};
+		window._aiGeneratedCodes[idx] = code;
+
+		const ta = document.getElementById(`ai-comp-textarea-${idx}`);
+		ta.value = code;
+		ta.style.color = '#cdd6f4';
+		loadingEl.style.display = 'none';
+		if (emptyEl)  emptyEl.style.display  = 'none';
+		outputEl.style.display = 'block';
+		btn.innerHTML = '🔄 Regenerate';
+		btn.style.opacity = '1';
+		btn.disabled = false;
+
+	} catch (e) {
+		loadingEl.style.display = 'none';
+		// If we already had code, keep showing it; otherwise show empty state again
+		const hasCode = !!(window._aiGeneratedCodes?.[idx]);
+		if (hasCode) {
+			outputEl.style.display = 'block';
+		} else {
+			if (emptyEl) emptyEl.style.display = 'flex';
+		}
+		btn.innerHTML = hasCode ? '🔄 Regenerate' : '⚡ Generate Code';
+		btn.disabled = false;
+		btn.style.opacity = '1';
+		showNotification('Generation failed: ' + e.message, 'error');
+	}
+};
+
+window._aiToggleRefineRow = function(idx) {
+	const row = document.getElementById(`ai-refine-row-${idx}`);
+	const toggleBtn = document.getElementById(`ai-refine-toggle-btn-${idx}`);
+	if (!row) return;
+	const isVisible = row.style.display !== 'none';
+	row.style.display = isVisible ? 'none' : 'flex';
+	if (toggleBtn) {
+		toggleBtn.style.background = isVisible ? '#0e3a2a' : '#065f46';
+		toggleBtn.style.color      = isVisible ? '#34d399' : '#6ee7b7';
+	}
+	if (!isVisible) {
+		// Focus the textarea when opening
+		const ta = document.getElementById(`ai-refine-input-${idx}`);
+		if (ta) setTimeout(() => ta.focus(), 50);
+	}
+};
+
+window._aiRefineComponentCode = async function(idx) {
+	const comp = window._aiLastComponents?.[idx];
+	if (!comp) return;
+
+	const refinementPrompt = (document.getElementById(`ai-refine-input-${idx}`)?.value || '').trim();
+	if (!refinementPrompt) {
+		showNotification('Write what you want to change first', 'error');
+		return;
+	}
+
+	const existingCode = window._aiGeneratedCodes?.[idx] || document.getElementById(`ai-comp-textarea-${idx}`)?.value || '';
+	if (!existingCode || existingCode.startsWith('<!-- ⚠️')) {
+		showNotification('Generate the component first, then refine it', 'error');
+		return;
+	}
+
+	const apiKey = _aiApiKey || document.getElementById('aiApiKeyInput').value.trim();
+	if (!apiKey || !apiKey.startsWith('sk-')) {
+		showNotification('No OpenAI API key — expand ▶ API Key settings', 'error');
+		return;
+	}
+
+	const btn       = document.getElementById(`ai-gen-btn-${idx}`);
+	const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
+	const outputEl  = document.getElementById(`ai-comp-output-${idx}`);
+	const applyBtn  = document.querySelector(`#ai-refine-row-${idx} button`);
+
+	// UI → loading state
+	if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳...'; }
+	if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+	outputEl.style.display = 'none';
+	loadingEl.style.display = 'block';
+
+	try {
+		// Build the same system prompt that was used to generate the code
+		const nicheContext = window._aiLastNicheContext || null;
+		const nicheDirective = nicheContext
+			? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nInfer the exact product/niche from these signals and make every headline, benefit line, and CTA hyper-specific to this topic.`
+			: '';
+		const systemPrompt = `You are a senior direct-response copywriter AND expert front-end developer. You refine existing landing page HTML/CSS/JS snippets based on specific instructions.\n\nRULES:\n- Apply ONLY the changes requested. Keep everything else exactly as-is.\n- Do not restructure, rename, or restyle parts the user did not mention.\n- Output ONLY the complete updated HTML snippet — no markdown fences, no explanations.\n- The output must be fully self-contained and functional.\n${nicheDirective}`;
+
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 60000);
+
+		let response;
+		try {
+			response = await fetch('https://api.openai.com/v1/chat/completions', {
+				method: 'POST',
+				signal: controller.signal,
+				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+				body: JSON.stringify({
+					model: 'gpt-4o',
+					messages: [
+						{ role: 'system', content: systemPrompt },
+						{ role: 'user', content: `Here is the current HTML component code:\n\n${existingCode}` },
+						{ role: 'assistant', content: 'I have reviewed the current component code.' },
+						{ role: 'user', content: `Please apply these changes to the component:\n\n${refinementPrompt}\n\nOutput ONLY the complete updated HTML — no explanations, no markdown fences.` }
+					],
+					max_completion_tokens: 3500
+				})
+			});
+		} catch (fetchErr) {
+			clearTimeout(timer);
+			throw new Error(fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error'));
+		}
+		clearTimeout(timer);
+
+		if (!response.ok) {
+			let errMsg = `OpenAI error (${response.status})`;
+			try { const b = await response.json(); errMsg = b?.error?.message || errMsg; } catch (_) {}
+			throw new Error(errMsg);
+		}
+
+		const data = await response.json();
+		let code = data.choices?.[0]?.message?.content?.trim() || '';
+		code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+		window._aiGeneratedCodes[idx] = code;
+		const ta = document.getElementById(`ai-comp-textarea-${idx}`);
+		if (ta) { ta.value = code; ta.style.color = '#cdd6f4'; }
+
+		loadingEl.style.display = 'none';
+		outputEl.style.display = 'block';
+
+		// Reset refine row
+		const refineInput = document.getElementById(`ai-refine-input-${idx}`);
+		if (refineInput) refineInput.value = '';
+		window._aiToggleRefineRow(idx); // collapse the row
+
+		showNotification('Component refined ✅', 'success');
+
+	} catch (e) {
+		loadingEl.style.display = 'none';
+		outputEl.style.display = 'block'; // keep showing old code
+		showNotification('Refinement failed: ' + e.message, 'error');
+	} finally {
+		if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '⚡ Apply'; }
+		if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+	}
+};
+
+window._aiCopyComponentCode = function(idx) {
+	const code = window._aiGeneratedCodes?.[idx] || document.getElementById(`ai-comp-textarea-${idx}`)?.value || '';
+	if (!code) return;
+	navigator.clipboard.writeText(code).then(() => {
+		showNotification('Code copied to clipboard! ✅', 'success');
+	}).catch(() => {
+		showNotification('Could not auto-copy — select the code manually', 'error');
+	});
+};
+
+window._aiSaveAsComponent = function(idx) {
+	const comp = window._aiLastComponents?.[idx];
+	const code = window._aiGeneratedCodes?.[idx] || document.getElementById(`ai-comp-textarea-${idx}`)?.value || '';
+	if (!code) return;
+
+	// Close AI modal
+	closeAiAnalyzerModal();
+
+	// Pre-fill the custom component modal and open it
+	if (!currentSlug) {
+		showNotification('Select a slug first, then use Save as Component again', 'error');
+		return;
+	}
+	showAddCustomComponentModal();
+	setTimeout(() => {
+		const nameInput = document.getElementById('customCompName');
+		const codeInput = document.getElementById('customCompCode');
+		if (nameInput && comp) {
+			nameInput.value = comp.component_name
+				.toLowerCase()
+				.replace(/[^a-z0-9-_]/g, '-')
+				.replace(/-+/g, '-')
+				.replace(/^-|-$/g, '');
+		}
+		if (codeInput) codeInput.value = code;
+	}, 100);
+};
+
+window._aiPreviewComponent = function(idx) {
+	const code = window._aiGeneratedCodes?.[idx] || document.getElementById(`ai-comp-textarea-${idx}`)?.value || '';
+	const comp = window._aiLastComponents?.[idx];
+	const name = comp?.component_name || `Component ${idx + 1}`;
+
+	if (!code || code.startsWith('<!-- ⚠️')) {
+		showNotification('No code to preview — generate the component first', 'error');
+		return;
+	}
+
+	// Remove existing preview modal if any
+	const existing = document.getElementById('aiPreviewModal');
+	if (existing) existing.remove();
+
+	const modal = document.createElement('div');
+	modal.id = 'aiPreviewModal';
+	modal.style.cssText = `
+		position:fixed; inset:0; z-index:99999;
+		display:flex; align-items:center; justify-content:center;
+		background:rgba(0,0,0,0.72); backdrop-filter:blur(4px);
+		padding:20px; box-sizing:border-box;
+	`;
+
+	modal.innerHTML = `
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45);">
+			<!-- Header -->
+			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
+				<div style="display:flex; align-items:center; gap:10px;">
+					<span style="font-size:16px;">👁</span>
+					<span style="font-size:13px; font-weight:700; color:#e2e8f0;">Preview — ${escapeHtml(name)}</span>
+				</div>
+				<div style="display:flex; gap:8px; align-items:center;">
+					<!-- Viewport toggles -->
+					<div style="display:flex; gap:4px; padding:3px 4px; background:#1e1e2e; border-radius:8px;">
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='100%'; document.getElementById('aiPreviewFrame').style.margin='0';"
+							title="Desktop" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all .15s;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">🖥 Desktop</button>
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='768px'; document.getElementById('aiPreviewFrame').style.margin='0 auto';"
+							title="Tablet" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all .15s;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">📱 Tablet</button>
+						<button onclick="document.getElementById('aiPreviewFrame').style.width='390px'; document.getElementById('aiPreviewFrame').style.margin='0 auto';"
+							title="Mobile" style="padding:4px 10px; background:transparent; color:#94a3b8; border:none; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; transition:all .15s;"
+							onmouseover="this.style.background='#313244'" onmouseout="this.style.background='transparent'">📲 Mobile</button>
+					</div>
+					<button onclick="document.getElementById('aiPreviewModal').remove()"
+						style="width:30px; height:30px; display:grid; place-items:center; background:#1e1e2e; color:#94a3b8; border:1px solid #313244; border-radius:8px; font-size:16px; cursor:pointer; font-family:inherit;">✕</button>
+				</div>
+			</div>
+			<!-- iframe container -->
+			<div style="flex:1; overflow:auto; background:#e5e7eb; padding:16px; display:flex; justify-content:center;">
+				<iframe id="aiPreviewFrame"
+					style="width:100%; height:100%; min-height:500px; border:none; border-radius:10px; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,0.15); transition:width .25s ease; display:block;"
+					sandbox="allow-scripts allow-same-origin"></iframe>
+			</div>
+		</div>
+	`;
+
+	document.body.appendChild(modal);
+
+	// Close on backdrop click
+	modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+	// Close on Escape
+	const onKey = e => { if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', onKey); } };
+	document.addEventListener('keydown', onKey);
+
+	// Write code into iframe via srcdoc
+	const frame = document.getElementById('aiPreviewFrame');
+	const doc = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;}</style></head><body>${code}</body></html>`;
+	frame.srcdoc = doc;
+};
+
+function _aiRenderResults(a, pageUrl, generatedCodes = {}, showSpinners = false) {
+	document.getElementById('aiResultsLoading').style.display = 'none';
+
+	const priorityColor = { HIGH: '#dc2626', MEDIUM: '#d97706', LOW: '#16a34a' };
+	const priorityBg   = { HIGH: '#fef2f2', MEDIUM: '#fffbeb', LOW: '#f0fdf4' };
+	const categoryColor = {
+		'Copy': '#1d4ed8', 'CTA': '#7c3aed', 'Visual Design': '#0891b2',
+		'Social Proof': '#15803d', 'Trust': '#15803d', 'Urgency': '#b45309',
+		'Layout': '#0891b2', 'Mobile': '#0891b2', 'Offer': '#7c3aed', 'UX': '#374151'
+	};
+	const categoryBg = {
+		'Copy': '#eff6ff', 'CTA': '#ede9fe', 'Visual Design': '#ecfeff',
+		'Social Proof': '#f0fdf4', 'Trust': '#f0fdf4', 'Urgency': '#fffbeb',
+		'Layout': '#ecfeff', 'Mobile': '#ecfeff', 'Offer': '#ede9fe', 'UX': '#f9fafb'
+	};
+
+	const typeEmoji = {
+		'social-proof': '⭐', 'urgency': '⏰', 'trust': '🛡️', 'content': '📝',
+		'video': '🎥', 'faq': '❓', 'guarantee': '✅', 'comparison': '📊',
+		'testimonial': '💬', 'bonus': '🎁', 'cta-section': '🎯',
+		'objection-handler': '🤝', 'curiosity': '🔍', 'before-after': '🔄',
+		'quiz-hook': '🧠', 'authority': '🏅', 'risk-reversal': '🔒',
+		'scarcity': '⚡', 'story': '📖', 'mechanism': '⚙️',
+		'stats-bar': '📈', 'peer-proof': '👥', 'default': '🧩', 'custom': '✏️'
+	};
+
+	// Score badge color — null means custom-ideas-only run (no page analysis)
+	const hasAnalysis = a.overall_score !== null && a.overall_score !== undefined && a.overall_score !== '';
+	const score = hasAnalysis ? a.overall_score : 0;
+	const scoreColor = score >= 8 ? '#16a34a' : score >= 6 ? '#d97706' : '#dc2626';
+	const scoreBg    = score >= 8 ? '#f0fdf4' : score >= 6 ? '#fffbeb' : '#fef2f2';
+
+	// Seed global caches
+	window._aiLastComponents = a.component_ideas || [];
+	window._aiLastPageUrl = pageUrl;
+	window._aiGeneratedCodes = { ...generatedCodes };
+
+	// Store raw text for copy
+	window._aiLastReportText = _aiReportToText(a, pageUrl);
+
+	let html = `
+	<div style="display:flex; flex-direction:column; gap:20px;">
+
+		<!-- Summary + Score (only shown for full page analysis) -->
+		${hasAnalysis ? `
+		<div style="background:#fafafa; border:1.5px solid var(--border); border-radius:12px; overflow:hidden;">
+			<!-- Score bar on top -->
+			<div style="display:flex; align-items:center; gap:12px; padding:12px 16px; background:${scoreBg}; border-bottom:1.5px solid ${scoreColor}22;">
+				<div style="display:flex; align-items:baseline; gap:4px;">
+					<span style="font-size:36px; font-weight:900; color:${scoreColor}; line-height:1;">${score}</span>
+					<span style="font-size:14px; font-weight:700; color:${scoreColor}; opacity:0.7;">/ 10</span>
+				</div>
+				<div style="flex:1; min-width:0;">
+					<div style="font-size:11px; font-weight:800; color:${scoreColor}; text-transform:uppercase; letter-spacing:0.6px; margin-bottom:2px;">CRO Score</div>
+					<div style="font-size:12px; color:var(--text-secondary); line-height:1.45;">${escapeHtml(a.score_rationale || '')}</div>
+				</div>
+				<!-- mini score bar -->
+				<div style="flex-shrink:0; width:80px;">
+					<div style="height:6px; background:#e5e7eb; border-radius:3px; overflow:hidden;">
+						<div style="height:100%; width:${score * 10}%; background:${scoreColor}; border-radius:3px; transition:width .6s ease;"></div>
+					</div>
+				</div>
+			</div>
+			<!-- Summary text -->
+			<div style="padding:14px 16px;">
+				<p style="margin:0 0 5px; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">Page Summary</p>
+				<p style="margin:0; font-size:13px; line-height:1.7; color:var(--text-primary);">${escapeHtml(a.page_summary || '')}</p>
+			</div>
+		</div>
+		` : `<!-- no page analysis -->`}
+
+		<!-- Conversion & UX Improvements (collapsible, closed by default) -->
+		${(a.improvements?.length) ? `
+		<div style="border:1.5px solid var(--border); border-radius:10px; overflow:hidden;">
+			<button onclick="var b=document.getElementById('ai-imp-body'),ic=document.getElementById('ai-imp-chevron'),open=b.style.display!=='none';b.style.display=open?'none':'flex';ic.style.transform=open?'rotate(0deg)':'rotate(180deg)';"
+				style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 16px; background:#fafafa; border:none; cursor:pointer; font-family:inherit; text-align:left;">
+				<div style="display:flex; align-items:center; gap:8px;">
+					<span style="font-size:14px;">📈</span>
+					<span style="font-size:12px; font-weight:700; color:var(--text-primary); text-transform:uppercase; letter-spacing:0.5px;">Conversion & UX Improvements</span>
+					<span style="font-size:11px; font-weight:700; color:#6b7280; background:#e5e7eb; padding:1px 8px; border-radius:20px;">${a.improvements.length}</span>
+				</div>
+				<span id="ai-imp-chevron" style="font-size:12px; color:var(--text-muted); transition:transform .25s; transform:rotate(0deg); display:inline-block;">▼</span>
+			</button>
+			<div id="ai-imp-body" style="display:none; flex-direction:column; gap:0; border-top:1.5px solid var(--border);">
+				${a.improvements.map((imp, i) => {
+					const pColor = priorityColor[imp.priority] || '#6b7280';
+					const pBg    = priorityBg[imp.priority]    || '#f9fafb';
+					const cColor = categoryColor[imp.category] || '#374151';
+					const cBg    = categoryBg[imp.category]    || '#f9fafb';
+					return `
+					<div style="padding:13px 16px; background:white; border-left:3px solid ${pColor};${i > 0 ? ' border-top:1px solid var(--border);' : ''}">
+						<div style="display:flex; align-items:center; gap:7px; margin-bottom:6px; flex-wrap:wrap;">
+							<span style="font-size:10px; font-weight:800; color:${pColor}; background:${pBg}; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.5px; border:1px solid ${pColor}30;">${escapeHtml(imp.priority)}</span>
+							<span style="font-size:10px; font-weight:700; color:${cColor}; background:${cBg}; padding:2px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:0.3px;">${escapeHtml(imp.category)}</span>
+							<span style="font-size:13px; font-weight:600; color:var(--text-primary);">${escapeHtml(imp.title)}</span>
+						</div>
+						${imp.observation ? `<p style="margin:0 0 5px; font-size:12px; color:var(--text-muted); line-height:1.5; font-style:italic;"><strong>Now:</strong> ${escapeHtml(imp.observation)}</p>` : ''}
+						<p style="margin:0; font-size:12px; color:var(--text-primary); line-height:1.6;"><strong>→</strong> ${escapeHtml(imp.recommendation)}</p>
+					</div>`;
+				}).join('')}
+			</div>
+		</div>
+		` : `<!-- no improvements -->`}
+
+		<!-- Component Ideas -->
+		${(a.component_ideas?.length) ? `
+		<div>
+			<div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">🧩 Component Ideas to Add</div>
+			<div style="display:flex; flex-direction:column; gap:10px;">
+				${a.component_ideas.map((c, idx) => {
+					const code = generatedCodes[idx] || '';
+					return `
+					<div id="ai-comp-card-${idx}" style="background:white; border:1.5px solid var(--border); border-radius:9px; overflow:hidden;">
+						<!-- Card header -->
+						<div style="padding:13px 14px; display:flex; flex-direction:column; gap:6px;">
+							<div style="display:flex; align-items:center; gap:8px; justify-content:space-between; flex-wrap:wrap;">
+								<div style="display:flex; align-items:center; gap:8px;">
+									<span style="font-size:18px;">${typeEmoji[c.type] || typeEmoji.default}</span>
+									<span style="font-size:13px; font-weight:700; color:var(--text-primary);">${escapeHtml(c.component_name)}</span>
+									<span style="font-size:10px; font-weight:700; color:#6d28d9; background:#ede9fe; padding:2px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:0.3px;">${escapeHtml(c.type)}</span>
+									${c.interactivity ? `<span style="font-size:10px; font-weight:700; color:#0369a1; background:#e0f2fe; padding:2px 8px; border-radius:20px; text-transform:uppercase; letter-spacing:0.3px;">${escapeHtml(c.interactivity)}</span>` : ''}
+									${c.scroll_timing ? `<span style="font-size:10px; font-weight:700; color:#0f766e; background:#f0fdfa; padding:2px 8px; border-radius:20px; letter-spacing:0.2px;">📍 ${escapeHtml(c.scroll_timing)}</span>` : ''}
+								</div>
+								<div style="display:flex; gap:5px; flex-shrink:0;">
+									<button id="ai-gen-btn-${idx}"
+										onclick="window._aiGenerateComponentCode(${idx})"
+										style="padding:5px 11px; background:#1e1e2e; color:#a78bfa; border:1px solid rgba(124,58,237,0.35); border-radius:7px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; transition:opacity .2s;">
+										🔄 Regenerate
+									</button>
+									<button id="ai-refine-toggle-btn-${idx}"
+										onclick="window._aiToggleRefineRow(${idx})"
+										style="padding:5px 11px; background:#0e3a2a; color:#34d399; border:1px solid rgba(52,211,153,0.35); border-radius:7px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; transition:opacity .2s;">
+										✏️ Refine
+									</button>
+								</div>
+							</div>
+							<p style="margin:0; font-size:12px; color:var(--text-secondary); line-height:1.55;">${escapeHtml(c.description)}</p>
+							${c.placement ? `<p style="margin:0; font-size:11px; color:var(--text-muted); line-height:1.4;"><strong>📍 Placement:</strong> ${escapeHtml(c.placement)}</p>` : ''}
+							${c.copy_suggestion ? `<div style="padding:8px 10px; background:#f5f3ff; border-radius:6px; font-size:11px; color:#6d28d9; line-height:1.55; font-style:italic;">"${escapeHtml(c.copy_suggestion)}"</div>` : ''}
+							<!-- Refine row (hidden by default) -->
+							<div id="ai-refine-row-${idx}" style="display:none; gap:6px; align-items:flex-start; margin-top:4px;">
+								<textarea id="ai-refine-input-${idx}" rows="2" placeholder="Describe what to fix or improve… e.g. 'make the button red', 'add a second testimonial', 'fix mobile layout'"
+									style="flex:1; width:100%; padding:8px 10px; background:#0d1117; color:#e2e8f0; border:1px solid rgba(52,211,153,0.3); border-radius:7px; font-size:12px; font-family:'Inter',sans-serif; resize:vertical; line-height:1.5; box-sizing:border-box; outline:none;"
+									onkeydown="if(event.key==='Enter'&&(event.ctrlKey||event.metaKey)){window._aiRefineComponentCode(${idx});}"
+								></textarea>
+								<button onclick="window._aiRefineComponentCode(${idx})"
+									style="padding:8px 14px; background:linear-gradient(135deg,#065f46,#047857); color:#ecfdf5; border:none; border-radius:7px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer; white-space:nowrap; flex-shrink:0;">
+									⚡ Apply
+								</button>
+							</div>
+						</div>
+						<!-- Code area -->
+						<div id="ai-comp-code-${idx}" style="border-top:1.5px solid var(--border);">
+							<!-- loading spinner (shown while generating) -->
+							<div id="ai-comp-loading-${idx}" style="display:${showSpinners && !code ? 'block' : 'none'}; padding:22px; text-align:center; background:#1e1e2e;">
+								<div style="display:inline-block; width:22px; height:22px; border:2px solid rgba(124,58,237,0.3); border-top-color:#a78bfa; border-radius:50%; animation:spin 0.8s linear infinite; margin-bottom:8px;"></div>
+								<div style="font-size:12px; color:#a78bfa;">Generating with GPT...</div>
+							</div>
+							<!-- empty state — generate prompt -->
+							<div id="ai-comp-empty-${idx}" style="display:${!showSpinners && !code ? 'flex' : 'none'}; flex-direction:column; align-items:center; gap:10px; padding:22px 20px; background:#13111e;">
+								<p style="margin:0; font-size:12px; color:#6e6a88; text-align:center; line-height:1.5;">Code not generated yet.<br>Click below to build this component.</p>
+								<button onclick="window._aiGenerateComponentCode(${idx})"
+									style="padding:9px 22px; background:linear-gradient(135deg,#7c3aed,#6d28d9); color:#fff; border:none; border-radius:8px; font-size:12px; font-weight:700; font-family:inherit; cursor:pointer; box-shadow:0 4px 14px rgba(124,58,237,0.35); transition:opacity .2s;">
+									⚡ Generate Code
+								</button>
+							</div>
+							<!-- code output (shown after generation) -->
+							<div id="ai-comp-output-${idx}" style="display:${code ? 'block' : 'none'};">
+								<div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#181825; border-bottom:1px solid #313244;">
+									<span style="font-size:11px; color:#a6adc8; font-family:monospace;">HTML / CSS / JS</span>
+									<div style="display:flex; gap:6px;">
+										<button onclick="window._aiPreviewComponent(${idx})"
+											style="padding:4px 11px; background:#0e3a5e; color:#38bdf8; border:1px solid rgba(56,189,248,0.35); border-radius:5px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;">
+											👁 Preview
+										</button>
+										<button onclick="window._aiCopyComponentCode(${idx})"
+											style="padding:4px 11px; background:#313244; color:#cdd6f4; border:1px solid #45475a; border-radius:5px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;">
+											📋 Copy
+										</button>
+										<button onclick="window._aiSaveAsComponent(${idx})"
+											style="padding:4px 11px; background:rgba(124,58,237,0.25); color:#a78bfa; border:1px solid rgba(124,58,237,0.4); border-radius:5px; font-size:11px; font-weight:700; font-family:inherit; cursor:pointer;">
+											💾 Save
+										</button>
+									</div>
+								</div>
+								<textarea id="ai-comp-textarea-${idx}" readonly
+									style="width:100%; min-height:220px; padding:14px 16px; background:#1e1e2e; color:#cdd6f4; border:none; font-size:12px; font-family:'JetBrains Mono','Fira Code','Courier New',monospace; resize:vertical; box-sizing:border-box; line-height:1.65; tab-size:2; outline:none;">${escapeHtml(code)}</textarea>
+							</div>
+						</div>
+					</div>`;
+				}).join('')}
+			</div>
+		</div>` : ''}
+
+
+	</div>`;
+
+	const content = document.getElementById('aiResultsContent');
+	content.innerHTML = html;
+	content.style.display = 'block';
+	document.getElementById('aiCopyBtn').style.display = 'inline-flex';
+	document.getElementById('aiResultsMeta').textContent = `Analyzed: ${pageUrl} · ${new Date().toLocaleTimeString()}`;
+}
+
+function _aiReportToText(a, url) {
+	const lines = [
+		`AI PAGE ANALYSIS REPORT`,
+		`URL: ${url}`,
+		`Date: ${new Date().toLocaleString()}`,
+		`Overall Score: ${a.overall_score}/10 — ${a.score_rationale}`,
+		``,
+		`SUMMARY`,
+		a.page_summary,
+		``,
+	];
+
+	if (a.improvements?.length) {
+		lines.push(`CONVERSION & UX IMPROVEMENTS`);
+		a.improvements.forEach(imp => {
+			lines.push(`[${imp.priority}] [${imp.category}] ${imp.title}`);
+			if (imp.observation) lines.push(`  Now: ${imp.observation}`);
+			lines.push(`  → ${imp.recommendation}`);
+		});
+		lines.push('');
+	}
+	if (a.component_ideas?.length) {
+		lines.push(`COMPONENT IDEAS`);
+		a.component_ideas.forEach(c => {
+			lines.push(`• ${c.component_name} (${c.type})`);
+			lines.push(`  ${c.description}`);
+			if (c.placement) lines.push(`  Placement: ${c.placement}`);
+			if (c.copy_suggestion) lines.push(`  Copy: "${c.copy_suggestion}"`);
+		});
+	}
+
+	return lines.join('\n');
+}
+
+function copyAiResults() {
+	const text = window._aiLastReportText || '';
+	if (!text) return;
+	navigator.clipboard.writeText(text).then(() => {
+		showNotification('Report copied to clipboard!', 'success');
+	}).catch(() => {
+		showNotification('Could not copy — try manually selecting the text', 'error');
+	});
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 
 // Boot
