@@ -308,7 +308,7 @@ function buildPreviewCard(component, content) {
 					<div class="card-component-name">
 						<div class="component-icon">${icon}</div>
 						<span class="component-label">${escapeHtml(component)}</span>
-						
+
 					</div>
 					<div class="component-type-tag component-type-tag--${typeTag.type}">${escapeHtml(typeTag.label)}</div>
 				</div>
@@ -2486,17 +2486,17 @@ async function runAiAnalysis() {
 		const pageContent = _aiExtractPageContent(rawHtml, url);
 		window._aiLastPageContent = pageContent; // cache for Regenerate
 
-		// ── Step 2.5: Scrape existing Firebase components + extract niche context ─
-		setStep('Reading existing site components from Firebase...');
+		// ── Step 2.5: Detect existing components from live HTML + extract niche context ─
+		setStep('Detecting existing components from page...');
 		const [existingInfo, nicheContext] = await Promise.all([
-			_aiGetExistingComponents(currentSite, currentSlug),
+			Promise.resolve(_aiExtractComponentsFromHtml(rawHtml)),
 			Promise.resolve(_aiExtractNicheContext(pageContent))
 		]);
 		// Cache for Regenerate button
 		window._aiLastExistingInfo = existingInfo;
 		window._aiLastNicheContext = nicheContext;
 		if (existingInfo) {
-			console.log('[AI] Existing components found:', existingInfo.componentNames);
+			console.log('[AI] Existing components detected from HTML:', existingInfo.componentNames);
 		}
 		if (nicheContext) {
 			console.log('[AI] Niche context extracted:', nicheContext);
@@ -2634,6 +2634,33 @@ async function _aiGetExistingComponents(site, slug) {
 		console.warn('[AI] Could not load existing components from Firebase:', e.message);
 		return null;
 	}
+}
+
+// ── Detect components already injected into the live page HTML ──────────
+// Scans for the lp- class prefix that all our generated components use.
+// Returns { componentNames } in the same shape as _aiGetExistingComponents
+// so all downstream prompt-building code works unchanged.
+function _aiExtractComponentsFromHtml(rawHtml) {
+	if (!rawHtml) return null;
+
+	const seen = new Set();
+	// Every generated component prefixes its classes with lp-{slug12}-
+	// e.g. lp-curiosity-hoo-wrapper, lp-social-proo-title
+	const pattern = /\blp-([a-z0-9][a-z0-9-]{0,11})-/g;
+	let match;
+	while ((match = pattern.exec(rawHtml)) !== null) {
+		seen.add(match[1]);
+	}
+
+	if (seen.size === 0) return null;
+
+	// Convert slug back to a readable name for the prompt
+	const componentNames = [...seen].sort().map(slug =>
+		slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+	);
+
+	console.log('[AI] lp- components found in page HTML:', componentNames);
+	return { componentNames };
 }
 
 // ── Extract free-form niche context directly from page content ───────────
@@ -2834,32 +2861,71 @@ async function _aiCallGpt(pageContent, pageUrl, apiKey, screenshotUrl, existingI
 		? `\nEXISTING COMPONENTS ALREADY ON THIS PAGE (from Firebase CMS):\n${existingInfo.componentNames.join(', ')}\n\nCRITICAL: Do NOT suggest adding any component that duplicates one already listed above — they are already present on this page. Infer from the names what each component contains, and focus exclusively on what is MISSING.`
 		: '';
 
-	const systemPrompt = `You are a world-class conversion rate optimization (CRO) expert and UX analyst specializing in landing pages and direct-response marketing. You have deep expertise in copywriting, visual hierarchy, social proof, trust signals, and funnel optimization.
+	const systemPrompt = `You are a senior conversion strategist, UX diagnostician, and concept developer for ecommerce and offer pages.
 
-AUDIENCE CONTEXT — critical for all suggestions:
-The page audience is adults aged 30–70. This means:
-- They are skeptical and have been disappointed by products before — trust signals and proof are essential
-- They respond to curiosity gaps, "hidden secret" framing, and "what doctors/experts don't tell you" angles
-- They are motivated by fear of loss (health, money, independence) AND by hope (feeling younger, more energetic, saving money)
-- They prefer plain, conversational language — no jargon, no hype that feels fake
-- They trust specificity: real numbers, real names, real before/after stories
-- They need reassurance before buying: guarantees, easy returns, security badges
-- Social proof from PEERS (same age group) is far more persuasive than celebrity endorsements
-- Urgency works when it feels real and reason-based — not fake countdown timers
+Your job is to identify the fewest, highest-leverage changes most likely to increase conversion on THIS page.
+You are not here to produce generic landing-page advice.
+
+WORKING METHOD
+- Diagnose before prescribing.
+- Treat audience assumptions as hypotheses inferred from the page, not fixed truths.
+- Optimize for expected conversion lift, not for novelty alone.
+- Prefer relevance, specificity, and plausibility over generic best practices.
+- Be commercially sharp, but avoid deceptive, fake, or unverifiable claims.
+
+FIRST INFER
+- what is being sold
+- likely buyer profile
+- awareness level
+- main promise
+- biggest objections
+- what proof exists vs missing
+- weakest part of page (hook / middle / close)
+
+GROUNDING RULES
+- Use only the page text, URL, screenshot, and existing-components context.
+- Do NOT suggest components already present.
+- Do NOT invent testimonials, numbers, certifications, urgency, or guarantees.
+- If proof is missing → use placeholders like [X], [customer], [result].
+
+CREATIVE FREEDOM
+- You may suggest any component — not limited to predefined types.
+- Do NOT force one idea per psychological trigger.
+- Pick the 4 strongest ideas for THIS page.
 ${nicheSection}
-You will receive both the extracted text content AND a screenshot of the page. Use the screenshot to assess the visual design, layout, color scheme, CTA visibility, whitespace, image quality, and overall aesthetics — things invisible from text alone.
-When suggesting component ideas, look at what is MISSING from the page visually and contextually. Do NOT suggest components that are already clearly present in the screenshot.${existingComponentsContext}`;
+${existingComponentsContext}
+${screenshotUrl ? 'Use screenshot for layout, hierarchy, and what exists visually.' : ''}`;
 
-	const userPrompt = `Analyze this landing page and provide a focused CRO + UX audit.
+	const userPrompt = `Analyze this landing page as a conversion diagnostician.
 
 PAGE URL: ${pageUrl}
 
 EXTRACTED PAGE CONTENT:
 ${pageContent}
 
-The screenshot of this page is attached as the image. Study it carefully — assess the visual hierarchy, design quality, section flow, and what components are already present vs. missing.
+${screenshotUrl
+		? 'The screenshot is attached. Analyze layout, hierarchy, and what components already exist.'
+		: 'No screenshot available.'}
 
----
+YOUR TASK
+Find what is most likely hurting conversions right now, then suggest the 4 highest-impact improvements.
+
+THINK FIRST (do not output this):
+- infer audience + intent
+- identify biggest conversion bottleneck
+- brainstorm at least 8 ideas
+- select the best 4 (not generic, not duplicates)
+
+OUTPUT RULES
+- Give EXACTLY 4 component ideas
+- Each must solve a real conversion problem (not random ideas)
+- At least:
+  • 1 trust/objection reducer
+  • 1 conversion trigger (CTA / urgency / decision push)
+  • 1 engagement or attention component
+- Do NOT invent fake proof
+- Use placeholders if needed
+- Copy must match page tone (NOT aggressive if page isn't)
 
 Respond with raw JSON only (no markdown code blocks), using this EXACT structure:
 
@@ -2884,46 +2950,12 @@ Respond with raw JSON only (no markdown code blocks), using this EXACT structure
       "scroll_timing": "TOP (0-20%)|MIDDLE (20-60%)|BOTTOM (60-90%)|PERSISTENT",
       "description": "What this component adds and why it helps for a 30-70 year old audience — what psychological trigger it activates (curiosity, fear of loss, hope, trust, social proof from peers) AND why this interactivity type works at this scroll position",
       "placement": "Specific placement (e.g. directly below hero section, before the order button, bottom of page)",
-      "copy_suggestion": "Ready-to-use copy example written specifically for a 30-70 year old reader — conversational, specific, no hype"
+      "copy_suggestion": "Ready-to-use copy example written specifically for this page's audience — conversational, specific, no hype"
     }
   ]
 }
 
-COMPONENT IDEAS RULES — read carefully:
-- Give exactly 4 component ideas, each targeting a DIFFERENT psychological trigger from this list: curiosity gap, fear of loss, peer social proof, trust/authority, urgency/scarcity, risk reversal, hope/transformation
-- Pick components that are VISUALLY MISSING from the screenshot — don't suggest what's already there
-- Be creative and specific — avoid generic static components. Think about what would make a 50-year-old skeptic stop scrolling and keep reading or click buy.
-- THINK BEYOND STATIC: the most powerful components combine psychology + interactivity + scroll timing. A component that reacts to the user's behavior (scroll depth, hesitation, time on page) converts far better than one that just sits there.
-
-SCROLL PSYCHOLOGY & TIMING — embed these principles in your suggestions:
-- TOP of page (0–20% scroll): Curiosity gap, bold promise, "pattern interrupt" — the user just arrived and is deciding whether to stay. Hook them hard.
-- MIDDLE of page (20–60% scroll): This is the "consideration zone" — the user is interested but skeptical. Deploy proof, mechanism, authority, before/after.
-- BOTTOM of page (60–90% scroll): The user who scrolled this far is HIGHLY INTERESTED but needs the final push. Stack: urgency + risk reversal + peer proof + strong CTA.
-- EXIT INTENT / HESITATION: A component that activates after the user pauses >8s or moves toward browser chrome can rescue abandoning visitors.
-
-INTERACTIVE & DYNAMIC COMPONENT TYPES — pick the most relevant for the page:
-  * Scroll-triggered reveal strip — text or stat that animates into view only when the user scrolls to it (creates dopamine micro-reward)
-  * Self-qualification quiz (2–3 questions) — "Is this for you?" that ends with a personalized CTA; dramatically increases relevance
-  * Animated before/after slider — drag handle between two states; visceral, tangible proof of transformation
-  * Countdown urgency block with REAL reason — visible timer that counts down to an offer deadline; real reason given (e.g. "batch ends Friday")
-  * Animated counter strip — numbers count up when scrolled into view ("14,237 customers", "93% satisfaction")
-  * Interactive objection accordion — "Still not sure? Tap your concern:" with expandable answers targeting each objection
-  * Sticky bottom CTA bar — appears after 40% scroll, stays visible, disappears only when main CTA is in view
-  * Social proof ticker / live feed — auto-scrolling strip of recent buyer names/results ("Maria from Ohio just ordered 10 min ago")
-  * Tabbed comparison panel — user can switch between tabs: "This vs. [Alternative 1]", "This vs. [Alternative 2]"
-  * Risk-reversal visual guarantee card — large, bold, with a seal/badge, specific refund terms, reason-based language
-  * "What X people aged 50+ discovered" curiosity-gap strip with bold stat and CTA
-  * Loss-framing calculator — "Every day you wait, you're missing out on X" with a number that increments
-  * Peer testimonial carousel — auto-advances, shows age + specific result, full name, photo placeholder
-  * Authority badge strip — logos/credentials, animated on scroll, with tooltip hover detail
-  * Step-by-step "How it works" with micro-animations (3 steps max — this audience distrusts complexity)
-  * Floating urgency nudge — small toast-style popup at the bottom-right after 15s: "Only X left at this price"
-  * "Myth vs. Truth" flip cards — user taps/clicks to flip from a common myth to the truth; high engagement
-  * Progress bar CTA strip — shows "You're 80% of the way to claiming your discount" to motivate scroll completion
-
-- For each component idea, specify in "interactivity" field whether it is STATIC, INTERACTIVE (user-triggered), ANIMATED (auto-plays), or SCROLL-TRIGGERED.
-- For each component idea, specify in "scroll_timing" field the ideal page position: TOP (0-20%), MIDDLE (20-60%), BOTTOM (60-90%), or PERSISTENT (sticky/floating).
-- Be specific and direct. No generic advice.`;
+Respond with raw JSON only using the existing structure.`;
 
 	const messages = [
 		{ role: 'system', content: systemPrompt },
@@ -3112,73 +3144,60 @@ async function _aiGenerateOneComponentCode(comp, pageUrl, apiKey, pageContent = 
 		? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nInfer the exact product/niche from these signals and make every headline, benefit line, and CTA hyper-specific to this topic. No generic copy — write as if you know this product/market deeply.`
 		: '';
 
-	const systemPrompt = `You are a senior direct-response copywriter AND expert front-end developer specializing in high-converting landing page components. You write clean, self-contained HTML/CSS/JS snippets injected as innerHTML into a Leadpages landing page container div.
+	const systemPrompt = `You are a senior conversion-focused UI engineer and landing-page copywriter.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CRITICAL RENDERING RULES — READ FIRST, VIOLATING THESE = BROKEN OUTPUT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-1. ALWAYS wrap your entire output in a root div with an explicit background-color AND color set. Example: <div style="background:#0f172a; color:#f1f5f9; font-family:system-ui,sans-serif; ...">. NEVER rely on inherited styles from the parent page — they will be unknown and wrong.
-2. EVERY text element must have an explicit color property. NEVER use color:inherit or omit color on text that sits over a non-white background. If background is dark → text must be light (#f1f5f9, #e2e8f0, #ffffff). If background is light → text must be dark (#1e293b, #0f172a, #111827). Contrast ratio must be at least 4.5:1.
-3. SCROLL-TRIGGERED animations: Elements must be FULLY VISIBLE by default (opacity:1, transform:none). Only apply the "hidden" starting state (opacity:0, translateY) inside a JS class that IntersectionObserver adds AFTER the observer is set up. Use this exact pattern:
-   • Add class "lp-PREFIX-hidden" to elements in HTML: opacity:1 (default, visible)
-   • In <script>, FIRST define the CSS transition, THEN attach IntersectionObserver, THEN inside the observer callback: add "lp-PREFIX-visible" class
-   • This guarantees content is visible even if JS fails or the observer never fires.
-   • NEVER set opacity:0 directly in HTML attributes or inline styles on animated elements.
-4. ALL interactive JS must be wrapped in a DOMContentLoaded listener OR placed after the HTML it references. Use document.querySelector inside the script only AFTER the element exists in the DOM.
-5. CSS class names for the component wrapper MUST start with "lp-" prefix. The outermost div must have width:100% and box-sizing:border-box set explicitly.
-6. For countdown timers: calculate the target date as (new Date()).getTime() + (days * 86400000) so it always shows a future date, never expired.
-7. For carousels/tickers: always initialize with the first item visible. setInterval must store its ID and the dismiss/close button must clearInterval to avoid memory leaks.
-8. BUTTONS must always have explicit background-color, color, border, padding, border-radius, cursor:pointer, and font-family:inherit set — never rely on browser defaults.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GOAL PRIORITY
+1. Solve the specific conversion problem
+2. Render perfectly on any page
+3. Match page tone and style
+4. Use interaction ONLY if it improves conversion
 
-COPY RULES — critical:
-- Study the EXISTING PAGE COPY provided below and match its exact tone, vocabulary, sentence rhythm, and angle. If the page uses casual conversational language, match that. If it's formal, match that. Mirror the way it addresses the reader.
-- Write benefit-driven, outcome-focused headlines. Lead with the transformation, not the feature.
-- Use specific numbers and concrete details — never vague claims.
-- CTAs must be action-oriented, first-person, and match the energy of the page's existing CTAs.
-- Social proof must feel authentic — specific names, specific results, not generic praise.
-- Every word must earn its place. No filler. No corporate speak. No generic marketing language.
-${nicheDirective}
-DESIGN RULES — be creative and varied:
-- Do NOT default to a generic white card with a border. Each component needs its own distinct visual personality.
-- Use creative layouts: asymmetric grids, bold color blocks, diagonal dividers, icon rows, quote callouts, timeline strips.
-- Use color boldly — dark backgrounds, gradient accents, vibrant CTA buttons.
-- Typography: mix weights, sizes, and uppercase labels to create strong hierarchy.
-- Micro-interactions are EXPECTED: hover states, animated counters, pulse effects, smooth transitions.
-- The result must feel premium and custom — not like a generic template.
+COPY RULES
+- Match page tone exactly
+- Be specific, not generic
+- No fake testimonials, numbers, or urgency
+- Use placeholders if needed: [X], [customer], [result]
+- One clear message, one CTA
 
-INTERACTIVITY & PSYCHOLOGY RULES — this is what separates converting components from decorative ones:
-- SCROLL-TRIGGERED components: Use IntersectionObserver. Elements start VISIBLE (see Critical Rule #3 above). Observer adds a class that transitions them to their "animated-in" state.
-- INTERACTIVE components (quizzes, accordions, flip cards, tabs, sliders): Each interaction is a micro-commitment — the user who clicks is 3x more likely to convert. Make the interaction feel satisfying (smooth CSS transitions, clear state changes).
-- ANIMATED counters: Count up from 0 to the final number when scrolled into view. Use easing. This makes stats feel real and earned, not static.
-- COUNTDOWN timers: Must look urgent but not fake. Use Date.now() + offset for the target. Show hours:minutes:seconds. Add a reason ("Offer expires when this batch sells out").
-- STICKY elements: Use position:fixed, z-index 9999, and a smooth slide-in animation. Include a close/dismiss button.
-- SOCIAL PROOF TICKERS: Auto-scroll horizontally with CSS animation. Pause on hover. Each item: name + location + result.
-- BEFORE/AFTER SLIDERS: Use a draggable divider. Touch-friendly. Label both sides clearly.
-- FLIP CARDS: CSS 3D transform. Front = the myth/problem. Back = the truth/solution. Satisfying flip on click/tap.
-- PROGRESS BARS: Animate width from 0% to target on scroll. Creates a sense of momentum and FOMO.
+DESIGN RULES
+- The component must feel native to the page BUT still draw attention.
+- Use "controlled contrast":
+  • Either slightly different background (darker/lighter/accent color)
+  • OR stronger typography hierarchy
+  • OR subtle shadow / elevation
+- Do NOT copy the page design exactly — it will disappear visually.
+- Do NOT go full contrast — it will feel disconnected.
 
-TECHNICAL RULES:
-- Standalone snippet — no external dependencies unless from a CDN.
-- Inline <style> and <script> tags inside the snippet.
-- All IDs/class names must be uniquely prefixed to avoid conflicts with existing page elements.
-- Mobile-responsive — test for 375px viewport mentally.
-- For IntersectionObserver: always use { threshold: 0.15, rootMargin: '0px 0px -50px 0px' }.
-- For event listeners on scroll animations: use { once: true }.`;
+VISUAL ENHANCEMENT RULES
+- Use at least ONE of:
+  • gradient accent (subtle, not flashy)
+  • shadow or elevation
+  • bold typography contrast (big number / keyword)
+  • icon or visual anchor
+- Buttons must visually stand out from the background
+- Important elements must be instantly scannable (large, bold, spaced)
 
-	const creativeSeeds = [
-		'Use a bold dark (#0f172a) background with a single vivid accent color. Layout: icon + stat in large type on the left, copy on the right. If animated: count up stats with IntersectionObserver.',
-		'Use a warm cream/off-white background with a thick colored left border. Layout: stacked, centered, with a large decorative quote mark. If interactive: expandable accordion items.',
-		'Use a vibrant full-width gradient background (two complementary colors). Layout: horizontal split — headline left, visual/stats right. If scroll-triggered: slide in from opposite sides.',
-		'Use glass-morphism effect (backdrop-filter blur, semi-transparent background over a gradient). Layout: grid of mini-cards inside. If interactive: flip cards with 3D CSS transform.',
-		'Use a dark purple/indigo background with gold accent text. Layout: step-by-step numbered badge strip with connecting lines. If animated: steps reveal one by one via IntersectionObserver.',
-		'Use a clean white background with a bold accent border-top. Make the CTA button full-width, very large, with a pulse/glow animation. If sticky: slides in from bottom after 40% scroll.',
-		'Use alternating light/dark rows for a comparison table. Layout: this product vs. alternatives with checkmarks/X marks. If interactive: tab switcher between comparison options.',
-		'Use an earthy green or deep teal palette. Layout: icon grid — 6 icons in 2 rows with bold short labels. If scroll-triggered: icons pop in with a staggered scale animation.',
-		'Use a bold red/orange urgency color scheme. Layout: countdown timer centered with large digits + reason text below. Timer counts down to a real deadline.',
-		'Use a light gray background with card shadows. Layout: horizontal scrolling testimonial carousel with auto-advance every 4s and manual dot navigation.',
-	];
-	const seed = creativeSeeds[Math.floor(Math.random() * creativeSeeds.length)];
+DESIGN STRATEGY (choose ONE approach internally):
+1. BLEND → same palette, stronger hierarchy
+2. CONTRAST → different background section to break pattern
+3. FOCUS BLOCK → card/strip that isolates attention (shadow, spacing, border)
+
+- Every component must have a clear visual focal point (headline, stat, CTA, or interaction)
+- Avoid flat layouts — use depth (spacing, layers, shadows, gradients)
+- Avoid boring sections that look like plain text blocks
+
+CRITICAL RULES
+1. Root div must have background + text color + font
+2. Every text element must have explicit color
+3. Content must be visible even if JS fails
+4. Mobile responsive
+5. Unique class prefix lp-
+
+TECHNICAL
+- Inline CSS + JS
+- No dependencies
+- DOMContentLoaded for JS
+- Works as innerHTML`;
 
 	// Pull a sample of the page's actual copy to guide tone-matching
 	const pageCopySample = pageContent
@@ -3199,8 +3218,10 @@ Page URL: ${pageUrl || ''}
 EXISTING PAGE COPY SAMPLE (match this tone, vocabulary and angle exactly):
 ${pageCopySample || '(not available — write in a direct, conversational, benefit-focused tone)'}
 
-DESIGN DIRECTION (follow closely):
-${seed}
+VISUAL INTENT
+- This component should be noticeable within 1 second of scrolling into view
+- It must not look like a generic template or plain text section
+- It should feel like a "designed block", not just content
 
 INTERACTIVITY IMPLEMENTATION — implement based on the interactivity level above:
 - SCROLL-TRIGGERED: IMPORTANT — elements must be FULLY VISIBLE by default in HTML/CSS. Use IntersectionObserver only to add a CSS class that triggers a "polish" animation (e.g. slight fade-up from opacity:0.4 to 1, or scale 0.95→1). NEVER start elements at opacity:0 — if the observer fails to fire, content must still be readable.
@@ -3218,6 +3239,7 @@ COPY REQUIREMENTS:
 - For SCROLL_TIMING = MIDDLE: Copy builds on what they've already read — reference the promise made above, add proof/mechanism/authority.
 - For SCROLL_TIMING = BOTTOM: Copy closes the deal — urgency, risk reversal, the cost of inaction. Reader is warm; remove final objections.
 - For PERSISTENT: Copy is ultra-short and urgent — 1 headline + 1 CTA button, nothing more.
+- If the component uses proof (testimonials, stats, guarantees) and they are not present in the input, use placeholders instead of inventing them.
 
 OUTPUT RULES — CRITICAL, follow exactly:
 - Output ONLY the raw HTML (with inline <style> and <script> if needed)
@@ -3597,7 +3619,7 @@ window._aiPreviewComponent = function(idx) {
 	`;
 
 	modal.innerHTML = `
-		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45);">
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
 			<!-- Header -->
 			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
 				<div style="display:flex; align-items:center; gap:10px;">
