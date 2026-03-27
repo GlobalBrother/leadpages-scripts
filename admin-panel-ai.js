@@ -1030,8 +1030,7 @@ Respond with raw JSON only using the existing structure.`;
 // ── Shared Claude fetch with 529 retry + global model fallback ───────────
 // Uses a global flag so that once ANY component triggers the Opus→Sonnet switch,
 // ALL subsequent requests immediately use Sonnet — no wasted retries.
-const _CLAUDE_FALLBACK_MODEL = 'claude-sonnet-4-5';
-const _CLAUDE_FALLBACK_AFTER = 1; // switch after this many 529s per request
+const _CLAUDE_FALLBACK_MODEL = 'claude-sonnet-4-6';
 let _claudeOpusOverloaded = false; // global flag — shared across all parallel calls
 
 function _claudePatchModelToFallback(options) {
@@ -1046,7 +1045,7 @@ function _claudePatchModelToFallback(options) {
 }
 
 async function _claudeFetchWithRetry(url, options, timeoutMs = 120000, maxRetries = 4) {
-	let delay = 8000;
+	let delay = 5000;
 
 	// If Opus is already known to be overloaded, skip straight to Sonnet
 	let currentOptions = _claudeOpusOverloaded ? _claudePatchModelToFallback(options) : options;
@@ -1067,20 +1066,21 @@ async function _claudeFetchWithRetry(url, options, timeoutMs = 120000, maxRetrie
 		if (response.status !== 529) return response;
 		if (attempt === maxRetries) return response; // let caller handle the final 529
 
-		console.warn(`[Claude] 529 Overloaded — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
-
-		// After FALLBACK_AFTER failures, switch to Sonnet globally for all calls
-		if (!_claudeOpusOverloaded && attempt >= _CLAUDE_FALLBACK_AFTER) {
+		if (!_claudeOpusOverloaded) {
+			// First 529: switch to Sonnet globally and retry immediately (no wait)
 			_claudeOpusOverloaded = true;
 			currentOptions = _claudePatchModelToFallback(currentOptions);
-			console.warn(`[Claude] Switching globally to ${_CLAUDE_FALLBACK_MODEL} — all pending requests will use Sonnet`);
-			showNotification(`Opus overloaded — switching to Sonnet for all components…`, 'info');
+			delay = 5000; // reset delay for Sonnet retry chain
+			console.warn(`[Claude] 529 on attempt ${attempt + 1} — switching globally to ${_CLAUDE_FALLBACK_MODEL}, retrying now`);
+			showNotification(`Opus overloaded — switching to Sonnet…`, 'info');
+			// continue immediately, no await
 		} else {
+			// Sonnet also 529 — wait before retrying
+			console.warn(`[Claude] Sonnet also 529 — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
 			showNotification(`Claude overloaded — retrying in ${delay / 1000}s…`, 'info');
+			await new Promise(r => setTimeout(r, delay));
+			delay = Math.min(delay * 2, 20000);
 		}
-
-		await new Promise(r => setTimeout(r, delay));
-		delay = Math.min(delay * 2, 30000);
 	}
 }
 
