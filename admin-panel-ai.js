@@ -318,8 +318,12 @@ async function runAiAnalysis() {
 		return;
 	}
 
-	// Reset global Opus overload flag for this fresh run
+	// Reset global Claude overload flags and semaphore for this fresh run
 	_claudeOpusOverloaded = false;
+	_claudeSonnetOverloaded = false;
+	_claudeNextRetryAt = 0;
+	_claudeSemaphoreInFlight = false;
+	_claudeSemaphoreWaiters = [];
 
 	let gptKey, claudeKey;
 	try {
@@ -406,9 +410,7 @@ async function runAiAnalysis() {
 					if (emptyEl)   emptyEl.style.display   = 'none';
 					if (outputEl)  outputEl.style.display  = 'none';
 
-					// Stagger starts by 4s per component to avoid simultaneous Opus overload
-				return new Promise(r => setTimeout(r, idx * 4000))
-					.then(() => _aiGenerateOneComponentCode(comp, url, claudeKey, pageContent, nicheContext, 'claude', inspirationPages))
+				return _aiGenerateOneComponentCode(comp, url, claudeKey, pageContent, nicheContext, 'claude', inspirationPages)
 						.then(code => {
 							generatedCodes[idx] = code;
 							window._aiGeneratedCodes[idx] = code;
@@ -724,23 +726,39 @@ function _aiPickInspirationUrls(nicheContext, count = 2) {
 	return scored.slice(0, count).map(e => e.url);
 }
 
-// Lightweight single-proxy fetch for inspiration pages (best-effort, silent on failure)
+// Lightweight multi-proxy fetch for inspiration pages (best-effort, silent on failure)
 async function _aiProxyFetchQuick(url) {
-	try {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), 7000);
-		let res;
-		try {
-			res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(url)}`, { signal: controller.signal });
-		} finally {
-			clearTimeout(timer);
+	const TIMEOUT_MS = 7000;
+	const proxies = [
+		{
+			buildUrl: (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => { const d = await res.json(); return d.contents || ''; }
+		},
+		{
+			buildUrl: (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => res.text()
+		},
+		{
+			buildUrl: (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+			extractHtml: async (res) => res.text()
 		}
-		if (!res.ok) return null;
-		const d = await res.json();
-		return (d.contents && d.contents.length > 200) ? d.contents : null;
-	} catch (e) {
-		return null; // silent — inspiration is optional
+	];
+	for (const proxy of proxies) {
+		try {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+			let res;
+			try {
+				res = await fetch(proxy.buildUrl(url), { signal: controller.signal });
+			} finally {
+				clearTimeout(timer);
+			}
+			if (!res.ok) continue;
+			const html = await proxy.extractHtml(res);
+			if (html && html.length > 200) return html;
+		} catch (e) { /* try next proxy */ }
 	}
+	return null; // all proxies failed — inspiration is optional
 }
 
 // Scrape inspiration pages in parallel — only keep headings, CTAs, prices (structural signal)
@@ -852,6 +870,24 @@ async function _aiProxyFetch(url, setStep) {
 	throw new Error(`Could not fetch page: ${lastError}. Make sure the URL is publicly accessible.`);
 }
 
+// ── Visual format spark pool ──────────────────────────────────────────────
+// 4 random entries are picked per run and shown to GPT as creative sparks —
+// NOT constraints. GPT can use them, remix them, or invent something completely different.
+const _VISUAL_FORMAT_PALETTE = [
+	'horizontal-scroll-strip', 'sticky-progress-bar', 'tab-switcher',
+	'before-after-reveal', 'quiz-funnel-hook', 'expandable-accordion',
+	'comparison-table', 'icon-benefit-grid', 'numbered-timeline',
+	'social-proof-ticker', 'countdown-with-reason', 'star-rating-breakdown',
+	'mega-guarantee-block', 'transformation-story-card', 'objection-crusher-list',
+	'urgency-stack', 'trust-logos-bar', 'animated-stat-counter', 'micro-quiz-hook',
+	'risk-reversal-box', 'step-process-visual', 'chat-style-testimonial',
+	'peer-proof-carousel', 'floating-sticky-cta', 'benefit-checklist-reveal',
+	'founder-story-block', 'mechanism-diagram'
+];
+function _pickSessionFormats() {
+	return [..._VISUAL_FORMAT_PALETTE].sort(() => Math.random() - 0.5).slice(0, 4);
+}
+
 async function _aiCallGpt(pageContent, pageUrl, apiKey, screenshotUrl, existingInfo = null, nicheContext = null, inspirationPages = []) {
 	// ── Build dynamic context sections ───────────────────────────────────
 	// nicheContext is a plain string of key copy signals extracted from the page
@@ -871,6 +907,16 @@ async function _aiCallGpt(pageContent, pageUrl, apiKey, screenshotUrl, existingI
 			).join('\n\n') +
 			`\n\nUse these to identify structural patterns, component types, and conversion elements that work in this type of market. Specifically flag what the TARGET PAGE is missing that these high-converting pages do well.`
 		: '';
+
+	// Pick 4 random visual formats for THIS run — shown as inspiration to spark fresh thinking
+	const sessionFormats = _pickSessionFormats();
+	const sessionFormatsBlock = `
+CREATIVE SPARKS FOR THIS RUN (for inspiration only — do NOT limit yourself to these):
+  • ${sessionFormats[0]}
+  • ${sessionFormats[1]}
+  • ${sessionFormats[2]}
+  • ${sessionFormats[3]}
+These are just random examples to jump-start your thinking. You are free — and encouraged — to invent completely new formats that don't appear here. The only rule: each of the 4 components must look and behave differently from the others.`;
 
 	const systemPrompt = `You are a senior conversion strategist, UX diagnostician, and concept developer for ecommerce and offer pages.
 
@@ -900,12 +946,12 @@ GROUNDING RULES
 - If proof is missing → use placeholders like [X], [customer], [result].
 
 CREATIVE FREEDOM + DIVERSITY MANDATE
-- You may suggest any component — not limited to predefined types.
+- You may suggest any component type — not limited to predefined types.
 - Pick the 4 strongest ideas for THIS page based on actual conversion gaps.
-- CRITICAL: Each of the 4 components MUST use a DIFFERENT visual layout format. No two may share the same visual approach.
-- For each component you suggest, you must mentally assign it one specific visual format from this palette:
-  horizontal-scroll-strip | sticky-progress-bar | tab-switcher | before-after-reveal | quiz-funnel-hook | expandable-accordion | comparison-table | icon-benefit-grid | numbered-timeline | social-proof-ticker | countdown-with-reason | star-rating-breakdown | mega-guarantee-block | transformation-story-card | objection-crusher-list | urgency-stack | trust-logos-bar | animated-stat-counter | micro-quiz-hook | risk-reversal-box | step-process-visual | chat-style-testimonial | peer-proof-carousel | floating-sticky-cta | benefit-checklist-reveal | founder-story-block | mechanism-diagram
-- Forbidden: do not suggest two components with the same format. Do not default to "text + CTA button" for all components.
+- CRITICAL: each of the 4 components must have a visually and functionally DISTINCT format — no two may look, behave, or feel the same.
+- Use the visual format inspiration below as creative fuel — but feel free to go beyond it.
+- Do NOT default to generic layouts (plain text blocks, simple FAQ lists, basic review cards). Push for fresh visual thinking.
+${sessionFormatsBlock}
 ${nicheSection}
 ${existingComponentsContext}
 ${screenshotUrl ? 'Use screenshot for layout, hierarchy, and what exists visually.' : ''}`;
@@ -927,19 +973,20 @@ Find what is most likely hurting conversions right now, then suggest the 4 highe
 THINK FIRST (do not output this):
 - infer audience + intent
 - identify the 3 biggest conversion bottlenecks
-- brainstorm at least 10 component ideas with a specific visual format for each
-- eliminate any that share the same visual format as another
-- select the best 4, ensuring: different visual formats, different psychological triggers, different page positions
+- brainstorm at least 10 component ideas — each with a distinct visual format
+- discard any that look or behave like another you've listed
+- select the best 4: different visual formats, different psychological triggers, different page positions
+- use the visual format inspiration in your system prompt as a starting point, but go beyond it freely
 
 OUTPUT RULES
 - Give EXACTLY 4 component ideas
 - Each must solve a real, specific conversion problem on THIS page
-- Each must use a DIFFERENT visual layout format — no two components may look or behave the same way
-- Cover at minimum: one trust/proof element, one conversion push, one engagement/curiosity element
-- At least 2 of the 4 must be INTERACTIVE or ANIMATED — not just static text blocks
-- Do NOT invent fake proof
-- Use placeholders if needed
-- Copy must match page tone (NOT aggressive if page isn't)
+- Each must have a visually and functionally DISTINCT format — no two may look or behave the same
+- Each must activate a DIFFERENT psychological trigger (trust, urgency, curiosity, social proof, etc.)
+- At least 2 of the 4 must be INTERACTIVE or ANIMATED
+- Do NOT default to FAQ lists, plain review cards, or simple sticky bars — push for fresh ideas
+- Do NOT invent fake proof — use placeholders if needed
+- Copy must match the page's tone
 
 Respond with raw JSON only (no markdown code blocks), using this EXACT structure:
 
@@ -1030,8 +1077,26 @@ Respond with raw JSON only using the existing structure.`;
 // ── Shared Claude fetch with 529 retry + global model fallback ───────────
 // Uses a global flag so that once ANY component triggers the Opus→Sonnet switch,
 // ALL subsequent requests immediately use Sonnet — no wasted retries.
+// A semaphore serializes all Claude requests so only 1 fires at a time,
+// which completely prevents parallel 529 floods.
 const _CLAUDE_FALLBACK_MODEL = 'claude-sonnet-4-6';
-let _claudeOpusOverloaded = false; // global flag — shared across all parallel calls
+let _claudeOpusOverloaded = false;   // global flag — shared across all parallel calls
+let _claudeSonnetOverloaded = false; // true once Sonnet also 529s → fall back to GPT
+let _claudeNextRetryAt = 0;          // shared cooldown timestamp
+// Semaphore: max 1 concurrent Claude request
+let _claudeSemaphoreInFlight = false;
+let _claudeSemaphoreWaiters = [];
+function _claudeAcquire() {
+	if (!_claudeSemaphoreInFlight) { _claudeSemaphoreInFlight = true; return Promise.resolve(); }
+	return new Promise(resolve => _claudeSemaphoreWaiters.push(resolve));
+}
+function _claudeRelease() {
+	if (_claudeSemaphoreWaiters.length > 0) {
+		_claudeSemaphoreWaiters.shift()();
+	} else {
+		_claudeSemaphoreInFlight = false;
+	}
+}
 
 function _claudePatchModelToFallback(options) {
 	try {
@@ -1045,42 +1110,58 @@ function _claudePatchModelToFallback(options) {
 }
 
 async function _claudeFetchWithRetry(url, options, timeoutMs = 120000, maxRetries = 4) {
-	let delay = 5000;
+	// If Sonnet already failed this run, skip Claude entirely — caller falls back to GPT
+	if (_claudeSonnetOverloaded) throw new Error('__CLAUDE_ALL_OVERLOADED__');
 
-	// If Opus is already known to be overloaded, skip straight to Sonnet
-	let currentOptions = _claudeOpusOverloaded ? _claudePatchModelToFallback(options) : options;
+	// Acquire semaphore so only 1 Claude request is in-flight at a time
+	await _claudeAcquire();
+	try {
+		// Check again after acquiring — another component may have set the flag while we waited
+		if (_claudeSonnetOverloaded) throw new Error('__CLAUDE_ALL_OVERLOADED__');
 
-	for (let attempt = 0; attempt <= maxRetries; attempt++) {
-		const controller = new AbortController();
-		const timer = setTimeout(() => controller.abort(), timeoutMs);
-		let response;
-		try {
-			response = await fetch(url, { ...currentOptions, signal: controller.signal });
-		} catch (e) {
+		let delay = 8000;
+
+		// If Opus is already known to be overloaded, skip straight to Sonnet
+		let currentOptions = _claudeOpusOverloaded ? _claudePatchModelToFallback(options) : options;
+
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			// Shared cooldown: if a previous request already set a retry barrier, honour it
+			const waitMs = _claudeNextRetryAt - Date.now();
+			if (waitMs > 0) await new Promise(r => setTimeout(r, waitMs));
+
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), timeoutMs);
+			let response;
+			try {
+				response = await fetch(url, { ...currentOptions, signal: controller.signal });
+			} catch (e) {
+				clearTimeout(timer);
+				if (e.name === 'AbortError') throw new Error('Claude request timed out — try again');
+				throw new Error('Could not reach Claude API: ' + (e.message || 'network error'));
+			}
 			clearTimeout(timer);
-			if (e.name === 'AbortError') throw new Error('Claude request timed out — try again');
-			throw new Error('Could not reach Claude API: ' + (e.message || 'network error'));
-		}
-		clearTimeout(timer);
 
-		if (response.status !== 529) return response;
-		if (attempt === maxRetries) return response; // let caller handle the final 529
+			if (response.status !== 529) return response;
+			if (attempt === maxRetries) return response;
 
-		if (!_claudeOpusOverloaded) {
-			// First 529: switch to Sonnet globally and retry immediately (no wait)
-			_claudeOpusOverloaded = true;
-			currentOptions = _claudePatchModelToFallback(currentOptions);
-			delay = 5000; // reset delay for Sonnet retry chain
-			console.warn(`[Claude] 529 on attempt ${attempt + 1} — switching globally to ${_CLAUDE_FALLBACK_MODEL}, retrying now`);
-			showNotification(`Opus overloaded — switching to Sonnet…`, 'info');
-			// continue immediately, no await
-		} else {
-			// Sonnet also 529 — wait before retrying
-			console.warn(`[Claude] Sonnet also 529 — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
-			showNotification(`Claude overloaded — retrying in ${delay / 1000}s…`, 'info');
-			await new Promise(r => setTimeout(r, delay));
-			delay = Math.min(delay * 2, 20000);
+			if (!_claudeOpusOverloaded) {
+				// First 529 on Opus: switch to Sonnet globally, retry immediately (no wait)
+				_claudeOpusOverloaded = true;
+				currentOptions = _claudePatchModelToFallback(currentOptions);
+				delay = 8000; // reset delay for Sonnet retry chain
+				console.warn(`[Claude] 529 on Opus — switching globally to ${_CLAUDE_FALLBACK_MODEL}, retrying now`);
+				showNotification(`Opus overloaded — switching to Sonnet…`, 'info');
+				// no await — continue immediately
+			} else {
+				// Sonnet also 529: give up on Claude entirely — caller will fall back to GPT
+				_claudeSonnetOverloaded = true;
+				console.warn('[Claude] Sonnet also 529 — all Claude models overloaded, falling back to GPT');
+				showNotification('Claude overloaded — falling back to GPT…', 'info');
+				throw new Error('__CLAUDE_ALL_OVERLOADED__');
+			}
 		}
+	} finally {
+		_claudeRelease();
 	}
 }
 
@@ -1180,7 +1261,7 @@ Give exactly 4 component_ideas, each targeting a DIFFERENT psychological trigger
 					model: 'claude-opus-4-6',
 					system: systemPrompt,
 					messages,
-					max_tokens: 6000
+					max_tokens: 8000
 				})
 			},
 			120000 // 2-min per-attempt timeout
@@ -1344,27 +1425,38 @@ OUTPUT RULES — CRITICAL, follow exactly:
 	let response;
 	if (provider === 'claude') {
 		// Use retry helper — manages its own AbortController per attempt
-		response = await _claudeFetchWithRetry(
-			'https://api.anthropic.com/v1/messages',
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'x-api-key': apiKey,
-					'anthropic-version': '2023-06-01',
-					'anthropic-dangerous-direct-browser-access': 'true'
+		// If all Claude models are overloaded it throws __CLAUDE_ALL_OVERLOADED__ → fall back to GPT
+		try {
+			response = await _claudeFetchWithRetry(
+				'https://api.anthropic.com/v1/messages',
+				{
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'x-api-key': apiKey,
+						'anthropic-version': '2023-06-01',
+						'anthropic-dangerous-direct-browser-access': 'true'
+					},
+					body: JSON.stringify({
+						model: 'claude-opus-4-6',
+						system: systemPrompt,
+						messages: [{ role: 'user', content: userPrompt }],
+						max_tokens: 8000,
+						temperature: 0.9
+					})
 				},
-				body: JSON.stringify({
-					model: 'claude-opus-4-6',
-					system: systemPrompt,
-					messages: [{ role: 'user', content: userPrompt }],
-					max_tokens: 6000,
-					temperature: 0.9
-				})
-			},
-			120000 // 2-min per-attempt timeout
-		);
-	} else {
+				120000 // 2-min per-attempt timeout
+			);
+		} catch (claudeErr) {
+			if (claudeErr.message !== '__CLAUDE_ALL_OVERLOADED__') throw claudeErr;
+			// ── GPT fallback ─────────────────────────────────────────────────
+			console.log('[AI codegen] Claude fully overloaded — retrying with GPT 5.4');
+			provider = 'gpt';
+			apiKey = _aiGetGptKey();
+			// fall through to the GPT block below
+		}
+	}
+	if (provider === 'gpt') {
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 120000);
 		try {
