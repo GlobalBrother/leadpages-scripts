@@ -1457,6 +1457,10 @@ OUTPUT RULES — CRITICAL, follow exactly:
 		}
 	}
 	if (provider === 'gpt') {
+		const gptMessages = [
+			{ role: 'system', content: systemPrompt },
+			{ role: 'user', content: userPrompt }
+		];
 		const controller = new AbortController();
 		const timer = setTimeout(() => controller.abort(), 120000);
 		try {
@@ -1466,8 +1470,9 @@ OUTPUT RULES — CRITICAL, follow exactly:
 				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
 				body: JSON.stringify({
 					model: 'gpt-5.4',
-					messages,
-					max_completion_tokens: 3500
+					messages: gptMessages,
+					max_completion_tokens: 8000,
+					temperature: 1
 				})
 			});
 		} catch (fetchErr) {
@@ -1493,6 +1498,9 @@ OUTPUT RULES — CRITICAL, follow exactly:
 	let code = provider === 'claude'
 		? (data.content?.[0]?.text?.trim() || '')
 		: (data.choices?.[0]?.message?.content?.trim() || '');
+	if (!code) {
+		console.warn('[AI codegen] Empty content in response. finish_reason:', data.choices?.[0]?.finish_reason, '| refusal:', data.choices?.[0]?.message?.refusal, '| full data:', JSON.stringify(data).substring(0, 500));
+	}
 	console.log('[AI codegen] raw response length:', code.length, '| first 120:', code.substring(0, 120));
 	// Strip markdown fences if the model added them
 	code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
@@ -1556,6 +1564,13 @@ window._aiGenerateComponentCode = async function (idx) {
 	try { claudeKey = _aiGetClaudeKey(); } catch (e) {
 		showNotification(e.message, 'error'); return;
 	}
+
+	// Reset cascade flags so each Regenerate starts fresh (Claude may have recovered)
+	_claudeOpusOverloaded = false;
+	_claudeSonnetOverloaded = false;
+	_claudeNextRetryAt = 0;
+	_claudeSemaphoreInFlight = false;
+	_claudeSemaphoreWaiters = [];
 
 	const btn = document.getElementById(`ai-gen-btn-${idx}`);
 	const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
@@ -1697,35 +1712,64 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 
 		const callRefineApi = async (retrying = false) => {
 			const { systemPrompt, messages: refineMessages } = buildRefineMessages(retrying);
-			const response = await _claudeFetchWithRetry(
-				'https://api.anthropic.com/v1/messages',
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'x-api-key': claudeKey,
-						'anthropic-version': '2023-06-01',
-						'anthropic-dangerous-direct-browser-access': 'true'
+
+			// ── Try Claude (Opus → Sonnet cascade) ───────────────────────────
+			let response;
+			let usedGpt = false;
+			try {
+				response = await _claudeFetchWithRetry(
+					'https://api.anthropic.com/v1/messages',
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'x-api-key': claudeKey,
+							'anthropic-version': '2023-06-01',
+							'anthropic-dangerous-direct-browser-access': 'true'
+						},
+						body: JSON.stringify({
+							model: 'claude-opus-4-6',
+							system: systemPrompt,
+							messages: refineMessages,
+							max_tokens: 8000,
+							temperature: 0.2
+						})
 					},
-					body: JSON.stringify({
-						model: 'claude-opus-4-6',
-						system: systemPrompt,
-						messages: refineMessages,
-						max_tokens: 8000,
-						temperature: 0.2
-					})
-				},
-				60000 // 1-min per-attempt timeout
-			);
+					60000 // 1-min per-attempt timeout
+				);
+			} catch (claudeErr) {
+				if (claudeErr.message !== '__CLAUDE_ALL_OVERLOADED__') throw claudeErr;
+				// ── GPT fallback ─────────────────────────────────────────────
+				console.log('[AI refine] Claude fully overloaded — falling back to GPT 5.4');
+				showNotification('Claude overloaded — refining with GPT…', 'info');
+				usedGpt = true;
+				const gptKey = _aiGetGptKey();
+				const gptMessages = [
+					{ role: 'system', content: systemPrompt },
+					...refineMessages
+				];
+				const ctrl = new AbortController();
+				const t = setTimeout(() => ctrl.abort(), 60000);
+				try {
+					response = await fetch('https://api.openai.com/v1/chat/completions', {
+						method: 'POST',
+						signal: ctrl.signal,
+						headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
+						body: JSON.stringify({ model: 'gpt-5.4', messages: gptMessages, max_completion_tokens: 8000, temperature: 1 })
+					});
+				} finally { clearTimeout(t); }
+			}
 
 			if (!response.ok) {
-				let errMsg = `Claude error (${response.status})`;
+				let errMsg = `${usedGpt ? 'GPT' : 'Claude'} error (${response.status})`;
 				try { const b = await response.json(); errMsg = b?.error?.message || b?.error?.error?.message || errMsg; } catch (_) { }
 				throw new Error(errMsg);
 			}
 
 			const data = await response.json();
-			let code = (data.content?.[0]?.text?.trim() || '');
+			let code = usedGpt
+				? (data.choices?.[0]?.message?.content?.trim() || '')
+				: (data.content?.[0]?.text?.trim() || '');
 			code = code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 			return code;
 		};
