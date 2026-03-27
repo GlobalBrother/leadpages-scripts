@@ -126,12 +126,9 @@ async function loadSiteContent() {
 		contentData = data || {};
 
 		const slugsSet = new Set();
-		const componentNames = new Set(Object.keys(contentData));
 		Object.keys(contentData).forEach(component => {
-			const compData = contentData[component];
-			if (typeof compData !== 'object' || compData === null) return;
-			Object.keys(compData).forEach(slug => {
-				if (!slug.startsWith('_') && !componentNames.has(slug)) slugsSet.add(slug);
+			Object.keys(contentData[component]).forEach(slug => {
+				if (!slug.startsWith('_')) slugsSet.add(slug);
 			});
 		});
 		// 'default' is always a valid slug (shows native LeadPages content)
@@ -187,6 +184,7 @@ function loadSlugContent() {
 
 	const componentsData = {};
 	Object.keys(contentData).forEach(component => {
+		if (component === 'slug-registry') return; // Skip slug registry — not a real component
 		if (contentData[component][slug]) {
 			componentsData[component] = contentData[component][slug];
 		}
@@ -1939,14 +1937,9 @@ async function confirmAddSlug() {
 async function addNewSlug(slugName) {
 	try {
 		showLoader(true);
-		const defaultComponents = {
-			'main-title': `Title for ${slugName}`,
-			'vsl-video': 'https://player.vimeo.com/video/YOUR_VIDEO_ID'
-		};
-		await Promise.all(Object.keys(defaultComponents).map(component =>
-			fetch(`${firebaseUrl}/dynamic_content/${currentSite}/${component}/${slugName}.json`,
-				{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(defaultComponents[component]) })
-		));
+		// Register the slug in the slug-registry component (used to persist slug names)
+		await fetch(`${firebaseUrl}/dynamic_content/${currentSite}/slug-registry/${slugName}.json`,
+			{ method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(true) });
 		showNotification(`Slug "${slugName}" added successfully!`, 'success');
 		showLoader(false);
 		await loadSiteContent();
@@ -1987,9 +1980,9 @@ async function addNewSite(hostname) {
 	const firebaseKey = hostnameToFirebaseKey(hostname);
 	try {
 		showLoader(true);
+		// Use slug-registry to track slugs — avoids component names appearing as slug options
 		const minimalStructure = {
-			"main-title": { "default": "Generic Title – Edit from Admin Panel" },
-			"vsl-video": { "default": "https://player.vimeo.com/video/YOUR_VIDEO_ID" }
+			"slug-registry": { "default": true }
 		};
 		const response = await fetch(
 			`${firebaseUrl}/dynamic_content/${firebaseKey}.json`,

@@ -318,6 +318,9 @@ async function runAiAnalysis() {
 		return;
 	}
 
+	// Reset global Opus overload flag for this fresh run
+	_claudeOpusOverloaded = false;
+
 	let gptKey, claudeKey;
 	try {
 		gptKey = _aiGetGptKey();
@@ -403,7 +406,9 @@ async function runAiAnalysis() {
 					if (emptyEl)   emptyEl.style.display   = 'none';
 					if (outputEl)  outputEl.style.display  = 'none';
 
-					return _aiGenerateOneComponentCode(comp, url, claudeKey, pageContent, nicheContext, 'claude', inspirationPages)
+					// Stagger starts by 4s per component to avoid simultaneous Opus overload
+				return new Promise(r => setTimeout(r, idx * 4000))
+					.then(() => _aiGenerateOneComponentCode(comp, url, claudeKey, pageContent, nicheContext, 'claude', inspirationPages))
 						.then(code => {
 							generatedCodes[idx] = code;
 							window._aiGeneratedCodes[idx] = code;
@@ -1022,6 +1027,63 @@ Respond with raw JSON only using the existing structure.`;
 	}
 }
 
+// ── Shared Claude fetch with 529 retry + global model fallback ───────────
+// Uses a global flag so that once ANY component triggers the Opus→Sonnet switch,
+// ALL subsequent requests immediately use Sonnet — no wasted retries.
+const _CLAUDE_FALLBACK_MODEL = 'claude-sonnet-4-5';
+const _CLAUDE_FALLBACK_AFTER = 1; // switch after this many 529s per request
+let _claudeOpusOverloaded = false; // global flag — shared across all parallel calls
+
+function _claudePatchModelToFallback(options) {
+	try {
+		const body = JSON.parse(options.body);
+		if (body.model && body.model.includes('opus')) {
+			body.model = _CLAUDE_FALLBACK_MODEL;
+			return { ...options, body: JSON.stringify(body) };
+		}
+	} catch (_) { }
+	return options;
+}
+
+async function _claudeFetchWithRetry(url, options, timeoutMs = 120000, maxRetries = 4) {
+	let delay = 8000;
+
+	// If Opus is already known to be overloaded, skip straight to Sonnet
+	let currentOptions = _claudeOpusOverloaded ? _claudePatchModelToFallback(options) : options;
+
+	for (let attempt = 0; attempt <= maxRetries; attempt++) {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), timeoutMs);
+		let response;
+		try {
+			response = await fetch(url, { ...currentOptions, signal: controller.signal });
+		} catch (e) {
+			clearTimeout(timer);
+			if (e.name === 'AbortError') throw new Error('Claude request timed out — try again');
+			throw new Error('Could not reach Claude API: ' + (e.message || 'network error'));
+		}
+		clearTimeout(timer);
+
+		if (response.status !== 529) return response;
+		if (attempt === maxRetries) return response; // let caller handle the final 529
+
+		console.warn(`[Claude] 529 Overloaded — retrying in ${delay / 1000}s (attempt ${attempt + 1}/${maxRetries})`);
+
+		// After FALLBACK_AFTER failures, switch to Sonnet globally for all calls
+		if (!_claudeOpusOverloaded && attempt >= _CLAUDE_FALLBACK_AFTER) {
+			_claudeOpusOverloaded = true;
+			currentOptions = _claudePatchModelToFallback(currentOptions);
+			console.warn(`[Claude] Switching globally to ${_CLAUDE_FALLBACK_MODEL} — all pending requests will use Sonnet`);
+			showNotification(`Opus overloaded — switching to Sonnet for all components…`, 'info');
+		} else {
+			showNotification(`Claude overloaded — retrying in ${delay / 1000}s…`, 'info');
+		}
+
+		await new Promise(r => setTimeout(r, delay));
+		delay = Math.min(delay * 2, 30000);
+	}
+}
+
 // ── Claude (Anthropic) equivalent of _aiCallGpt ───────────────────────────
 async function _aiCallClaude(pageContent, pageUrl, apiKey, screenshotUrl, existingInfo = null, nicheContext = null) {
 	// Reuse the same prompt-building logic as GPT
@@ -1102,38 +1164,35 @@ Give exactly 4 component_ideas, each targeting a DIFFERENT psychological trigger
 		}]
 		: [{ role: 'user', content: userPrompt }];
 
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), 120000); // 2 min for vision
-
 	let response;
 	try {
-		response = await fetch('https://api.anthropic.com/v1/messages', {
-			method: 'POST',
-			signal: controller.signal,
-			headers: {
-				'Content-Type': 'application/json',
-				'x-api-key': apiKey,
-				'anthropic-version': '2023-06-01',
-				'anthropic-dangerous-direct-browser-access': 'true'
+		response = await _claudeFetchWithRetry(
+			'https://api.anthropic.com/v1/messages',
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'x-api-key': apiKey,
+					'anthropic-version': '2023-06-01',
+					'anthropic-dangerous-direct-browser-access': 'true'
+				},
+				body: JSON.stringify({
+					model: 'claude-opus-4-6',
+					system: systemPrompt,
+					messages,
+					max_tokens: 6000
+				})
 			},
-			body: JSON.stringify({
-				model: 'claude-sonnet-4-6',
-				system: systemPrompt,
-				messages,
-				max_tokens: 6000
-			})
-		});
+			120000 // 2-min per-attempt timeout
+		);
 	} catch (e) {
-		if (e.name === 'AbortError') throw new Error('Claude request timed out — try again');
 		throw new Error('Could not reach Claude API: ' + (e.message || 'network error'));
-	} finally {
-		clearTimeout(timer);
 	}
 
 	if (!response.ok) {
 		const err = await response.json().catch(() => ({}));
 		const msg = err?.error?.message || `Claude API error (${response.status})`;
-		throw new Error(response.status === 429 ? `[429] ${msg}` : msg);
+		throw new Error(response.status === 429 ? `[429] ${msg}` : `[${response.status}] ${msg}`);
 	}
 
 	const data = await response.json();
@@ -1282,15 +1341,13 @@ OUTPUT RULES — CRITICAL, follow exactly:
 - Mobile-responsive (375px viewport)
 - BEFORE FINISHING: mentally check — is every text element readable? Is any element invisible because opacity:0 was set without a trigger? Fix it.`;
 
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), 120000);
-
 	let response;
-	try {
-		if (provider === 'claude') {
-			response = await fetch('https://api.anthropic.com/v1/messages', {
+	if (provider === 'claude') {
+		// Use retry helper — manages its own AbortController per attempt
+		response = await _claudeFetchWithRetry(
+			'https://api.anthropic.com/v1/messages',
+			{
 				method: 'POST',
-				signal: controller.signal,
 				headers: {
 					'Content-Type': 'application/json',
 					'x-api-key': apiKey,
@@ -1298,14 +1355,19 @@ OUTPUT RULES — CRITICAL, follow exactly:
 					'anthropic-dangerous-direct-browser-access': 'true'
 				},
 				body: JSON.stringify({
-					model: 'claude-sonnet-4-6',
+					model: 'claude-opus-4-6',
 					system: systemPrompt,
 					messages: [{ role: 'user', content: userPrompt }],
 					max_tokens: 6000,
 					temperature: 0.9
 				})
-			});
-		} else {
+			},
+			120000 // 2-min per-attempt timeout
+		);
+	} else {
+		const controller = new AbortController();
+		const timer = setTimeout(() => controller.abort(), 120000);
+		try {
 			response = await fetch('https://api.openai.com/v1/chat/completions', {
 				method: 'POST',
 				signal: controller.signal,
@@ -1316,14 +1378,14 @@ OUTPUT RULES — CRITICAL, follow exactly:
 					max_completion_tokens: 3500
 				})
 			});
+		} catch (fetchErr) {
+			clearTimeout(timer);
+			const msg = fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error');
+			console.error('[AI codegen] fetch failed:', fetchErr);
+			throw new Error(msg);
 		}
-	} catch (fetchErr) {
 		clearTimeout(timer);
-		const msg = fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error');
-		console.error('[AI codegen] fetch failed:', fetchErr);
-		throw new Error(msg);
 	}
-	clearTimeout(timer);
 
 	if (!response.ok) {
 		let errMsg = `${provider === 'claude' ? 'Claude' : 'OpenAI'} error (${response.status})`;
@@ -1543,13 +1605,10 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 
 		const callRefineApi = async (retrying = false) => {
 			const { systemPrompt, messages: refineMessages } = buildRefineMessages(retrying);
-			const controller = new AbortController();
-			const timer = setTimeout(() => controller.abort(), 60000);
-			let response;
-			try {
-				response = await fetch('https://api.anthropic.com/v1/messages', {
+			const response = await _claudeFetchWithRetry(
+				'https://api.anthropic.com/v1/messages',
+				{
 					method: 'POST',
-					signal: controller.signal,
 					headers: {
 						'Content-Type': 'application/json',
 						'x-api-key': claudeKey,
@@ -1557,18 +1616,15 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 						'anthropic-dangerous-direct-browser-access': 'true'
 					},
 					body: JSON.stringify({
-						model: 'claude-sonnet-4-6',
+						model: 'claude-opus-4-6',
 						system: systemPrompt,
 						messages: refineMessages,
 						max_tokens: 8000,
 						temperature: 0.2
 					})
-				});
-			} catch (fetchErr) {
-				clearTimeout(timer);
-				throw new Error(fetchErr.name === 'AbortError' ? 'Request timed out (60s)' : (fetchErr.message || 'Network error'));
-			}
-			clearTimeout(timer);
+				},
+				60000 // 1-min per-attempt timeout
+			);
 
 			if (!response.ok) {
 				let errMsg = `Claude error (${response.status})`;
@@ -1684,7 +1740,7 @@ window._aiPreviewComponent = function (idx) {
 	`;
 
 	modal.innerHTML = `
-		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:1300px; max-height:95vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
 			<!-- Header -->
 			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
 				<div style="display:flex; align-items:center; gap:10px;">
