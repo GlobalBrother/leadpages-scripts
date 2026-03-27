@@ -434,7 +434,7 @@ function previewComponentContent(component) {
 		padding:20px; box-sizing:border-box;
 	`;
 	modal.innerHTML = `
-		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:960px; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
+		<div style="background:#ffffff; border-radius:16px; overflow:hidden; width:100%; max-width:1300px; max-height:95vh; display:flex; flex-direction:column; box-shadow:0 32px 80px rgba(0,0,0,0.45); height:100%;">
 			<div style="display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#0f0f17; border-bottom:1px solid #1e1e2e; flex-shrink:0;">
 				<div style="display:flex; align-items:center; gap:10px;">
 					<span style="font-size:16px;">👁</span>
