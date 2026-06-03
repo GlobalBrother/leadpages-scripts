@@ -1044,7 +1044,7 @@ Respond with raw JSON only using the existing structure.`;
 				'Authorization': `Bearer ${apiKey}`
 			},
 			body: JSON.stringify({
-				model: 'gpt-5.4',
+				model: 'gpt-5.5',
 				messages,
 				max_completion_tokens: 4000,
 				temperature: 1
@@ -1258,7 +1258,7 @@ Give exactly 4 component_ideas, each targeting a DIFFERENT psychological trigger
 					'anthropic-dangerous-direct-browser-access': 'true'
 				},
 				body: JSON.stringify({
-					model: 'claude-opus-4-6',
+					model: 'claude-opus-4-7',
 					system: systemPrompt,
 					messages,
 					max_tokens: 8000
@@ -1438,7 +1438,7 @@ OUTPUT RULES — CRITICAL, follow exactly:
 						'anthropic-dangerous-direct-browser-access': 'true'
 					},
 					body: JSON.stringify({
-						model: 'claude-opus-4-6',
+						model: 'claude-opus-4-7',
 						system: systemPrompt,
 						messages: [{ role: 'user', content: userPrompt }],
 						max_tokens: 8000,
@@ -1469,7 +1469,7 @@ OUTPUT RULES — CRITICAL, follow exactly:
 				signal: controller.signal,
 				headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
 				body: JSON.stringify({
-					model: 'gpt-5.4',
+					model: 'gpt-5.5',
 					messages: gptMessages,
 					max_completion_tokens: 8000,
 					temperature: 1
@@ -1728,7 +1728,7 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 							'anthropic-dangerous-direct-browser-access': 'true'
 						},
 						body: JSON.stringify({
-							model: 'claude-opus-4-6',
+							model: 'claude-opus-4-7',
 							system: systemPrompt,
 							messages: refineMessages,
 							max_tokens: 8000,
@@ -1755,7 +1755,7 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 						method: 'POST',
 						signal: ctrl.signal,
 						headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
-						body: JSON.stringify({ model: 'gpt-5.4', messages: gptMessages, max_completion_tokens: 8000, temperature: 1 })
+						body: JSON.stringify({ model: 'gpt-5.5', messages: gptMessages, max_completion_tokens: 8000, temperature: 1 })
 					});
 				} finally { clearTimeout(t); }
 			}
