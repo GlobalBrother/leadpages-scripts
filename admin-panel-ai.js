@@ -1660,6 +1660,13 @@ window._aiRefineComponentCode = async function (idx) {
 		showNotification(e.message, 'error'); return;
 	}
 
+	// Reset cascade flags so refine always starts fresh with Opus
+	_claudeOpusOverloaded = false;
+	_claudeSonnetOverloaded = false;
+	_claudeNextRetryAt = 0;
+	_claudeSemaphoreInFlight = false;
+	_claudeSemaphoreWaiters = [];
+
 	const btn = document.getElementById(`ai-gen-btn-${idx}`);
 	const loadingEl = document.getElementById(`ai-comp-loading-${idx}`);
 	const outputEl = document.getElementById(`ai-comp-output-${idx}`);
@@ -1677,33 +1684,36 @@ window._aiRefineComponentCode = async function (idx) {
 			? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nKeep all copy hyper-specific to this product/niche — no generic language.`
 			: '';
 		const buildRefineMessages = (retrying = false) => {
-			const systemPrompt = `You are a surgical code editor. Your ONLY job is to apply the exact changes requested — nothing else.
+			const systemPrompt = `You are an expert HTML/CSS/JS editor. You will receive an existing component and specific change instructions.
 
-CRITICAL RULES:
-1. SURGICAL EDITS ONLY — find the exact lines that need to change and change only those. Do not touch anything else.
-2. Copy everything outside the changed parts VERBATIM — character for character. Do not reformat, do not refactor, do not "improve" unrelated code.
-3. Do NOT change: class names, IDs, JS logic, structure, layout, animations, or copy — unless explicitly asked.
-4. Output the COMPLETE updated HTML with the changes applied — no markdown fences, no explanations, no text before or after the code.
-5. The component must remain fully functional after your edit.${nicheDirective}`;
+YOUR TASK:
+- Apply ALL the requested changes — every single one, exactly as described
+- Do not change anything that was NOT explicitly requested
+- Output the COMPLETE updated HTML from the very first character to the very last — no truncation, no ellipsis, no "rest of code here" comments
+- No markdown fences, no explanations — raw HTML only${nicheDirective}`;
 
 			const retryPrefix = retrying
-				? `⚠️ RETRY: Your previous response was identical to the input — you did not apply the requested changes. This time, you MUST make the specific changes listed below.\n\n`
+				? `⚠️ IMPORTANT: Your previous response was IDENTICAL to the input — you made zero changes. This is incorrect. You MUST apply every change listed below. Do not return the same code again.\n\n`
 				: '';
 
-			const userMsg = `${retryPrefix}EXISTING COMPONENT (apply changes to this, copy the rest verbatim):
-${existingCode}
-
----
-COMPONENT PURPOSE: ${comp.description || 'landing page component'}${comp.copy_suggestion ? `\nCOPY ANGLE: ${comp.copy_suggestion}` : ''}
-
-CHANGES TO APPLY:
-${refinementPrompt}
-
-Output ONLY the complete updated HTML — no markdown, no explanations.`;
-
+			// Multi-turn structure: user shows component → assistant "owns" it → user requests changes
+			// This framing is far more effective for reasoning models than embedding everything in one message
 			return {
 				systemPrompt,
-				messages: [{ role: 'user', content: userMsg }]
+				messages: [
+					{
+						role: 'user',
+						content: `Here is the existing HTML component (purpose: ${comp.description || 'landing page component'}${comp.copy_suggestion ? `, copy angle: ${comp.copy_suggestion}` : ''}):\n\n${existingCode}`
+					},
+					{
+						role: 'assistant',
+						content: existingCode
+					},
+					{
+						role: 'user',
+						content: `${retryPrefix}Apply these specific changes to the component above:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
+					}
+				]
 			};
 		};
 
