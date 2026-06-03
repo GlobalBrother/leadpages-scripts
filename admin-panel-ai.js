@@ -2253,6 +2253,262 @@ function copyAiResults() {
 
 // ─────────────────────────────────────────────────────────────────────────
 
+// ─── POPUP COMPONENT AI ACTIONS ───────────────────────────────────────────
+// These work on saved components opened via the componentEditorModal popup.
+// History is tracked in window._aiPopupRefineHistory keyed by componentName.
+
+window._aiTogglePopupRefineRow = function (componentName) {
+	const row = document.getElementById(`popup-refine-row-${componentName}`);
+	const btn = document.getElementById(`popup-refine-toggle-${componentName}`);
+	if (!row) return;
+	const isVisible = row.style.display !== 'none';
+	row.style.display = isVisible ? 'none' : 'flex';
+	if (btn) {
+		const history = window._aiPopupRefineHistory?.[componentName];
+		const rounds = history ? Math.floor((history.length - 2) / 2) : 0;
+		const roundLabel = rounds > 0 ? ` · ${rounds} exchange${rounds > 1 ? 's' : ''}` : '';
+		btn.textContent = `✏️ Refine${roundLabel}`;
+		btn.style.background = isVisible ? '' : '#065f46';
+		btn.style.color = isVisible ? '' : '#d1fae5';
+		btn.style.borderColor = isVisible ? '' : '#059669';
+	}
+	if (!isVisible) {
+		const ta = document.getElementById(`popup-refine-input-${componentName}`);
+		if (ta) setTimeout(() => ta.focus(), 50);
+	}
+};
+
+window._aiPopupRegenerateComponent = async function (componentName) {
+	let claudeKey;
+	try { claudeKey = _aiGetClaudeKey(); } catch (e) { showNotification(e.message, 'error'); return; }
+
+	// Reset cascade flags so generation always starts fresh with Opus
+	_claudeOpusOverloaded = false;
+	_claudeSonnetOverloaded = false;
+	_claudeNextRetryAt = 0;
+	_claudeSemaphoreInFlight = false;
+	_claudeSemaphoreWaiters = [];
+
+	const ta = document.getElementById(`content-${componentName}`);
+	const loadingEl = document.getElementById(`popup-ai-loading-${componentName}`);
+	const regenBtn = document.getElementById(`popup-regen-btn-${componentName}`);
+	const refineToggleBtn = document.getElementById(`popup-refine-toggle-${componentName}`);
+	const refineRow = document.getElementById(`popup-refine-row-${componentName}`);
+
+	// Hide textarea and refine row; show spinner
+	if (ta) ta.style.display = 'none';
+	if (refineRow) refineRow.style.display = 'none';
+	if (loadingEl) loadingEl.style.display = 'flex';
+	if (regenBtn) { regenBtn.disabled = true; regenBtn.textContent = '⏳…'; }
+	if (refineToggleBtn) refineToggleBtn.disabled = true;
+
+	try {
+		// Build minimal comp descriptor from the component name + whatever context is available
+		const comp = {
+			name: componentName,
+			component_name: componentName,
+			description: componentName.replace(/-/g, ' '),
+			type: 'html',
+			copy_suggestion: null
+		};
+
+		const code = await _aiGenerateOneComponentCode(
+			comp,
+			window._aiLastPageUrl || '',
+			claudeKey,
+			window._aiLastPageContent || '',
+			window._aiLastNicheContext || null,
+			'claude',
+			window._aiLastInspirationPages || []
+		);
+
+		// Reset refine history since we now have a brand-new version
+		if (!window._aiPopupRefineHistory) window._aiPopupRefineHistory = {};
+		window._aiPopupRefineHistory[componentName] = null;
+		// Update toggle button label
+		window._aiTogglePopupRefineRow.__labelUpdate?.(componentName);
+
+		if (ta) { ta.value = code; ta.style.display = ''; }
+		if (loadingEl) loadingEl.style.display = 'none';
+		showNotification('Component regenerated ✅ — click Save to keep it', 'success');
+	} catch (e) {
+		if (ta) ta.style.display = '';
+		if (loadingEl) loadingEl.style.display = 'none';
+		showNotification('Regeneration failed: ' + e.message, 'error');
+	} finally {
+		if (regenBtn) { regenBtn.disabled = false; regenBtn.textContent = '🤖 Regenerate'; }
+		if (refineToggleBtn) {
+			refineToggleBtn.disabled = false;
+			// Refresh round-count label on the refine button after successful regen
+			const history = window._aiPopupRefineHistory?.[componentName];
+			const rounds = history ? Math.floor((history.length - 2) / 2) : 0;
+			refineToggleBtn.textContent = rounds > 0 ? `✏️ Refine · ${rounds} exchange${rounds > 1 ? 's' : ''}` : '✏️ Refine';
+			refineToggleBtn.style.background = '';
+			refineToggleBtn.style.color = '';
+			refineToggleBtn.style.borderColor = '';
+		}
+	}
+};
+
+window._aiPopupRefineComponent = async function (componentName) {
+	const refinementPrompt = (document.getElementById(`popup-refine-input-${componentName}`)?.value || '').trim();
+	if (!refinementPrompt) { showNotification('Write what you want to change first', 'error'); return; }
+
+	const ta = document.getElementById(`content-${componentName}`);
+	const existingCode = ta?.value || '';
+	if (!existingCode || existingCode.startsWith('<!-- ⚠️')) {
+		showNotification('No component code to refine', 'error'); return;
+	}
+
+	let claudeKey;
+	try { claudeKey = _aiGetClaudeKey(); } catch (e) { showNotification(e.message, 'error'); return; }
+
+	// Reset cascade flags
+	_claudeOpusOverloaded = false;
+	_claudeSonnetOverloaded = false;
+	_claudeNextRetryAt = 0;
+	_claudeSemaphoreInFlight = false;
+	_claudeSemaphoreWaiters = [];
+
+	const loadingEl = document.getElementById(`popup-ai-loading-${componentName}`);
+	const applyBtn = document.getElementById(`popup-refine-apply-${componentName}`);
+	const regenBtn = document.getElementById(`popup-regen-btn-${componentName}`);
+
+	if (ta) ta.style.display = 'none';
+	if (loadingEl) loadingEl.style.display = 'flex';
+	if (applyBtn) { applyBtn.disabled = true; applyBtn.textContent = '⏳…'; }
+	if (regenBtn) regenBtn.disabled = true;
+
+	try {
+		const nicheContext = window._aiLastNicheContext || null;
+		const nicheDirective = nicheContext
+			? `\nPAGE TOPIC / NICHE SIGNALS: "${nicheContext}"\nKeep all copy hyper-specific to this product/niche — no generic language.`
+			: '';
+
+		const systemPrompt = `You are an expert HTML/CSS/JS editor. You will receive an existing component and specific change instructions.
+
+YOUR TASK:
+- Apply ALL the requested changes — every single one, exactly as described
+- Do not change anything that was NOT explicitly requested
+- Output the COMPLETE updated HTML from the very first character to the very last — no truncation, no ellipsis, no "rest of code here" comments
+- No markdown fences, no explanations — raw HTML only${nicheDirective}`;
+
+		const buildMessages = (retrying = false) => {
+			const retryPrefix = retrying
+				? `⚠️ IMPORTANT: Your previous response was IDENTICAL to the input — you made zero changes. You MUST apply every change listed below.\n\n`
+				: '';
+
+			if (!window._aiPopupRefineHistory) window._aiPopupRefineHistory = {};
+			const history = window._aiPopupRefineHistory[componentName];
+
+			if (!history || history.length === 0) {
+				return [
+					{ role: 'user', content: `Here is the existing HTML component (name: ${componentName.replace(/-/g, ' ')}):\n\n${existingCode}` },
+					{ role: 'assistant', content: existingCode },
+					{ role: 'user', content: `${retryPrefix}Apply these specific changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML — full file, no truncation.` }
+				];
+			} else {
+				return [
+					...history,
+					{ role: 'user', content: `${retryPrefix}Now apply these additional changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML — full file, no truncation.` }
+				];
+			}
+		};
+
+		const callApi = async (retrying = false) => {
+			const messages = buildMessages(retrying);
+			let response, usedGpt = false;
+			try {
+				response = await _claudeFetchWithRetry(
+					'https://api.anthropic.com/v1/messages',
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'x-api-key': claudeKey,
+							'anthropic-version': '2023-06-01',
+							'anthropic-dangerous-direct-browser-access': 'true'
+						},
+						body: JSON.stringify({ model: 'claude-opus-4-7', system: systemPrompt, messages, max_tokens: 8000 })
+					},
+					60000
+				);
+			} catch (claudeErr) {
+				if (claudeErr.message !== '__CLAUDE_ALL_OVERLOADED__') throw claudeErr;
+				showNotification('Claude overloaded — refining with GPT…', 'info');
+				usedGpt = true;
+				const gptKey = _aiGetGptKey();
+				const ctrl = new AbortController();
+				const t = setTimeout(() => ctrl.abort(), 60000);
+				try {
+					response = await fetch('https://api.openai.com/v1/chat/completions', {
+						method: 'POST', signal: ctrl.signal,
+						headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
+						body: JSON.stringify({ model: 'gpt-5.5', messages: [{ role: 'system', content: systemPrompt }, ...messages], max_completion_tokens: 8000 })
+					});
+				} finally { clearTimeout(t); }
+			}
+			if (!response.ok) {
+				let errMsg = `${usedGpt ? 'GPT' : 'Claude'} error (${response.status})`;
+				try { const b = await response.json(); errMsg = b?.error?.message || b?.error?.error?.message || errMsg; } catch (_) { }
+				throw new Error(errMsg);
+			}
+			const data = await response.json();
+			let code = usedGpt
+				? (data.choices?.[0]?.message?.content?.trim() || '')
+				: (data.content?.[0]?.text?.trim() || '');
+			return code.replace(/^```html\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+		};
+
+		let code = await callApi(false);
+
+		if (code.trim() === existingCode.trim()) {
+			showNotification('No changes detected — retrying with stronger prompt…', 'info');
+			code = await callApi(true);
+			if (code.trim() === existingCode.trim()) {
+				showNotification('⚠️ AI returned identical code. Try rephrasing your request.', 'error');
+			}
+		}
+
+		code = _aiFixComponentCode(code);
+
+		// Save conversation history
+		if (!window._aiPopupRefineHistory) window._aiPopupRefineHistory = {};
+		const prevHistory = window._aiPopupRefineHistory[componentName];
+		if (!prevHistory || prevHistory.length === 0) {
+			window._aiPopupRefineHistory[componentName] = [
+				{ role: 'user', content: `Here is the existing HTML component (name: ${componentName.replace(/-/g, ' ')}):\n\n${existingCode}` },
+				{ role: 'assistant', content: existingCode },
+				{ role: 'user', content: `Apply these specific changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML — full file, no truncation.` },
+				{ role: 'assistant', content: code }
+			];
+		} else {
+			window._aiPopupRefineHistory[componentName].push(
+				{ role: 'user', content: `Now apply these additional changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML — full file, no truncation.` },
+				{ role: 'assistant', content: code }
+			);
+		}
+
+		if (ta) { ta.value = code; ta.style.display = ''; }
+		if (loadingEl) loadingEl.style.display = 'none';
+
+		const refineInput = document.getElementById(`popup-refine-input-${componentName}`);
+		if (refineInput) refineInput.value = '';
+		window._aiTogglePopupRefineRow(componentName); // closes the refine row + updates label
+
+		showNotification('Component refined ✅ — click Save to keep it', 'success');
+	} catch (e) {
+		if (ta) ta.style.display = '';
+		if (loadingEl) loadingEl.style.display = 'none';
+		showNotification('Refinement failed: ' + e.message, 'error');
+	} finally {
+		if (applyBtn) { applyBtn.disabled = false; applyBtn.textContent = '⚡ Apply Refinement'; }
+		if (regenBtn) regenBtn.disabled = false;
+	}
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+
 // Boot
 initSidebarState();
 initAuthUI();

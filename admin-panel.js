@@ -388,10 +388,20 @@ function openComponentEditor(component) {
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;
 	} else {
 		body.innerHTML = `
-					<textarea id="content-${component}" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',monospace;resize:vertical;min-height:120px;color:var(--text-primary);background:#fafafa;transition:all 0.2s;line-height:1.6;box-sizing:border-box;">${escapeHtml(content)}</textarea>`;
+					<textarea id="content-${component}" rows="8" style="width:100%;padding:11px 13px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',monospace;resize:vertical;min-height:120px;color:var(--text-primary);background:#fafafa;transition:all 0.2s;line-height:1.6;box-sizing:border-box;">${escapeHtml(content)}</textarea>
+					<div id="popup-ai-loading-${component}" style="display:none;padding:16px 0;text-align:center;color:#6b7280;font-size:13px;gap:8px;align-items:center;justify-content:center;">
+						<div style="width:16px;height:16px;border:2px solid #d1d5db;border-top-color:#6b7280;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></div>
+						<span>AI is working…</span>
+					</div>
+					<div id="popup-refine-row-${component}" style="display:none;flex-direction:column;gap:8px;padding-top:12px;">
+						<textarea id="popup-refine-input-${component}" placeholder="Describe what you want to change…" rows="2" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',monospace;resize:none;color:var(--text-primary);background:#fafafa;line-height:1.5;box-sizing:border-box;transition:border-color 0.2s;"></textarea>
+						<button id="popup-refine-apply-${component}" class="btn-popup-ai-apply" onclick="window._aiPopupRefineComponent('${component}')">⚡ Apply Refinement</button>
+					</div>`;
 		footer.innerHTML = `
 					<button class="btn-save-card" onclick="saveContent('${component}')">Save</button>
 					<button class="btn-preview-card" onclick="previewComponentContent('${component}')" title="Preview component HTML in a live iframe">👁 Preview</button>
+					<button class="btn-popup-ai-regen" id="popup-regen-btn-${component}" onclick="window._aiPopupRegenerateComponent('${component}')">🤖 Regenerate</button>
+					<button class="btn-popup-ai-refine" id="popup-refine-toggle-${component}" onclick="window._aiTogglePopupRefineRow('${component}')">✏️ Refine</button>
 					<button class="btn-rename-card" onclick="renameComponent('${component}')">Rename</button>
 					<button class="btn-archive-card" onclick="archiveComponent('${component}')" title="Archive — hides this component from the live site without deleting it">📦 Archive</button>
 					<button class="btn-delete-card" onclick="deleteComponent('${component}')">Delete</button>`;

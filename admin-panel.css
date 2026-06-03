@@ -1799,6 +1799,74 @@
 			color: #2563eb;
 		}
 
+		/* AI buttons in the saved-component popup */
+		.btn-popup-ai-regen,
+		.btn-popup-ai-refine {
+			padding: 9px 12px;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+			display: flex;
+			align-items: center;
+			gap: 5px;
+			border: 1.5px solid;
+			white-space: nowrap;
+		}
+		.btn-popup-ai-regen {
+			background: #f0f9ff;
+			color: #0369a1;
+			border-color: rgba(3, 105, 161, 0.3);
+		}
+		.btn-popup-ai-regen:hover {
+			background: #e0f2fe;
+			border-color: #0369a1;
+			color: #0c4a6e;
+		}
+		.btn-popup-ai-regen:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+		.btn-popup-ai-refine {
+			background: #f0fdf4;
+			color: #065f46;
+			border-color: rgba(6, 95, 70, 0.3);
+		}
+		.btn-popup-ai-refine:hover {
+			background: #dcfce7;
+			border-color: #059669;
+			color: #064e3b;
+		}
+		.btn-popup-ai-refine:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+		/* Apply button inside the refine row */
+		.btn-popup-ai-apply {
+			padding: 8px 16px;
+			background: #065f46;
+			color: #d1fae5;
+			border: none;
+			border-radius: 8px;
+			font-size: 13px;
+			font-weight: 600;
+			font-family: inherit;
+			cursor: pointer;
+			transition: all 0.2s;
+			align-self: flex-end;
+			white-space: nowrap;
+		}
+		.btn-popup-ai-apply:hover {
+			background: #047857;
+			color: #ecfdf5;
+		}
+		.btn-popup-ai-apply:disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+
 		/* ============================================
 		   MOBILE SIDEBAR OVERLAY
 		   ============================================ */
