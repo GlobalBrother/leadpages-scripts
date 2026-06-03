@@ -1046,7 +1046,7 @@ Respond with raw JSON only using the existing structure.`;
 			body: JSON.stringify({
 				model: 'gpt-5.5',
 				messages,
-				max_completion_tokens: 4000
+				max_completion_tokens: 16000
 			})
 		});
 	} catch (e) {
@@ -1064,6 +1064,14 @@ Respond with raw JSON only using the existing structure.`;
 
 	const data = await response.json();
 	const raw = data.choices?.[0]?.message?.content || '';
+	const finishReason = data.choices?.[0]?.finish_reason || '';
+
+	if (!raw.trim()) {
+		// Reasoning model used all tokens for internal thinking — surface helpful info
+		const usedTokens = data.usage?.completion_tokens || '?';
+		throw new Error(`GPT returned an empty response (finish_reason: "${finishReason}", completion_tokens: ${usedTokens}). This usually means the reasoning chain consumed all tokens. Try again — the model is non-deterministic.`);
+	}
+
 	const cleaned = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
 	try {
