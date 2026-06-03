@@ -1588,6 +1588,10 @@ window._aiGenerateComponentCode = async function (idx) {
 		if (!window._aiGeneratedCodes) window._aiGeneratedCodes = {};
 		window._aiGeneratedCodes[idx] = code;
 
+		// Reset refine conversation history when component is regenerated
+		if (!window._aiRefineHistory) window._aiRefineHistory = {};
+		window._aiRefineHistory[idx] = null;
+
 		const ta = document.getElementById(`ai-comp-textarea-${idx}`);
 		ta.value = code;
 		ta.style.color = '#cdd6f4';
@@ -1630,6 +1634,11 @@ window._aiToggleRefineRow = function (idx) {
 	row.style.display = isVisible ? 'none' : 'flex';
 	if (toggleBtn) {
 		toggleBtn.style.background = isVisible ? '#0e3a2a' : '#065f46';
+		// Show conversation round count on the toggle button when history exists
+		const history = window._aiRefineHistory?.[idx];
+		const rounds = history ? Math.floor((history.length - 2) / 2) : 0;
+		const roundLabel = rounds > 0 ? ` · ${rounds} exchange${rounds > 1 ? 's' : ''}` : '';
+		toggleBtn.textContent = isVisible ? `✏️ Refine${roundLabel}` : `✏️ Refine${roundLabel}`;
 		toggleBtn.style.color = isVisible ? '#34d399' : '#6ee7b7';
 	}
 	if (!isVisible) {
@@ -1696,11 +1705,15 @@ YOUR TASK:
 				? `⚠️ IMPORTANT: Your previous response was IDENTICAL to the input — you made zero changes. This is incorrect. You MUST apply every change listed below. Do not return the same code again.\n\n`
 				: '';
 
-			// Multi-turn structure: user shows component → assistant "owns" it → user requests changes
-			// This framing is far more effective for reasoning models than embedding everything in one message
-			return {
-				systemPrompt,
-				messages: [
+			// Multi-turn structure with persistent conversation history across refine calls.
+			// First refine: anchor with the original component. Subsequent refines: append to history.
+			if (!window._aiRefineHistory) window._aiRefineHistory = {};
+			const history = window._aiRefineHistory[idx];
+
+			let messages;
+			if (!history || history.length === 0) {
+				// First refine — start fresh conversation anchored on the current component
+				messages = [
 					{
 						role: 'user',
 						content: `Here is the existing HTML component (purpose: ${comp.description || 'landing page component'}${comp.copy_suggestion ? `, copy angle: ${comp.copy_suggestion}` : ''}):\n\n${existingCode}`
@@ -1711,10 +1724,21 @@ YOUR TASK:
 					},
 					{
 						role: 'user',
-						content: `${retryPrefix}Apply these specific changes to the component above:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
+						content: `${retryPrefix}Apply these specific changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
 					}
-				]
-			};
+				];
+			} else {
+				// Continue existing conversation — append the new request to the history
+				messages = [
+					...history,
+					{
+						role: 'user',
+						content: `${retryPrefix}Now apply these additional changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
+					}
+				];
+			}
+
+			return { systemPrompt, messages };
 		};
 
 		const callRefineApi = async (retrying = false) => {
@@ -1798,6 +1822,47 @@ YOUR TASK:
 		code = _aiFixComponentCode(code);
 
 		window._aiGeneratedCodes[idx] = code;
+
+		// Save to conversation history so next refine continues from where this one ended
+		if (!window._aiRefineHistory) window._aiRefineHistory = {};
+		const prevHistory = window._aiRefineHistory[idx];
+		if (!prevHistory || prevHistory.length === 0) {
+			// First successful refine — initialize full history
+			window._aiRefineHistory[idx] = [
+				{
+					role: 'user',
+					content: `Here is the existing HTML component (purpose: ${comp.description || 'landing page component'}${comp.copy_suggestion ? `, copy angle: ${comp.copy_suggestion}` : ''}):\n\n${existingCode}`
+				},
+				{
+					role: 'assistant',
+					content: existingCode
+				},
+				{
+					role: 'user',
+					content: `Apply these specific changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
+				},
+				{
+					role: 'assistant',
+					content: code
+				}
+			];
+		} else {
+			// Subsequent refine — append user request + Claude response
+			window._aiRefineHistory[idx].push(
+				{
+					role: 'user',
+					content: `Now apply these additional changes:\n\n${refinementPrompt}\n\nOutput the complete updated HTML with all changes applied — full file, no truncation.`
+				},
+				{
+					role: 'assistant',
+					content: code
+				}
+			);
+		}
+
+		const refineRound = Math.floor((window._aiRefineHistory[idx].length - 2) / 2);
+		console.log(`[AI refine] History: ${refineRound} exchange(s) stored for component ${idx}`);
+
 		const ta = document.getElementById(`ai-comp-textarea-${idx}`);
 		if (ta) { ta.value = code; ta.style.color = '#cdd6f4'; }
 
