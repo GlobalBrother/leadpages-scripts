@@ -1046,8 +1046,7 @@ Respond with raw JSON only using the existing structure.`;
 			body: JSON.stringify({
 				model: 'gpt-5.5',
 				messages,
-				max_completion_tokens: 4000,
-				temperature: 1
+				max_completion_tokens: 4000
 			})
 		});
 	} catch (e) {
@@ -1471,8 +1470,7 @@ OUTPUT RULES — CRITICAL, follow exactly:
 				body: JSON.stringify({
 					model: 'gpt-5.5',
 					messages: gptMessages,
-					max_completion_tokens: 8000,
-					temperature: 1
+					max_completion_tokens: 8000
 				})
 			});
 		} catch (fetchErr) {
@@ -1755,7 +1753,7 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 						method: 'POST',
 						signal: ctrl.signal,
 						headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${gptKey}` },
-						body: JSON.stringify({ model: 'gpt-5.5', messages: gptMessages, max_completion_tokens: 8000, temperature: 1 })
+						body: JSON.stringify({ model: 'gpt-5.5', messages: gptMessages, max_completion_tokens: 8000 })
 					});
 				} finally { clearTimeout(t); }
 			}
