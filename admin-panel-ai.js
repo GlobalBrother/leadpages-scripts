@@ -1440,8 +1440,7 @@ OUTPUT RULES — CRITICAL, follow exactly:
 						model: 'claude-opus-4-7',
 						system: systemPrompt,
 						messages: [{ role: 'user', content: userPrompt }],
-						max_tokens: 8000,
-						temperature: 0.9
+						max_tokens: 8000
 					})
 				},
 				120000 // 2-min per-attempt timeout
@@ -1729,8 +1728,7 @@ Output ONLY the complete updated HTML — no markdown, no explanations.`;
 							model: 'claude-opus-4-7',
 							system: systemPrompt,
 							messages: refineMessages,
-							max_tokens: 8000,
-							temperature: 0.2
+							max_tokens: 8000
 						})
 					},
 					60000 // 1-min per-attempt timeout
